@@ -16,6 +16,7 @@
   <div id="topleft">
     <div id="money">R$ 0,00</div>
     <div id="rating"></div>
+    <div id="netinfo" class="hidden"></div>
   </div>
 
   <div id="mapbox" class="panel">
@@ -62,6 +63,13 @@
       <span><kbd>Esc</kbd> pausa</span>
     </div>
     <button id="startbtn">ENTER · COMEÇAR</button>
+    <div id="multibox" class="hidden">
+      <div class="mb-title">MULTIPLAYER · ATÉ 4 AMIGOS</div>
+      <div class="mb-row"><label for="nick">Apelido</label><input id="nick" maxlength="12" autocomplete="off" spellcheck="false" placeholder="como te chamam"></div>
+      <div class="mb-row" id="coderow"><label for="code">Código</label><input id="code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="K7QF"></div>
+      <div class="mb-btns"><button id="createbtn">CRIAR SALA</button><button id="joinbtn" class="ghost">ENTRAR COM CÓDIGO</button></div>
+      <div id="multimsg"></div>
+    </div>
   </div>
 </div>
 
@@ -75,6 +83,8 @@
 <script src="js/rides.js"></script>
 <script src="js/carcare.js"></script>
 <script src="js/hud.js"></script>
+<script src="js/net.js"></script>
+<script src="js/multi.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

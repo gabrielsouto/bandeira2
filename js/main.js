@@ -56,6 +56,7 @@ traffic.onHonk = () => Sfx.horn(0.035);
 const peds = new Peds(city, 70);
 Rides.init(city);
 HUD.init();
+Multi.initTitle();
 const particles = [], floaters = [];
 let mode = 'title', time = 0, saveT = 5, gameMin = 7 * 60, prevWheels = null;
 
@@ -69,16 +70,26 @@ const input = { up: false, down: false, left: false, right: false, hb: false };
 const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right', Space: 'hb' };
 function clearInput() { for (const k in input) input[k] = false; }
+// teclas digitadas em campos de texto (apelido, código da sala) não comandam o carro
+const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
 window.addEventListener('keydown', (e) => {
+  if (typing(e)) return;
   if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.repeat) return;
   onKey(e.code);
 });
-window.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = false; e.preventDefault(); } });
+window.addEventListener('keyup', (e) => {
+  if (typing(e)) return;
+  if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = false; e.preventDefault(); }
+});
 window.addEventListener('blur', clearInput);
 
 function onKey(code) {
-  if (mode === 'title') { if (code === 'Enter' || code === 'Space') startGame(); return; }
+  if (mode === 'title') {
+    if (Multi.titleKey(code)) return;
+    if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
+    return;
+  }
   if (mode === 'menu') {
     if (code === 'Escape') closeModal();
     else { const m = code.match(/^(Digit|Numpad)(\d)$/); if (m) clickModalIndex(+m[2]); }
@@ -176,6 +187,18 @@ function openPlaceMenu(pl) {
 }
 
 function openPause(confirmReset) {
+  if (GAME.mode === 'multi') {
+    showModal(`PAUSA · SALA ${Multi.sala}`, 'O jogo continua para os outros: seu carro fica parado onde está.', [
+      { label: 'Continuar', run: closeModal },
+      { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
+      { label: 'Copiar o link da sala', run: () => {
+        navigator.clipboard.writeText(location.href).then(() => toast('Link copiado!', 'good'),
+          () => toast('Não deu pra copiar. Use o endereço da barra do navegador.', 'warn'));
+      } },
+      { label: 'Sair da sala', run: () => Multi.leave() },
+    ], 'Voltar');
+    return;
+  }
   showModal('PAUSA', `Corridas: ${S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
@@ -201,6 +224,7 @@ function callTow() {
   S.money -= TOW_COST;
   toast(`Guincho: -${fmtMoney(TOW_COST)}. Te deixamos em ${best.name}.`, 'bad');
   placeCarAt(best);
+  Multi.onTeleport();
   lastPlace = null;
   cam.x = player.x; cam.y = player.y;
 }
@@ -212,7 +236,8 @@ function update(dt) {
   const m = Care.mods(surface);
   const px = player.x, py = player.y;
   stepPlayer(player, input, dt, m);
-  const imp = collidePlayer(player, city, traffic.cars);
+  // batida em outro jogador conta metade (ninguém controla o carro do outro)
+  const imp = Math.max(collidePlayer(player, city, traffic.cars), Multi.collide(player) * 0.5);
   if (imp > 35) {
     Care.onImpact(imp); Rides.onImpact(imp);
     Sfx.crash(clamp(imp / 220, 0.15, 1));
@@ -322,7 +347,10 @@ function render() {
   peds.draw(ctx, camX, camY, vw, vh);
   Rides.drawWorld(ctx, camX, camY);
   for (const n of traffic.cars) drawCar(SPR.npc[n.ci], n.x, n.y, n.a, n.speed < 5);
+  Multi.drawCars();
+  if (Multi.ghostT > 0) ctx.globalAlpha = Math.floor(time * 8) % 2 ? 0.35 : 0.7; // pisca enquanto é fantasma
   drawCar(SPR.player, player.x, player.y, player.a, player.braking);
+  ctx.globalAlpha = 1;
 
   for (const p of particles) {
     ctx.globalAlpha = clamp(p.life / p.max, 0, 1) * 0.7;
@@ -331,6 +359,7 @@ function render() {
     ctx.fillRect(Math.round(p.x - camX - s / 2), Math.round(p.y - camY - s / 2), s, s);
   }
   ctx.globalAlpha = 1;
+  Multi.drawTags();
 
   // seta orbitando o carro apontando o objetivo
   const tg = Rides.target();
@@ -365,6 +394,7 @@ function frame(now) {
     acc = 0;
     if (mode === 'title') { time += dt; traffic.update(dt, player); peds.update(dt, player); }
   }
+  Multi.update(dt); // roda até no menu: o jogo continua para os outros
   render();
   if (mode !== 'title') HUD.update(dt);
   requestAnimationFrame(frame);

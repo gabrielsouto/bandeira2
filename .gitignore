@@ -1,2 +1,6 @@
 .DS_Store
 Thumbs.db
+
+# servidor do multiplayer
+server/node_modules/
+server/.wrangler/

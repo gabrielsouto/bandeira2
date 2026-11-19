@@ -145,6 +145,7 @@ const HUD = {
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
       g.fillStyle = tg.kind === 'pick' ? '#39ff88' : '#ffd23f'; g.fillRect(x - 3, y - 3, 6, 6);
     }
+    Multi.drawMinimap(g, s);
     const px = Math.round(player.x * s), py = Math.round(player.y * s);
     g.fillStyle = '#000'; g.fillRect(px - 3, py - 3, 6, 6);
     g.fillStyle = '#fff'; g.fillRect(px - 2, py - 2, 4, 4);

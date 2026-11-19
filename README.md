@@ -15,6 +15,35 @@ python -m http.server 8642
 
 Depois acesse http://localhost:8642. (Abrir o `index.html` direto com duplo clique também funciona na maioria dos navegadores.)
 
+## Multiplayer (em construção)
+
+Até 4 amigos na mesma cidade, numa sala aberta por link (`?sala=K7QF`). Por enquanto (etapa A) cada um vê os outros dirigindo e pode bater neles; as corridas ainda são de cada um. O dinheiro da sala não mexe no save do single player.
+
+O jogo continua sem build. Só o servidor das salas (pasta `server/`, Cloudflare Durable Objects) precisa de Node:
+
+```
+cd server
+npm install
+npm run dev        # servidor local em ws://localhost:8787
+```
+
+Com o servidor local rodando, abra `http://localhost:8642/?sala=TEST` em **duas janelas lado a lado** (não em duas abas da mesma janela: o navegador congela a aba que fica escondida). Parâmetros úteis:
+
+| Parâmetro | Para quê |
+|---|---|
+| `?lag=200` | soma 200 ms de ida e volta |
+| `?jitter=60` | soma até 60 ms aleatórios por mensagem |
+| `?servidor=ws://host:porta` | usa outro servidor |
+
+Testes do servidor (com o `npm run dev` rodando em outro terminal):
+
+```
+npm run fumaca                 # confere entrada, repasse, recusas e saída
+node test/robo.mjs TEST        # um jogador falso dando voltas na sala TEST
+```
+
+Para publicar: `npx wrangler login` e `npm run deploy` dentro de `server/` (plano grátis da Cloudflare). Depois coloque o endereço `wss://...workers.dev` em `NET_SERVER_PROD`, no topo de `js/net.js`. Enquanto ele estiver vazio, o site publicado esconde o multiplayer.
+
 ## Controles
 
 | Tecla | Ação |
@@ -53,7 +82,10 @@ js/peds.js         pedestres
 js/rides.js        corridas e tarifa dinâmica
 js/carcare.js      combustível, danos e defeitos
 js/hud.js          interface (celular, painel, minimapa)
+js/net.js          conexão com a sala (WebSocket, reconexão, ping, atraso simulado)
+js/multi.js        multiplayer no jogo (entrada na sala, rivais, interpolação, colisão)
 js/main.js         loop, câmera, desenho, menus, save
+server/            servidor das salas (Cloudflare Durable Objects)
 ```
 
 ## Ideias para depois

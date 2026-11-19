@@ -221,5 +221,12 @@ function generateCity(seed) {
   };
 }
 
+// Impressão digital da cidade (FNV-1a dos tiles). No multiplayer, todos na sala precisam ter a mesma.
+function cityHash(city) {
+  let h = 2166136261;
+  for (let k = 0; k < city.tiles.length; k++) { h ^= city.tiles[k]; h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(16);
+}
+
 // No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
-if (typeof module !== 'undefined' && module.exports) module.exports = { T, DIRS, generateCity };
+if (typeof module !== 'undefined' && module.exports) module.exports = { T, DIRS, generateCity, cityHash };

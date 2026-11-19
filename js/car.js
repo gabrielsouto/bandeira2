@@ -63,9 +63,9 @@ function stepPlayer(c, inp, dt, m) {
   c.y += c.vy * dt;
 }
 
-// Resolve colisões com o cenário, com o trânsito e (opcional) com carros que não podem ser empurrados,
-// como os de outros jogadores. Retorna a força do impacto (px/s).
-function collidePlayer(c, city, npcs, rivals) {
+// Resolve colisões com o cenário e com o trânsito. Retorna a força do impacto (px/s).
+// Os carros de outros jogadores usam collideCars() direto (ver Multi.collide).
+function collidePlayer(c, city, npcs) {
   let impact = 0;
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
   const rad = CARP.r;
@@ -102,9 +102,7 @@ function collidePlayer(c, city, npcs, rivals) {
     }
   }
 
-  impact = Math.max(impact, collideCars(c, npcs, true, 1.3));
-  if (rivals) impact = Math.max(impact, collideCars(c, rivals, false, 1.1));
-  return impact;
+  return Math.max(impact, collideCars(c, npcs, true, 1.3));
 }
 
 // Colisão do carro c contra uma lista de carros com { x, y, a, speed }. Só c é deslocado.
