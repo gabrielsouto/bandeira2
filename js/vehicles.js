@@ -32,8 +32,14 @@ const VEHICLES = {
     phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
     fare: 1, offerMul: 0.5, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
+  // autoescola: aulas com instrutor em vez de corridas (js/autoescola.js). Só no solo; o carro é da escola.
+  escola: {
+    name: 'Autoescola', app: 'AUTOESCOLA', color: '#f4f4f4', art: 'escola', school: true, soloOnly: true,
+    desc: 'Aprenda a dirigir! Busque o instrutor e siga as setas. 6 aulas e a prova do DETRAN. (Só no solo.)',
+    phys: {}, fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
+  },
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'escola'];
 const VEH_KEY = 'bandeira2-veiculo';
 
 const Veh = {

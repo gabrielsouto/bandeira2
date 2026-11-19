@@ -47,9 +47,10 @@ const Care = {
   },
 
   update(dt, car, moved) {
+    if (Veh.cur.school) return; // o carro da autoescola é da escola: sempre revisado e abastecido
     const c = S.car;
     if (c.fuel > 0) {
-      c.fuel = Math.max(0, c.fuel - dt * (0.01 + 0.2 * car.throttle) * Veh.cur.fuelUse * (1 + 0.9 * (c.bad || 0)));
+      c.fuel = Math.max(0, c.fuel - dt * (0.01 + 0.2 * car.throttle) * Veh.cur.fuelUse * (1 + 0.9 * (c.bad || 0)) * (Easy.solo ? 0.6 : 1));
       if (c.fuel <= 0) c.bad = 0;
       if (c.fuel <= 0) { toast('Acabou a gasolina! Aperte G para chamar o guincho.', 'bad'); Sfx.sputter(); }
     }
@@ -91,7 +92,7 @@ const Care = {
       }
     }
 
-    if (car.speed > 20) {
+    if (car.speed > 20 && !Easy.solo) { // na direção fácil o carro não quebra sozinho
       this.failAcc += dt;
       while (this.failAcc >= 1) {
         this.failAcc -= 1;
@@ -119,8 +120,8 @@ const Care = {
   },
 
   onImpact(imp) {
-    if (imp < 35) return 0;
-    const c = S.car, dmg = (imp - 35) * 0.1 * Veh.cur.dmgMul, before = c.health;
+    if (imp < 35 || Veh.cur.school) return 0;
+    const c = S.car, dmg = (imp - 35) * 0.1 * Veh.cur.dmgMul * Easy.dmgMul(), before = c.health;
     c.health = Math.max(0, c.health - dmg);
     if (Veh.cur.art === 'moto' && imp > 120 && c.health > 0) { // tombo: o motor apaga e leva um tempo para levantar a moto
       this.stallT = Math.max(this.stallT, 1.5);
@@ -135,6 +136,7 @@ const Care = {
 
   // cobrança que acontece de qualquer jeito (guincho, multa). No multiplayer, quem desconta é a sala.
   charge(value, kind) {
+    if (Veh.cur.school) return; // na autoescola quem paga as multas é a escola (o instrutor tira pontos)
     if (GAME.mode === 'multi') Multi.charge(kind, value);
     else S.money -= value;
   },

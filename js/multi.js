@@ -245,9 +245,10 @@ const Multi = {
     this.active = true;
     GAME.mode = 'multi';
     S = defaultSave(); // estado só desta sessão: o save do solo não é lido nem gravado
-    if (Veh.cur.soloOnly) { // o euComida ainda não existe na sala: vai de Moto Rebu (sem mudar a escolha guardada)
-      Veh.set('moto', false); applyVehicle();
-      setTimeout(() => toast('O euComida ainda é só no solo. Na sala você vai de Moto Rebu.', 'warn'), 1500);
+    if (Veh.cur.soloOnly) { // euComida e autoescola ainda não existem na sala (a escolha guardada não muda)
+      const was = Veh.cur.name, k = Veh.cur.art === 'moto' ? 'moto' : 'uber';
+      Veh.set(k, false); applyVehicle();
+      setTimeout(() => toast(`${was} ainda é só no solo. Na sala você vai de ${VEHICLES[k].name}.`, 'warn'), 1500);
     }
     S.money = this.mySaldo; S.earned = this.myGanho; S.rides = this.myCorridas; // pode estar voltando no meio do turno
     RidesNet.install();

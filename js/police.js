@@ -17,7 +17,7 @@ const Police = {
 
   // começa (ou piora) uma perseguição
   alert(why) {
-    if (mode !== 'play') return;
+    if (mode !== 'play' || Veh.cur.school) return; // na autoescola o instrutor cuida das broncas
     if (this.wanted) { if (this.cops.length < 2 && this.chaseT > 8) this.spawn(); return; }
     this.wanted = true; this.why = why;
     this.chaseT = 0; this.caughtT = 0; this.lostT = 0;

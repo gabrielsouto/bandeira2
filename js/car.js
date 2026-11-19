@@ -53,7 +53,7 @@ function stepPlayer(c, inp, dt, m) {
   if (vF > maxS) vF += (maxS - vF) * Math.min(1, 1.5 * dt);
   if (inp.hb) { vF -= Math.sign(vF) * Math.min(Math.abs(vF), 110 * dt); c.braking = true; }
 
-  const grip = inp.hb ? P.hbGrip : P.grip * m.gripMul;
+  const grip = inp.hb ? P.hbGrip * (m.hbGripMul || 1) : P.grip * m.gripMul;
   vR *= Math.exp(-grip * dt);
 
   c.vx = fx * vF + rx * vR;
@@ -66,7 +66,8 @@ function stepPlayer(c, inp, dt, m) {
 
 // Resolve colisões com o cenário e com o trânsito. Retorna a força do impacto (px/s).
 // Os carros de outros jogadores usam collideCars() direto (ver Multi.collide).
-function collidePlayer(c, city, npcs) {
+// slide = true (direção fácil): o carro raspa no muro e segue, em vez de quicar
+function collidePlayer(c, city, npcs, slide) {
   let impact = 0;
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
   const P = c.p || CARP, rad = P.r;
@@ -95,15 +96,16 @@ function collidePlayer(c, city, npcs) {
         c.x += nx * pen; c.y += ny * pen; cx += nx * pen; cy += ny * pen;
         const vn = c.vx * nx + c.vy * ny;
         if (vn < 0) {
-          c.vx -= 1.35 * vn * nx; c.vy -= 1.35 * vn * ny;
-          c.vx *= 0.92; c.vy *= 0.92;
+          const k = slide ? 1 : 1.35, keep = slide ? 0.97 : 0.92;
+          c.vx -= k * vn * nx; c.vy -= k * vn * ny;
+          c.vx *= keep; c.vy *= keep;
           impact = Math.max(impact, -vn);
         }
       }
     }
   }
 
-  return Math.max(impact, collideCars(c, npcs, true, 1.3));
+  return Math.max(impact, collideCars(c, npcs, true, slide ? 1 : 1.3));
 }
 
 // Colisão do carro c contra uma lista de carros com { x, y, a, speed }. Só c é deslocado.

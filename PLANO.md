@@ -88,7 +88,13 @@ Regras que valem para todas as etapas:
   (sem mudar tiles), espera da cozinha, comida esfriando, tipos de pedido (lanche, pizza, açaí, com refri, festa).
   Só no solo: entrar numa sala com ele troca para Moto Rebu sem mexer na escolha salva. O servidor não mudou.
 
+- [x] **Direção fácil** (`js/facil.js`, tecla F) e **Autoescola** (`js/autoescola.js`, 6º veículo, só no solo), pedidos para a filha
+  de 10 anos que estava com dificuldade. Testado no navegador: aula completa (instrutor → cruzamentos → vaga → estrelas),
+  limite de velocidade, contramão, PARE furado, caminho errado com recálculo, aula à noite e a carteira depois da prova;
+  direção fácil com velocidade máxima, volante voltando sozinho e freio automático antes do pedestre. O servidor não mudou.
+
 ### Ideias soltas para depois
+- Autoescola: dar seta (pisca) antes de virar; baliza; semáforo nos cruzamentos; aula com chuva.
 - euComida no multiplayer: pedidos vindos da sala (precisa de regras novas no servidor e protocolo 5).
 - Bike do euComida: sem gasolina, lenta, mas não paga posto.
 - Interpretar de novo "gasolina adulterada... vai durar mesmo": hoje ela rende MENOS. Se a ideia era render mais, é trocar o sinal do consumo em `Care.update`.

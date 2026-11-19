@@ -272,7 +272,7 @@ const World = {
       let sp = 12, gx = b.tx, gy = b.ty;
       if (b.state === 'lurk') {
         if (Math.hypot(b.tx - b.x, b.ty - b.y) < 2) { const t = R.pick(b.z.tiles); b.tx = t.x * 16 + 8; b.ty = t.y * 16 + 8; }
-        if (d < 100 && car.speed < 70 && this.robCd <= 0 && mode === 'play') {
+        if (d < 100 && car.speed < 70 && this.robCd <= 0 && mode === 'play' && !Veh.cur.school) {
           // quem tem muita aura assusta o bandido
           if (R.chance(Math.min(0.85, (S.aura || 0) / 120))) {
             b.state = 'flee'; b.t = 3;

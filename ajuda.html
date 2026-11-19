@@ -62,6 +62,8 @@
     <a href="#objetivo">Objetivo</a>
     <a href="#controles">Controles</a>
     <a href="#veiculos">Veículos</a>
+    <a href="#facil">Direção fácil</a>
+    <a href="#autoescola">Autoescola</a>
     <a href="#corridas">Corridas</a>
     <a href="#nota">Nota e gorjeta</a>
     <a href="#dinamica">Tarifa dinâmica</a>
@@ -102,9 +104,10 @@
     <tr><td><kbd>G</kbd></td><td>guincho (só quando o carro quebrou ou ficou sem gasolina)</td></tr>
     <tr><td><kbd>R</kbd></td><td>rádio: troca a estação (no fim do turno da sala, abre o ranking)</td></tr>
     <tr><td><kbd>X</kbd></td><td>pega (multiplayer): chamar, entrar ou desistir</td></tr>
+    <tr><td><kbd>F</kbd></td><td>liga e desliga a <a href="#facil">direção fácil</a> (também na tela inicial e na pausa)</td></tr>
     <tr><td><kbd>M</kbd></td><td>liga e desliga o som</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>pausa</td></tr>
-    <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>na tela inicial: escolher o veículo; nos menus: escolher a opção</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>6</kbd></td><td>na tela inicial: escolher o veículo; nos menus: escolher a opção</td></tr>
     <tr><td><kbd>Enter</kbd></td><td>na tela inicial: começar; no multiplayer: o dono começa o turno ou pede revanche</td></tr>
   </table></div>
 </section>
@@ -119,7 +122,56 @@
     <tr><td>Táxi</td><td>+15%, e <b>bandeira 2</b> (+30%) das 20:00 às 06:00</td><td>menos frequentes</td><td>gasta 10% mais</td><td>um pouco mais lento, aguenta mais batida</td></tr>
     <tr><td>Moto Rebu</td><td>−40%</td><td>bem mais frequentes</td><td>gasta 30% menos; o tanque cheio custa 35% do de um carro</td><td>ágil e menor, derrapa mais; não leva executivo; batida dói 70% mais e o tombo derruba o piloto; passageiro não suja a moto</td></tr>
     <tr><td>euComida</td><td>taxa de entrega (veja abaixo)</td><td>chove pedido</td><td>igual à Moto Rebu</td><td>moto de entregador: em vez de passageiros, leva <b>comida</b>. Só no modo sozinho (numa sala você vai de Moto Rebu)</td></tr>
+    <tr><td>Autoescola</td><td>—</td><td>—</td><td>não gasta</td><td>carro da escola para <a href="#autoescola">aprender a dirigir</a>. Só no modo sozinho (numa sala você vai de Rebu)</td></tr>
   </table></div>
+</section>
+
+<section id="facil">
+  <h2>DIREÇÃO FÁCIL</h2>
+  <p>Para quem está aprendendo. Liga e desliga com <kbd>F</kbd>, no botão da tela inicial ou na pausa. Quando está ligada, aparece <b>FÁCIL</b> no painel.</p>
+  <ul>
+    <li>O carro anda no máximo uns 75 km/h, acelera mais suave e quase não derrapa (nem com o freio de mão).</li>
+    <li>Soltou a seta do teclado, o volante se endireita sozinho na direção da rua.</li>
+    <li>Raspou no muro? O carro desliza junto da parede em vez de quicar.</li>
+    <li>Freio automático: o carro segura sozinho antes de pedestres, crianças, gatos, cachorros e carros na frente.</li>
+    <li>Só no modo sozinho: as batidas estragam metade, o carro não quebra sozinho e gasta menos gasolina.</li>
+  </ul>
+  <p>No multiplayer a direção fácil também funciona, mas só deixa o carro mais lento e mais seguro (o dinheiro da sala não muda).</p>
+</section>
+
+<section id="autoescola">
+  <h2>AUTOESCOLA</h2>
+  <p>Escolha <b>6 · Autoescola</b> na tela inicial. O carro é da escola: não gasta gasolina, não estraga, não paga multa e não mexe no seu dinheiro nem no save do modo sozinho.</p>
+  <ul>
+    <li>O instrutor liga no celular: siga a <b style="color:var(--accent)">seta verde</b> e pare do lado dele.</li>
+    <li>Na aula, siga a <b style="color:var(--gold)">seta amarela</b> pintada no chão de cada cruzamento. O celular mostra a próxima ordem bem grande (← vire à esquerda, ↑ siga reto, → vire à direita) e o instrutor fala em voz alta (a voz desliga junto com o som, no <kbd>M</kbd>).</li>
+    <li>Placa de <b class="neg">PARE</b>: pare o carro de vez antes da faixa branca, depois siga.</li>
+    <li>No fim, pare dentro do quadrado branco com o <b style="color:var(--gold)">P</b>.</li>
+    <li>Errou o caminho? Tudo bem: o instrutor monta outro caminho a partir de onde você está (perde 5 pontos).</li>
+  </ul>
+  <h3>PONTOS</h3>
+  <p>Toda aula começa com 100 pontos. 90 ou mais = ★★★, 75 = ★★, 50 = ★. A próxima aula abre com pelo menos uma estrela.</p>
+  <div class="tbl"><table>
+    <tr><th>Falta</th><th>Pontos</th></tr>
+    <tr><td>Bater (muro, carro)</td><td>−10</td></tr>
+    <tr><td>Passar do limite de velocidade (a placa redonda no celular pisca)</td><td>−5</td></tr>
+    <tr><td>Andar na calçada ou na grama</td><td>−5</td></tr>
+    <tr><td>Contramão (a partir da aula 4)</td><td>−5</td></tr>
+    <tr><td>Caminho errado</td><td>−5</td></tr>
+    <tr><td>Passar direto no PARE</td><td>−15</td></tr>
+    <tr><td>Atropelar alguém</td><td>−25</td></tr>
+  </table></div>
+  <h3>AULAS</h3>
+  <div class="tbl"><table>
+    <tr><th>Aula</th><th>O que treina</th></tr>
+    <tr><td>1. Primeira aula</td><td>3 cruzamentos, quase tudo reto, limite 40 km/h</td></tr>
+    <tr><td>2. Virando a esquina</td><td>5 cruzamentos com várias curvas</td></tr>
+    <tr><td>3. Placa de PARE</td><td>duas placas de PARE</td></tr>
+    <tr><td>4. Mão direita</td><td>contramão passa a contar; limite 50 km/h</td></tr>
+    <tr><td>5. Aula à noite</td><td>a aula acontece às 21:00, limite 40 km/h</td></tr>
+    <tr><td>6. Prova do DETRAN</td><td>8 cruzamentos, três PARE; precisa de 70 pontos. Quem passa ganha a <b>carteira de motorista</b> e libera o treino livre</td></tr>
+  </table></div>
+  <p>Na pausa, <b>Escolher a aula</b> repete qualquer aula já liberada (ou apaga o progresso da autoescola).</p>
 </section>
 
 <section id="entregas">

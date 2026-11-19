@@ -199,3 +199,32 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 #netinfo .ni-pega { color: #ff4fd8; }
 .c-lava { color: #3fb6ff; } .c-risk { color: #ff6b6b; }
 #helplink { display: inline-block; margin-left: 12px; font-size: 20px; color: var(--accent); vertical-align: middle; }
+
+/* direção fácil */
+#easybtn { align-self: flex-start; font-size: 19px; padding: 2px 10px; }
+#easybtn.sel { background: #0f1d16; box-shadow: 0 0 0 2px var(--accent); color: var(--accent); }
+#easytag { font-family: 'Press Start 2P', monospace; font-size: 8px; margin-left: 10px; padding: 3px 5px; vertical-align: middle;
+  background: var(--accent); color: #000; }
+
+/* autoescola */
+#phone.escola { box-shadow: 0 0 0 3px #1d4fa8, 6px 6px 0 3px rgba(0,0,0,.45); }
+#phone.escola .appbar { color: #7fb2ff; }
+.es-next { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.es-arrow { min-width: 58px; height: 58px; display: flex; align-items: center; justify-content: center; font-size: 46px; line-height: 1;
+  background: var(--gold); color: #000; font-family: system-ui, sans-serif; font-weight: bold; }
+.es-arrow.stop { background: #d4161c; color: #fff; font-size: 13px; font-family: 'Press Start 2P', monospace; font-weight: normal;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
+.es-arrow.park { background: #1d4fa8; color: #fff; font-family: 'Press Start 2P', monospace; font-size: 26px; font-weight: normal; }
+.es-txt { font-size: 22px; line-height: 1.05; }
+.es-info { display: flex; align-items: center; gap: 10px; font-size: 19px; }
+.es-limit { width: 38px; height: 38px; border-radius: 50%; border: 5px solid #d4161c; background: #fff; color: #000; flex: none;
+  display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 10px; }
+.es-limit.over { animation: es-blink 0.4s steps(2) infinite; }
+@keyframes es-blink { 50% { background: #d4161c; color: #fff; } }
+.es-prog { font-size: 18px; line-height: 1.15; margin: 6px 0; }
+.es-p.lock { color: #555; }
+.es-st { color: var(--gold); } .es-st span { color: #444; }
+.cnh { background: linear-gradient(135deg, #cfe8c8, #9fd0a6); color: #10301a; padding: 10px 12px; margin: 6px 0 10px; border: 2px solid #000;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.4); font-size: 20px; line-height: 1.15; }
+.cnh-h { font-family: 'Press Start 2P', monospace; font-size: 8px; margin-bottom: 6px; }
+.cnh b { color: #10301a; }
