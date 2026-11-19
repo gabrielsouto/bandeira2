@@ -75,7 +75,7 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 | H | buzina |
 | R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
 | X | pega (multiplayer): chamar, entrar ou desistir |
-| 1–4 | na tela inicial: escolher Rebu, 66, Táxi ou Moto Rebu |
+| 1–5 | na tela inicial: escolher Rebu, 66, Táxi, Moto Rebu ou euComida |
 | O / P / L | seta até a oficina, o posto ou o lava jato mais perto (a mesma tecla cancela) |
 | G | guincho (quando o carro quebra ou fica sem gasolina; não cobra se você já está lá) |
 | M | liga/desliga o som |
@@ -90,6 +90,7 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Corridas: ofertas no celular, buscar, levar, prazo, avaliação, gorjeta.
 - Tipos de passageiro: normal, com pressa, enjoa fácil (pode sujar o carro), executivo, voltando da praia (sempre suja o carro).
 - Veículos: Rebu (equilibrado), 66 (tarifa menor, mais chamadas, econômico), Táxi (tarifa maior e bandeira 2 das 20:00 às 06:00) e Moto Rebu (ágil, tanque barato, tarifa 40% menor, sem executivo, tombo dói).
+- Entregador do **euComida** (5º veículo, só no solo): moto com bag que leva pedidos de 8 restaurantes (toldo listrado, rosa no minimapa) até o cliente. A cozinha pode estar preparando, a comida esfria, pizza e pedido de festa não aguentam batida, açaí derrete e o refri vaza com derrapada.
 - Dia e noite: o relógio anda 1 minuto por segundo; à noite escurece, com faróis, postes e giroflex.
 - Rádio do carro com estações sintetizadas (funk, sertanejo, pagode) e uma estação de notícias falada pela voz do navegador.
 - Posto Preço Baixo: gasolina 40% mais barata, mas batizada. Rende menos, o motor fica fraco e engasga, e o desgaste sobe. Abastecer em outro posto dilui.
@@ -110,7 +111,8 @@ js/util.js         utilidades (aleatório, cores, pixels)
 js/city.js         geração da cidade
 js/render-city.js  arte gerada por código (mapa, carros, ícones)
 js/car.js          física e colisão do jogador
-js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu): física, tarifa, consumo
+js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu, euComida): física, tarifa, consumo
+js/delivery.js     entregador do euComida: restaurantes, pedidos, nota da entrega
 js/light.js        dia e noite (escuridão, faróis, postes)
 js/radio.js        rádio do carro (música sintetizada e notícias faladas)
 js/world.js        áreas de risco com bandidos (e AURA), gatos e cachorros, colégios com trânsito

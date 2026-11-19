@@ -84,7 +84,13 @@ Regras que valem para todas as etapas:
 - [x] Teclas O / P / L: seta até a oficina, o posto ou o lava jato mais perto (a pausa ficou só no Esc).
 - [x] Página de ajuda (`ajuda.html`) com todas as regras, aberta pela tela inicial e pela pausa.
 
+- [x] Entregador do euComida (`js/delivery.js`): 5º veículo, moto com bag, pedidos de 8 restaurantes sorteados pela seed
+  (sem mudar tiles), espera da cozinha, comida esfriando, tipos de pedido (lanche, pizza, açaí, com refri, festa).
+  Só no solo: entrar numa sala com ele troca para Moto Rebu sem mexer na escolha salva. O servidor não mudou.
+
 ### Ideias soltas para depois
+- euComida no multiplayer: pedidos vindos da sala (precisa de regras novas no servidor e protocolo 5).
+- Bike do euComida: sem gasolina, lenta, mas não paga posto.
 - Interpretar de novo "gasolina adulterada... vai durar mesmo": hoje ela rende MENOS. Se a ideia era render mais, é trocar o sinal do consumo em `Care.update`.
 - Viaturas também patrulhando a cidade sem perseguição; blitz à noite.
 - Bandidos e polícia sincronizados no multiplayer.

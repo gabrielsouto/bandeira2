@@ -245,6 +245,10 @@ const Multi = {
     this.active = true;
     GAME.mode = 'multi';
     S = defaultSave(); // estado só desta sessão: o save do solo não é lido nem gravado
+    if (Veh.cur.soloOnly) { // o euComida ainda não existe na sala: vai de Moto Rebu (sem mudar a escolha guardada)
+      Veh.set('moto', false); applyVehicle();
+      setTimeout(() => toast('O euComida ainda é só no solo. Na sala você vai de Moto Rebu.', 'warn'), 1500);
+    }
     S.money = this.mySaldo; S.earned = this.myGanho; S.rides = this.myCorridas; // pode estar voltando no meio do turno
     RidesNet.install();
     placeCarAt(city.places[this.myColor % city.places.length]); // cada cor nasce num lugar diferente
@@ -509,7 +513,7 @@ const Multi = {
   sprite(cor, v = 'uber') {
     if (!this.sprites) this.sprites = {};
     const k = cor + ':' + v;
-    if (!this.sprites[k]) this.sprites[k] = makeCarSprites(PLAYER_COLORS[cor % PLAYER_COLORS.length], true, (VEHICLES[v] || VEHICLES.uber).art);
+    if (!this.sprites[k]) this.sprites[k] = makeCarSprites(PLAYER_COLORS[cor % PLAYER_COLORS.length], true, (VEHICLES[v] || VEHICLES.uber).art, (VEHICLES[v] || VEHICLES.uber).bag);
     return this.sprites[k];
   },
 

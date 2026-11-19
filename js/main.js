@@ -43,9 +43,11 @@ const player = makePlayer(0, 0, 0);
 // veículo escolhido na tela inicial: sprite, física e nome do app no celular
 function applyVehicle() {
   const v = Veh.cur;
-  SPR.player = makeCarSprites(v.color, true, v.art);
+  SPR.player = makeCarSprites(v.color, true, v.art, v.bag);
   player.p = Veh.phys();
   $('appname').textContent = v.app;
+  $('phone').classList.toggle('food', !!v.delivery);
+  $('lgrest').classList.toggle('hidden', !v.delivery);
 }
 applyVehicle();
 let lastPlace = null;
@@ -65,6 +67,7 @@ const peds = new Peds(city, 70);
 Rides.init(city);
 Light.init(city);
 World.init(city, mapCtx);
+Delivery.init(city, mapCtx); // restaurantes do euComida (depois do World: não pega colégio nem área de risco)
 traffic.capFn = (x, y) => World.trafficCap(x, y);
 HUD.init();
 Multi.initTitle();
@@ -101,7 +104,7 @@ window.addEventListener('blur', clearInput);
 function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
-    const d = code.match(/^(Digit|Numpad)([1-4])$/);
+    const d = code.match(/^(Digit|Numpad)([1-5])$/);
     if (d) { pickVehicle(VEH_ORDER[+d[2] - 1]); return; }
     if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
     return;
@@ -134,8 +137,13 @@ function startGame() {
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   mode = 'play';
-  toast('Você está online! As corridas chegam no celular.', 'good');
-  setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
+  if (Veh.cur.delivery) {
+    toast('Você está online no euComida! Os pedidos chegam no celular.', 'good');
+    setTimeout(() => toast('Restaurantes têm toldo listrado. Retire o pedido e leve quentinho!'), 2500);
+  } else {
+    toast('Você está online! As corridas chegam no celular.', 'good');
+    setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
+  }
 }
 $('startbtn').addEventListener('click', startGame);
 
@@ -151,7 +159,7 @@ function pickVehicle(k) {
   VEH_ORDER.forEach((k, i) => {
     const v = VEHICLES[k], b = document.createElement('button');
     b.className = 'ghost'; b.dataset.veh = k;
-    const spr = makeCarSprites(v.color, true, v.art), [cv, g] = makeCanvas(40, 24);
+    const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(40, 24);
     g.drawImage(spr.img, Math.round(20 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
     b.append(cv, document.createTextNode(`${i + 1} · ${v.name}`));
     b.addEventListener('click', () => { pickVehicle(k); b.blur(); });
@@ -274,7 +282,7 @@ function openPause(confirmReset) {
     ], 'Voltar');
     return;
   }
-  showModal('PAUSA', `Corridas: ${S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
+  showModal('PAUSA', `${Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
     { label: 'Ajuda: todas as regras', run: openHelp },
@@ -464,6 +472,7 @@ function render() {
   }
 
   World.draw(ctx, camX, camY, vw, vh);
+  Delivery.draw(ctx, camX, camY, vw, vh);
   peds.draw(ctx, camX, camY, vw, vh);
   Rides.drawWorld(ctx, camX, camY);
   for (const n of traffic.cars) drawCar(SPR.npc[n.ci], n.x, n.y, n.a, n.speed < 5);
@@ -487,7 +496,7 @@ function render() {
   for (const n of traffic.cars) lit.push({ x: n.x, y: n.y, a: n.a, front: 8, len: 50, k: 0.7 });
   Multi.lightCars(lit);
   Police.lightCars(lit);
-  Light.render(ctx, vw, vh, camX, camY, lit, (L) => World.drawLights(L, camX, camY));
+  Light.render(ctx, vw, vh, camX, camY, lit, (L) => { World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); });
   Police.drawGlow();
   Multi.drawTags();
 

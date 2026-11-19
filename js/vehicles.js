@@ -25,8 +25,15 @@ const VEHICLES = {
     phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
     fare: 0.6, offerMul: 0.6, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
+  // entregador: em vez de passageiros, pedidos de comida (js/delivery.js). Só no solo por enquanto.
+  eucomida: {
+    name: 'euComida', app: 'euComida', color: '#e3262e', art: 'moto', bag: true, delivery: true, soloOnly: true,
+    desc: 'Entregador! Busque o pedido no restaurante e leve quentinho. Chove pedido, gorjeta salva o dia. (Só no solo.)',
+    phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
+    fare: 1, offerMul: 0.5, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
+  },
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida'];
 const VEH_KEY = 'bandeira2-veiculo';
 
 const Veh = {
@@ -35,10 +42,11 @@ const Veh = {
   load() {
     try { const k = localStorage.getItem(VEH_KEY); if (VEHICLES[k]) this.key = k; } catch (e) { /* storage bloqueado */ }
   },
-  set(k) {
+  // persist = false troca só nesta partida (ex.: o euComida vira Moto Rebu dentro de uma sala)
+  set(k, persist = true) {
     if (!VEHICLES[k]) return;
     this.key = k;
-    try { localStorage.setItem(VEH_KEY, k); } catch (e) { /* idem */ }
+    if (persist) try { localStorage.setItem(VEH_KEY, k); } catch (e) { /* idem */ }
   },
   get cur() { return VEHICLES[this.key]; },
 

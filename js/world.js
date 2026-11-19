@@ -312,7 +312,7 @@ const World = {
   },
 
   carStolen() {
-    if (Rides.ride) { toast(`${Rides.ride.name} saiu correndo do carro.`, 'bad'); Rides.cancel(true); }
+    if (Rides.ride) { toast(Rides.ride.order ? `Levaram o pedido de ${Rides.ride.name} junto!` : `${Rides.ride.name} saiu correndo do carro.`, 'bad'); Rides.cancel(true); }
     let best = null, bd = Infinity;
     for (const p of city.places) {
       if (p.kind !== 'oficina') continue;

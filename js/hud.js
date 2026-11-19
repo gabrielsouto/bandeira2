@@ -58,7 +58,7 @@ const HUD = {
     e.money.classList.toggle('neg', S.money < 0);
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
-    e.rating.textContent = `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} corridas`;
+    e.rating.textContent = `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} ${Veh.cur.delivery ? 'entrega' : 'corrida'}${S.rides === 1 ? '' : 's'}`;
     e.spd.textContent = Math.round(player.speed * 0.55);
     e.clock.textContent = clockStr();
     const au = `AURA ${Math.round(S.aura || 0)}`;
@@ -83,9 +83,10 @@ const HUD = {
 
   phoneHTML() {
     const c = S.car, st = Rides.state, r = Rides.ride;
-    if (c.health <= 0 && !r) return `<div class="ph-alert">CARRO QUEBRADO</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
+    if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.cur.art === 'moto' ? 'MOTO QUEBRADA' : 'CARRO QUEBRADO'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
     if (c.fuel <= 0 && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
+    if (Veh.cur.delivery) return Delivery.phoneHTML();
     if (st === 'idle') {
       const ns = Rides.nearestSurge(player.x, player.y);
       return `<div class="ph-status"><span class="dot"></span>ONLINE</div><div class="ph-muted">Procurando corridas…</div>` +
@@ -162,6 +163,7 @@ const HUD = {
       g.fillStyle = tg.kind === 'pick' ? '#39ff88' : '#ffd23f'; g.fillRect(x - 3, y - 3, 6, 6);
     }
     World.drawMinimap(g, s);
+    Delivery.drawMinimap(g, s);
     Police.drawMinimap(g, s);
     Multi.drawMinimap(g, s);
     const px = Math.round(player.x * s), py = Math.round(player.y * s);

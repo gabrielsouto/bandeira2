@@ -35,6 +35,15 @@ const MOTO_ART = [
   '...pppp.......',
   '....pp........',
 ];
+// moto do entregador: a bag vermelha (x, y, logo z) cobre a roda de trás
+const MOTO_BAG_ART = [
+  'xxxxx..pp........',
+  'xyyyx.pppp.......',
+  'xyzyxtbbqqbbbbwkh',
+  'xyzyxtbbqqbbbbwkh',
+  'xyyyx.pppp.......',
+  'xxxxx..pp........',
+];
 const ARROW_ART = [
   '...x...',
   '...xx..',
@@ -106,13 +115,14 @@ function artToCanvas(rows, pal) {
   return c;
 }
 
-// art: 'car' (padrão), 'taxi' (luminoso no teto) ou 'moto'
-function makeCarSprites(body, isPlayer, art = 'car') {
-  let rows = art === 'moto' ? MOTO_ART : CAR_ART;
+// art: 'car' (padrão), 'taxi' (luminoso no teto) ou 'moto'; bag = moto de entregador com a caixa térmica
+function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
+  let rows = art === 'moto' ? (bag ? MOTO_BAG_ART : MOTO_ART) : CAR_ART;
   if (art === 'taxi') rows = rows.map((row, y) => (y >= 3 && y <= 6) ? row.slice(0, 7) + 'sss' + row.slice(10) : row);
   if (isPlayer && art !== 'moto') rows = rows.map((row, y) => (y === 4 || y === 5) ? row.slice(0, 10) + 'g' + row.slice(11) : row);
   const pal = { o: shade(body, -0.6), b: body, d: shade(body, -0.22), l: shade(body, 0.2),
-    w: '#24323f', h: '#fff3b0', t: '#7a1c1c', g: '#39ff88', s: '#ff9a1f', k: '#151515', p: '#2c3e66', q: isPlayer ? '#39ff88' : '#e8e8e8' };
+    w: '#24323f', h: '#fff3b0', t: '#7a1c1c', g: '#39ff88', s: '#ff9a1f', k: '#151515', p: bag ? '#3a3a3a' : '#2c3e66', q: isPlayer ? '#39ff88' : '#e8e8e8',
+    x: '#7d0f14', y: '#e3262e', z: '#f4f4f4' };
   const shadowPal = {};
   for (const k in pal) shadowPal[k] = 'rgba(0,0,0,0.35)';
   return {

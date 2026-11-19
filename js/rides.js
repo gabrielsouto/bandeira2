@@ -109,6 +109,7 @@ const Rides = {
   },
 
   makeOffer(px, py) {
+    if (Veh.cur.delivery) return Delivery.makeOffer(px, py); // entregador do euComida: pedidos de comida
     const c = this.city;
     let pick = null, drop = null;
     // às vezes a chamada vem de dentro de uma área de dinâmica (é lá que tem demanda)
@@ -145,13 +146,13 @@ const Rides = {
     if (this.state !== 'offer') return;
     const o = this.offer;
     this.offer = null;
-    this.ride = Object.assign({}, o, {
+    this.ride = Object.assign({}, o, o.order ? Delivery.rideFields(o) : {
       waitT: 0, maxWait: 75 + o.pickD / 16 * 0.8, hits: 0, comfort: 100, t: 0, vomited: false,
       allowed: rideAllowed(o.tripD, o.type), paxX: o.pick.x, paxY: o.pick.y,
     });
     this.state = 'toPickup';
     Sfx.tone(660, 0.08, 'square', 0.05);
-    toast(`Corrida aceita! Vá buscar ${o.name} (seta verde).`);
+    toast(o.order ? `Pedido aceito! Retire em ${o.rest.name} (seta verde).` : `Corrida aceita! Vá buscar ${o.name} (seta verde).`);
   },
 
   decline() {
@@ -162,14 +163,16 @@ const Rides = {
   },
 
   cancel(forced) {
-    const st = this.state;
+    const st = this.state, order = this.ride && this.ride.order;
     if (st === 'toPickup' || st === 'boarding') {
-      if (!forced) { this.chargeFee(CANCEL_FEE); toast('Corrida cancelada. Taxa de R$ 5,00.', 'warn'); }
+      if (!forced) { this.chargeFee(CANCEL_FEE); toast(`${order ? 'Pedido' : 'Corrida'} cancelad${order ? 'o' : 'a'}. Taxa de R$ 5,00.`, 'warn'); }
       this.reset();
     } else if (st === 'onTrip') {
       S.ratings.push(1); if (S.ratings.length > 30) S.ratings.shift();
-      if (!forced) { this.chargeFee(ABANDON_FEE); toast('Você largou o passageiro no meio do caminho! -R$ 15,00 e nota 1.', 'bad'); }
-      else toast(`${this.ride.name} desceu e foi de ônibus. Nota 1.`, 'bad');
+      if (!forced) {
+        this.chargeFee(ABANDON_FEE);
+        toast(order ? 'Você sumiu com o pedido! -R$ 15,00 e nota 1.' : 'Você largou o passageiro no meio do caminho! -R$ 15,00 e nota 1.', 'bad');
+      } else toast(order ? `O pedido de ${this.ride.name} não chegou. Nota 1.` : `${this.ride.name} desceu e foi de ônibus. Nota 1.`, 'bad');
       Sfx.bad();
       this.reset();
     }
@@ -188,6 +191,13 @@ const Rides = {
     if (this.state !== 'onTrip' && this.state !== 'boarding') return;
     if (imp < 45) return;
     const r = this.ride;
+    if (r.order) { // a bag só sofre depois de retirada
+      if (this.state !== 'onTrip') return;
+      r.hits++;
+      if (DTYPES[r.type].slosh) r.comfort -= imp * 0.25;
+      if (this.hitCd <= 0) { toast(R.pick(FOOD_HIT_LINES), 'warn'); this.hitCd = 2.5; }
+      return;
+    }
     r.hits++;
     if (r.type === 'enjoo') r.comfort -= imp * 0.25;
     if (this.hitCd <= 0) { toast(`${r.name}: "${R.pick(HIT_LINES)}"`, 'warn'); this.hitCd = 2.5; }
@@ -200,8 +210,8 @@ const Rides = {
   },
 
   finish(car) {
-    const r = this.ride, v = this.tripReport(r);
-    const stars = rideStars(r.type, v);
+    const r = this.ride, v = r.order ? Delivery.report(r) : this.tripReport(r);
+    const stars = r.order ? deliveryStars(r.type, v) : rideStars(r.type, v);
     const { pay, tip } = ridePay(r.fare, v.late, stars);
     this.applyResult(car, { pay, tip, stars, late: v.late });
     this.startDrop(car);
@@ -213,7 +223,7 @@ const Rides = {
     S.money += pay + tip; S.earned += pay + tip; S.rides++;
     S.ratings.push(stars); if (S.ratings.length > 30) S.ratings.shift();
     this.lastResult = { pay, tip, total: pay + tip, stars, late };
-    toast(`Corrida concluída! +${fmtMoney(pay + tip)} · ${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}`, 'good');
+    toast(`${this.ride && this.ride.order ? 'Entrega' : 'Corrida'} concluída! +${fmtMoney(pay + tip)} · ${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}`, 'good');
     Sfx.cash();
     addFloater(car.x, car.y - 12, '+' + fmtMoney(pay + tip), '#39ff88');
   },
@@ -241,6 +251,7 @@ const Rides = {
   stepTrip(dt, car) {
     const r = this.ride;
     r.t += dt;
+    if (r.order) Delivery.stepTrip(r, dt, car);
     if (r.type === 'enjoo') {
       const slide = Math.abs(car.vR);
       if (slide > 45) r.comfort -= dt * (slide - 45) * 0.9;
@@ -263,6 +274,7 @@ const Rides = {
     this.hitCd -= dt;
     this.stepSurges(dt);
     const r = this.ride;
+    if (r && r.order && r.prep > 0) r.prep -= dt; // a cozinha prepara enquanto você vai até lá
     switch (this.state) {
       case 'idle': {
         if (!this.canWork()) break;
@@ -284,17 +296,19 @@ const Rides = {
       case 'toPickup': {
         r.waitT += dt;
         if (r.waitT > r.maxWait) {
-          toast(`${r.name} cancelou: você demorou demais.`, 'bad');
+          toast(r.order ? `${r.rest.name} passou o pedido para outro entregador: você demorou demais.` : `${r.name} cancelou: você demorou demais.`, 'bad');
           Sfx.bad();
           this.reset();
           break;
         }
         if (Math.hypot(car.x - r.pick.x, car.y - r.pick.y) < 30 && car.speed < 30) {
           this.state = 'boarding'; r.boardT = 0;
+          if (r.order && r.prep > 0 && !r.waitedMsg) { r.waitedMsg = true; toast(`${r.rest.name}: "Tá saindo, só um minutinho!"`); }
         }
         break;
       }
       case 'boarding': {
+        if (r.order) { Delivery.stepPickup.call(this, dt, car); break; }
         if (car.speed > 40) {
           this.state = 'toPickup'; r.paxX = r.pick.x; r.paxY = r.pick.y;
           toast('Calma! O passageiro ainda não entrou.', 'warn');
@@ -324,6 +338,7 @@ const Rides = {
   drawWorld(g, camX, camY) {
     const r = this.ride;
     if (!r) return;
+    if (r.order) { Delivery.drawRide(g, camX, camY, r, this.state); return; }
     const bob = Math.round(Math.sin(time * 5) * 1.5);
     const pulse = 10 + Math.round(Math.sin(time * 6) * 1.5);
     if (this.state === 'toPickup' || this.state === 'boarding') {
