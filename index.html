@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bandeira 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="topleft">
+    <div id="money">R$ 0,00</div>
+    <div id="rating"></div>
+  </div>
+
+  <div id="mapbox" class="panel">
+    <canvas id="minimap"></canvas>
+    <div class="legend"><i class="lg-posto"></i>posto <i class="lg-ofi"></i>oficina <i class="lg-surge"></i>dinâmica</div>
+  </div>
+
+  <div id="dash" class="panel">
+    <div id="speed"><span id="spd">0</span><small>km/h</small></div>
+    <div class="bar"><label>COMBUST.</label><div class="track"><div id="fuelbar" class="fill"></div></div></div>
+    <div class="bar"><label>LATARIA</label><div class="track"><div id="hpbar" class="fill"></div></div></div>
+    <div class="bar"><label>DESGASTE</label><div class="track"><div id="wearbar" class="fill"></div></div></div>
+    <div class="bar" id="tempwrap"><label>TEMP.</label><div class="track"><div id="tempbar" class="fill"></div></div></div>
+    <div id="problems"></div>
+  </div>
+
+  <div id="phone">
+    <div class="appbar"><span>VRUM</span><span id="clock">07:00</span></div>
+    <div id="phonebody"></div>
+  </div>
+
+  <div id="toasts"></div>
+  <div id="help">WASD/setas dirigir · Espaço freio de mão · E aceitar · Q recusar · C cancelar · H buzina · G guincho · M som · Esc pausa</div>
+</div>
+
+<div id="modal" class="hidden"><div id="modalbox" class="panel"></div></div>
+
+<div id="title">
+  <div class="tbox panel">
+    <h1>BANDEIRA 2</h1>
+    <p class="sub">motorista de aplicativo · protótipo</p>
+    <ul>
+      <li>Aceite corridas no celular, busque o passageiro e leve até o destino.</li>
+      <li>Áreas <b class="c-surge">laranjas</b> estão com tarifa dinâmica: corridas de lá pagam mais.</li>
+      <li>Bateu? Perde nota e lataria. O carro também quebra sozinho com o desgaste.</li>
+      <li>Entre devagar no pátio de um <b class="c-posto">posto</b> ou de uma <b class="c-ofi">oficina</b> para abastecer e consertar.</li>
+    </ul>
+    <div class="keys">
+      <span><kbd>WASD</kbd>/<kbd>setas</kbd> dirigir</span>
+      <span><kbd>Espaço</kbd> freio de mão</span>
+      <span><kbd>E</kbd>/<kbd>Q</kbd> aceitar/recusar</span>
+      <span><kbd>H</kbd> buzina</span>
+      <span><kbd>G</kbd> guincho</span>
+      <span><kbd>Esc</kbd> pausa</span>
+    </div>
+    <button id="startbtn">ENTER · COMEÇAR</button>
+  </div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/city.js"></script>
+<script src="js/render-city.js"></script>
+<script src="js/car.js"></script>
+<script src="js/traffic.js"></script>
+<script src="js/peds.js"></script>
+<script src="js/rides.js"></script>
+<script src="js/carcare.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
