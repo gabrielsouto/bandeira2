@@ -70,6 +70,9 @@ Regras que valem para todas as etapas:
   `npm run fumaca` no servidor local, e no navegador: solo (veículos, noite, lava jato, posto batizado, colégio,
   polícia, assalto) e sala local com `server/test/pega-bot.mjs` (pega completo, sprite da moto do rival).
 - Não testado no navegador: o pega valendo dinheiro (só nos testes das regras), e duas pessoas reais na sala.
+  - Atualização: o pega valendo dinheiro foi testado no navegador (sala local, turno de 2 min, contra `pega-bot.mjs`):
+    inscrição de R$ 20 de cada um, pote de R$ 40 para quem chegou primeiro, ranking certo e "livro confere" no log.
+  - Servidor publicado (protocolo 4) e site no ar com a versão nova. Falta só jogar com pessoas reais.
 - A cidade mudou (dois lava jatos novos): o hash da sala mudou e o protocolo foi para 4.
   **Publicar o servidor antes do site**, senão o multiplayer do site recusa a entrada.
 - Polícia, bandidos, colégios e rádio são locais de cada jogador; só o dinheiro passa pela sala.
