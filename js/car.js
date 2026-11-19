@@ -8,51 +8,52 @@ const CARP = {
 };
 
 function makePlayer(x, y, a) {
-  return { x, y, a, vx: 0, vy: 0, steer: 0, speed: 0, vF: 0, vR: 0, throttle: 0, braking: false };
+  return { x, y, a, vx: 0, vy: 0, steer: 0, speed: 0, vF: 0, vR: 0, throttle: 0, braking: false, p: CARP };
 }
 
 // m = modificadores vindos do estado do carro (combustível, pneu furado, grama...)
 function stepPlayer(c, inp, dt, m) {
+  const P = c.p || CARP; // física do veículo escolhido (vehicles.js)
   const steerIn = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
   c.steer += (steerIn - c.steer) * Math.min(1, 14 * dt);
 
   let fx = Math.cos(c.a), fy = Math.sin(c.a);
   let vF = c.vx * fx + c.vy * fy;
   const sp = Math.abs(vF);
-  const sf = clamp(sp / 50, 0, 1) * (1 - 0.4 * clamp(sp / CARP.maxSpeed, 0, 1));
+  const sf = clamp(sp / 50, 0, 1) * (1 - 0.4 * clamp(sp / P.maxSpeed, 0, 1));
   const bias = m.steerBias * clamp(sp / 60, 0, 1);
-  c.a += (c.steer * (inp.hb ? 1.4 : 1) + bias) * CARP.steerRate * sf * (vF >= 0 ? 1 : -1) * dt;
+  c.a += (c.steer * (inp.hb ? 1.4 : 1) + bias) * P.steerRate * sf * (vF >= 0 ? 1 : -1) * dt;
 
   // decompõe a velocidade no novo referencial do carro: o que sobra de lateral vira derrapagem
   fx = Math.cos(c.a); fy = Math.sin(c.a);
   const rx = -fy, ry = fx;
   vF = c.vx * fx + c.vy * fy;
   let vR = c.vx * rx + c.vy * ry;
-  const maxS = CARP.maxSpeed * m.speedMul;
+  const maxS = P.maxSpeed * m.speedMul;
 
   c.throttle = 0; c.braking = false;
   if (inp.up) {
-    if (vF < -5) { vF += CARP.brake * m.brakeMul * dt; c.braking = true; }
+    if (vF < -5) { vF += P.brake * m.brakeMul * dt; c.braking = true; }
     else if (m.power > 0) {
       const k = 1 - Math.pow(clamp(vF / maxS, 0, 1), 2);
-      vF += CARP.accel * m.power * m.accelMul * k * dt;
+      vF += P.accel * m.power * m.accelMul * k * dt;
       c.throttle = m.power;
     }
   }
   if (inp.down) {
-    if (vF > 5) { vF -= CARP.brake * m.brakeMul * dt; c.braking = true; if (vF < 0) vF = 0; }
+    if (vF > 5) { vF -= P.brake * m.brakeMul * dt; c.braking = true; if (vF < 0) vF = 0; }
     else if (m.power > 0) {
-      vF -= CARP.accel * 0.7 * m.power * dt;
-      if (vF < -CARP.reverseMax) vF = -CARP.reverseMax;
+      vF -= P.accel * 0.7 * m.power * dt;
+      if (vF < -P.reverseMax) vF = -P.reverseMax;
       c.throttle = m.power * 0.6;
     }
   }
-  if (!inp.up && !inp.down) vF -= Math.sign(vF) * Math.min(Math.abs(vF), CARP.coast * dt);
-  vF -= vF * CARP.drag * m.dragMul * dt;
+  if (!inp.up && !inp.down) vF -= Math.sign(vF) * Math.min(Math.abs(vF), P.coast * dt);
+  vF -= vF * P.drag * m.dragMul * dt;
   if (vF > maxS) vF += (maxS - vF) * Math.min(1, 1.5 * dt);
   if (inp.hb) { vF -= Math.sign(vF) * Math.min(Math.abs(vF), 110 * dt); c.braking = true; }
 
-  const grip = inp.hb ? CARP.hbGrip : CARP.grip * m.gripMul;
+  const grip = inp.hb ? P.hbGrip : P.grip * m.gripMul;
   vR *= Math.exp(-grip * dt);
 
   c.vx = fx * vF + rx * vR;
@@ -68,9 +69,9 @@ function stepPlayer(c, inp, dt, m) {
 function collidePlayer(c, city, npcs) {
   let impact = 0;
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
-  const rad = CARP.r;
+  const P = c.p || CARP, rad = P.r;
 
-  for (const off of [CARP.off, -CARP.off]) {
+  for (const off of [P.off, -P.off]) {
     for (let iter = 0; iter < 2; iter++) {
       let cx = c.x + fx * off, cy = c.y + fy * off;
       const tx0 = Math.floor((cx - rad) / 16), tx1 = Math.floor((cx + rad) / 16);
@@ -110,12 +111,13 @@ function collidePlayer(c, city, npcs) {
 function collideCars(c, list, push, bounce) {
   let impact = 0;
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
+  const P = c.p || CARP, rr = P.r + 5; // os outros carros têm raio 5 (moto de rival conta como carro)
   for (const n of list) {
     if (Math.abs(n.x - c.x) > 30 || Math.abs(n.y - c.y) > 30) continue;
     const nfx = Math.cos(n.a), nfy = Math.sin(n.a);
-    for (const po of [5, -5]) for (const no of [5, -5]) {
+    for (const po of [P.off, -P.off]) for (const no of [5, -5]) {
       const ax = c.x + fx * po, ay = c.y + fy * po, bx = n.x + nfx * no, by = n.y + nfy * no;
-      const dx = ax - bx, dy = ay - by, d2 = dx * dx + dy * dy, rr = 10;
+      const dx = ax - bx, dy = ay - by, d2 = dx * dx + dy * dy;
       if (d2 >= rr * rr || d2 < 1e-6) continue;
       const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, pen = rr - d;
       c.x += nx * pen; c.y += ny * pen;

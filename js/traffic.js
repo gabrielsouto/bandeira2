@@ -18,19 +18,25 @@ class Traffic {
       const i = R.i(0, c.NX - 1), j = R.i(0, c.NY - 1);
       const ex = c.exits(i, j);
       if (!ex.length) continue;
-      const d = R.pick(ex);
-      const a = c.exitPoint(i, j, d);
-      const ni = i + DIRS[d].dx, nj = j + DIRS[d].dy;
-      const b = c.entryPoint(ni, nj, d);
-      const t = R.f(0.1, 0.9);
-      const x = lerp(a.x, b.x, t), y = lerp(a.y, b.y, t);
-      if (this.cars.some((o) => Math.hypot(o.x - x, o.y - y) < 36)) continue;
-      const ang = Math.atan2(DIRS[d].dy, DIRS[d].dx);
-      this.cars.push({ x, y, a: ang, ma: ang, speed: 0, cruise: R.f(55, 85),
-        wps: [{ x: b.x, y: b.y, turn: false }], ti: ni, tj: nj, dir: d,
-        ci: R.i(0, NPC_COLORS.length - 1), stuck: 0, ghost: 0, honkT: 0, hitT: 0 });
-      return;
+      if (this.spawnAt(i, j, R.pick(ex), R.f(0.1, 0.9))) return;
     }
+  }
+
+  // põe um carro no trecho que sai do cruzamento (i,j) na direção d, na fração t do caminho
+  spawnAt(i, j, d, t) {
+    const c = this.city;
+    if (!c.exits(i, j).includes(d)) return null;
+    const a = c.exitPoint(i, j, d);
+    const ni = i + DIRS[d].dx, nj = j + DIRS[d].dy;
+    const b = c.entryPoint(ni, nj, d);
+    const x = lerp(a.x, b.x, t), y = lerp(a.y, b.y, t);
+    if (this.cars.some((o) => Math.hypot(o.x - x, o.y - y) < 20)) return null;
+    const ang = Math.atan2(DIRS[d].dy, DIRS[d].dx);
+    const car = { x, y, a: ang, ma: ang, speed: 0, cruise: R.f(55, 85),
+      wps: [{ x: b.x, y: b.y, turn: false }], ti: ni, tj: nj, dir: d,
+      ci: R.i(0, NPC_COLORS.length - 1), stuck: 0, ghost: 0, honkT: 0, hitT: 0 };
+    this.cars.push(car);
+    return car;
   }
 
   // chegou na entrada do cruzamento (ti,tj): escolhe a saída e gera a curva
@@ -56,6 +62,8 @@ class Traffic {
   }
 
   update(dt, pl) {
+    // carros extras (fila do colégio) somem quando ninguém está vendo
+    this.cars = this.cars.filter((o) => !o.leave || Math.hypot(o.x - pl.x, o.y - pl.y) < 320);
     const cars = this.cars;
     for (const car of cars) {
       car.hitT -= dt; car.ghost -= dt; car.honkT -= dt;
@@ -74,7 +82,8 @@ class Traffic {
       if (car.hitT > 0) blocked = true;
 
       const wp = car.wps[0];
-      const target = blocked ? 0 : (wp && wp.turn ? 36 : car.cruise);
+      const cap = this.capFn ? this.capFn(car.x, car.y) : Infinity; // engarrafamento (colégios)
+      const target = blocked ? 0 : Math.min(cap, wp && wp.turn ? 36 : car.cruise);
       if (car.speed < target) car.speed = Math.min(target, car.speed + 60 * dt);
       else car.speed = Math.max(target, car.speed - 240 * dt);
 

@@ -45,7 +45,7 @@ const RidesNet = {
         // parou ao lado: pede o passageiro à sala (uma vez; de novo só se a conexão caiu)
         if (!r.confirmed && !r.requested) {
           r.requested = true;
-          Net.send({ t: 'embarcar', chamada: r.id, x: car.x, y: car.y });
+          Net.send({ t: 'embarcar', chamada: r.id, x: car.x, y: car.y, veiculo: Veh.key });
         }
         r.boardT += dt;
         const k = Math.min(1, r.boardT / 0.9);
@@ -78,7 +78,9 @@ const RidesNet = {
     if (!this.canWork()) { toast('Com o carro assim não dá pra pegar corrida.', 'warn'); return; }
     const c = RidesNet.selected();
     if (!c) return;
-    this.ride = Object.assign({}, c, {
+    if (c.type === 'exec' && Veh.cur.noExec) { toast('Executivo não anda de moto. Escolha outra chamada (Q).', 'warn'); return; }
+    if (Pega.mine() && Pega.p.fase !== 'inscricao') { toast('Termina o pega primeiro!', 'warn'); return; }
+    this.ride = Object.assign({}, c, { fare: RidesNet.fareFor(c),
       hits: 0, comfort: 100, t: 0, vomited: false, allowed: rideAllowed(c.tripD, c.type),
       paxX: c.pick.x, paxY: c.pick.y, requested: false, confirmed: false, paid: false,
     });
@@ -131,9 +133,13 @@ const RidesNet = {
       drawPedSprite(g, sx, sy, c.shirt, c.hair, time * 4, true);
     }
     RidesNet.solo.drawWorld.call(this, g, camX, camY);
+    Pega.drawWorld(g, camX, camY);
   },
 
   // ---------- lista de chamadas ----------
+  // valor para o seu veículo (a sala paga com o mesmo multiplicador)
+  fareFor(c) { return Math.round(c.fare * Veh.cur.fare * 100) / 100; },
+
   sorted() {
     return [...this.calls].sort((a, b) => Math.hypot(a.pick.x - player.x, a.pick.y - player.y) - Math.hypot(b.pick.x - player.x, b.pick.y - player.y));
   },
@@ -180,7 +186,8 @@ const RidesNet = {
     }
     if (!r || r.id !== m.id) return;
     if (m.acao === 'embarcar' && !r.confirmed) {
-      const why = { sumiu: 'Outro motorista chegou antes.', longe: 'Encoste mais perto do passageiro.' }[m.motivo] || 'A sala recusou o embarque.';
+      const why = { sumiu: 'Outro motorista chegou antes.', longe: 'Encoste mais perto do passageiro.', veiculo: 'Executivo não anda de moto.',
+        pega: 'Termina o pega primeiro!' }[m.motivo] || 'A sala recusou o embarque.';
       toast(why, 'warn');
       Rides.reset();
     } else if (m.acao === 'entregar' && (m.motivo === 'longe' || m.motivo === 'rapido')) {
@@ -232,7 +239,7 @@ const RidesNet = {
     if (st === 'idle') {
       const list = this.sorted().slice(0, 4), sel = this.selected();
       const rows = list.map((c) => `<div class="ph-call${sel && c.id === sel.id ? ' sel' : ''}">` +
-        `<span>${esc(c.name)}</span><b>${fmtMoney(c.fare)}</b><small>${kmStr(Math.hypot(c.pick.x - player.x, c.pick.y - player.y))}` +
+        `<span>${esc(c.name)}</span><b>${c.type === 'exec' && Veh.cur.noExec ? 'só carro' : fmtMoney(this.fareFor(c))}</b><small>${kmStr(Math.hypot(c.pick.x - player.x, c.pick.y - player.y))}` +
         `${c.surge > 1 ? ' · ' + multStr(c.surge) : ''}</small></div>`).join('');
       return `<div class="ph-title">CHAMADAS NA CIDADE (${this.calls.length})</div>` +
         (rows || '<div class="ph-muted">Nenhuma chamada agora…</div>') +

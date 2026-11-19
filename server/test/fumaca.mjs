@@ -10,7 +10,7 @@ const { generateCity, cityHash } = require('../../js/city.js');
 
 const BASE = process.argv[2] || 'ws://localhost:8787';
 const LOCAL = /^ws:\/\/(localhost|127\.0\.0\.1)/.test(BASE);
-const PROTO = 3;
+const PROTO = 4;
 const codigo = () => 'T' + Math.random().toString(36).slice(2, 5).toUpperCase().replace(/[^A-Z0-9]/g, 'X').replace(/[OI01]/g, 'X');
 const SALA = codigo();
 const HASH = cityHash(generateCity(20261118)); // a mesma cidade do jogo

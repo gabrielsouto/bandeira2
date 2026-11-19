@@ -3,7 +3,7 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, earned: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, earned: 0, aura: 0,
     car: { fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
@@ -23,7 +23,7 @@ const city = generateCity(S.seed);
 const mapCanvas = prerenderCity(city);
 const mapCtx = mapCanvas.getContext('2d');
 const minimapBase = prerenderMinimap(city);
-const SPR = { player: makeCarSprites('#efede4', true), npc: NPC_COLORS.map((c) => makeCarSprites(c, false)) };
+const SPR = { player: null, npc: NPC_COLORS.map((c) => makeCarSprites(c, false)) };
 
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const view = { w: 480, h: 270, scale: 4 };
@@ -40,6 +40,14 @@ window.addEventListener('resize', resize);
 resize();
 
 const player = makePlayer(0, 0, 0);
+// veículo escolhido na tela inicial: sprite, física e nome do app no celular
+function applyVehicle() {
+  const v = Veh.cur;
+  SPR.player = makeCarSprites(v.color, true, v.art);
+  player.p = Veh.phys();
+  $('appname').textContent = v.app;
+}
+applyVehicle();
 let lastPlace = null;
 function placeCarAt(p) {
   player.x = p.cx; player.y = p.cy;
@@ -55,10 +63,15 @@ const traffic = new Traffic(city, 46);
 traffic.onHonk = () => Sfx.horn(0.035);
 const peds = new Peds(city, 70);
 Rides.init(city);
+Light.init(city);
+World.init(city, mapCtx);
+traffic.capFn = (x, y) => World.trafficCap(x, y);
 HUD.init();
 Multi.initTitle();
 const particles = [], floaters = [];
-let mode = 'title', time = 0, saveT = 5, gameMin = 7 * 60, prevWheels = null;
+// ?hora=22 começa o solo nessa hora (para testar a noite)
+const START_HOUR = clamp(+new URLSearchParams(location.search).get('hora') || 7, 0, 23.99);
+let mode = 'title', time = 0, saveT = 5, gameMin = START_HOUR * 60, prevWheels = null;
 
 function clockStr() {
   return String(Math.floor(gameMin / 60) % 24).padStart(2, '0') + ':' + String(Math.floor(gameMin) % 60).padStart(2, '0');
@@ -88,6 +101,8 @@ window.addEventListener('blur', clearInput);
 function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
+    const d = code.match(/^(Digit|Numpad)([1-4])$/);
+    if (d) { pickVehicle(VEH_ORDER[+d[2] - 1]); return; }
     if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
     return;
   }
@@ -103,7 +118,9 @@ function onKey(code) {
     case 'KeyC': Rides.cancel(); break;
     case 'KeyH': Sfx.horn(0.09); peds.scare(player.x, player.y); break;
     case 'KeyG': callTow(); break;
-    case 'KeyM': Sfx.setMuted(!Sfx.muted); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
+    case 'KeyM': Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
+    case 'KeyR': Radio.next(); break;
+    case 'KeyX': Pega.key(); break;
     case 'Escape': case 'KeyP': openPause(); break;
   }
 }
@@ -118,6 +135,27 @@ function startGame() {
   setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
 }
 $('startbtn').addEventListener('click', startGame);
+
+// ---------- escolha do veículo (tela inicial) ----------
+function pickVehicle(k) {
+  Veh.set(k);
+  applyVehicle();
+  for (const b of document.querySelectorAll('#vehbtns button')) b.classList.toggle('sel', b.dataset.veh === Veh.key);
+  $('vehdesc').textContent = Veh.cur.desc;
+}
+(function buildVehiclePicker() {
+  const box = $('vehbtns');
+  VEH_ORDER.forEach((k, i) => {
+    const v = VEHICLES[k], b = document.createElement('button');
+    b.className = 'ghost'; b.dataset.veh = k;
+    const spr = makeCarSprites(v.color, true, v.art), [cv, g] = makeCanvas(40, 24);
+    g.drawImage(spr.img, Math.round(20 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
+    b.append(cv, document.createTextNode(`${i + 1} · ${v.name}`));
+    b.addEventListener('click', () => { pickVehicle(k); b.blur(); });
+    box.appendChild(b);
+  });
+  pickVehicle(Veh.key);
+})();
 window.addEventListener('beforeunload', writeSave);
 
 // ---------- menus (oficina, posto, pausa) ----------
@@ -135,6 +173,7 @@ function showModal(title, sub, items, closeLabel) {
     `<button class="mbtn ghost" data-close="1"><span><kbd>Esc</kbd> ${closeLabel || 'Sair'}</span></button>`;
   modal.classList.remove('hidden');
   mode = 'menu';
+  Police.sirenVol(0);
   Sfx.engine(0, 0, false); Sfx.screech(0);
   clearInput();
 }
@@ -163,7 +202,7 @@ function shopItem(label, cost, fn, reopen, kinds) {
 function garageMenu(place) {
   const c = S.car, items = [], reopen = () => garageMenu(place);
   if (c.health < 99.5) items.push(shopItem(`Funilaria (lataria em ${Math.round(c.health)}%)`, Math.ceil((100 - c.health) * 2.2), () => { c.health = 100; }, reopen, ['funilaria']));
-  for (const k in PROBLEMS) if (c.problems[k]) items.push(shopItem(PROBLEMS[k].fix, PROBLEMS[k].cost, () => {
+  for (const k in PROBLEMS) if (c.problems[k] && k !== 'dirty') items.push(shopItem(PROBLEMS[k].fix, PROBLEMS[k].cost, () => {
     c.problems[k] = false;
     if (k === 'overheat') { Care.overheated = false; c.temp = 50; }
   }, reopen, [k]));
@@ -178,23 +217,37 @@ function garageMenu(place) {
 
 function postoMenu(place) {
   const c = S.car, items = [], reopen = () => postoMenu(place);
-  const missing = 100 - c.fuel;
+  // tanque de moto é menor; o posto preço baixo é mais barato... e batiza a gasolina
+  const missing = 100 - c.fuel, price = FUEL_PRICE * Veh.cur.tankMul * (place.cheap ? CHEAP_FUEL : 1), bad = !!place.cheap;
   if (missing > 1) {
-    const full = Math.ceil(missing * FUEL_PRICE * 100) / 100;
-    items.push(shopItem('Completar o tanque', full, () => { c.fuel = 100; }, reopen, ['tanque']));
-    if (full > FUEL_SMALL) items.push(shopItem('Colocar R$ 20 de gasolina', FUEL_SMALL, () => { c.fuel = Math.min(100, c.fuel + FUEL_SMALL / FUEL_PRICE); }, reopen, ['gasolina']));
+    const full = Math.ceil(missing * price * 100) / 100;
+    items.push(shopItem('Completar o tanque', full, () => Care.refuel(missing, bad), reopen, ['tanque']));
+    if (full > FUEL_SMALL) items.push(shopItem('Colocar R$ 20 de gasolina', FUEL_SMALL, () => Care.refuel(FUEL_SMALL / price, bad), reopen, ['gasolina']));
   }
   items.push(shopItem('Café + pão de queijo', COFFEE_PRICE, () => toast('Delícia. Bora trabalhar!', 'good'), reopen, ['cafe']));
-  showModal(`POSTO · ${place.name}`, `Gasolina: ${fmtMoney(FUEL_PRICE)} por % do tanque · Tanque: ${Math.round(c.fuel)}%`, items);
+  const sub = `Gasolina: ${fmtMoney(price)} por % do tanque · Tanque: ${Math.round(c.fuel)}%` +
+    (place.cheap ? '<br><small>"Gasolina aditivada, patrão, pode confiar." (Ela rende menos, o motor engasga e gasta mais.)</small>'
+      : (c.bad || 0) > 0.05 ? `<br><small>Seu tanque tem ${Math.round(c.bad * 100)}% de gasolina batizada. Completar aqui dilui.</small>` : '');
+  showModal(`POSTO · ${place.name}`, sub, items);
 }
 
+const LAVA_LINES = ['"Vai querer o pretinho no pneu?"', '"Areia de novo? Esse pessoal da praia..."', '"Deixa comigo que sai brilhando!"'];
+
+function lavaMenu(place) {
+  const c = S.car, items = [], reopen = () => lavaMenu(place);
+  if (c.problems.dirty) items.push(shopItem(PROBLEMS.dirty.fix, PROBLEMS.dirty.cost, () => { c.problems.dirty = false; toast('Carro limpinho e cheiroso!', 'good'); }, reopen, ['dirty']));
+  const sub = items.length ? R.pick(LAVA_LINES) : (Veh.cur.art === 'moto' ? 'Moto não junta areia por dentro. Tá liberado!' : 'Seu carro está limpinho! Nada pra lavar.');
+  showModal(`LAVA JATO · ${place.name}`, sub, items);
+}
+
+const PLACE_CLOSED = { oficina: 'A oficina', posto: 'O posto', lavajato: 'O lava jato' };
 function openPlaceMenu(pl) {
   if (GAME.mode === 'multi' && !Multi.moneyLive()) {
-    toast(pl.kind === 'oficina' ? 'A oficina só abre durante o turno.' : 'O posto só abre durante o turno.');
+    toast(`${PLACE_CLOSED[pl.kind]} só abre durante o turno.`);
     return;
   }
   player.vx = player.vy = 0; player.speed = 0;
-  if (pl.kind === 'oficina') garageMenu(pl); else postoMenu(pl);
+  if (pl.kind === 'oficina') garageMenu(pl); else if (pl.kind === 'lavajato') lavaMenu(pl); else postoMenu(pl);
 }
 
 function openPause(confirmReset) {
@@ -243,6 +296,15 @@ function callTow() {
 }
 
 // ---------- simulação ----------
+// atropelou alguém (pedestre ou criança na frente do colégio): multa e polícia
+function onPedHit(who) {
+  Care.charge(RUN_OVER_FINE, 'multa');
+  toast(`Você atropelou ${who === 'criança' ? 'uma criança' : 'um pedestre'}! Multa de ${fmtMoney(RUN_OVER_FINE)}.`, 'bad');
+  Sfx.bad(); Rides.onImpact(80);
+  player.vx *= 0.85; player.vy *= 0.85;
+  Police.alert('atropelamento');
+}
+
 function update(dt) {
   time += dt; gameMin += dt;
   const surface = city.tileAtPx(player.x, player.y);
@@ -250,7 +312,9 @@ function update(dt) {
   const px = player.x, py = player.y;
   stepPlayer(player, Multi.frozen() ? NO_INPUT : input, dt, m); // na contagem 3-2-1 o carro espera
   // batida em outro jogador conta metade (ninguém controla o carro do outro)
-  const imp = Math.max(collidePlayer(player, city, traffic.cars), Multi.collide(player) * 0.5);
+  // viaturas e rivais empurram antes, para a colisão com o cenário ter a palavra final (nada de ser empurrado para dentro da água)
+  const pushed = Math.max(Multi.collide(player) * 0.5, Police.collide(player));
+  const imp = Math.max(collidePlayer(player, city, traffic.cars), pushed);
   if (imp > 35) {
     Care.onImpact(imp); Rides.onImpact(imp);
     Sfx.crash(clamp(imp / 220, 0.15, 1));
@@ -263,12 +327,9 @@ function update(dt) {
   Care.update(dt, player, moved);
   traffic.update(dt, player);
   const hits = peds.update(dt, player);
-  for (let k = 0; k < hits; k++) {
-    Care.charge(RUN_OVER_FINE, 'multa');
-    toast(`Você atropelou um pedestre! Multa de ${fmtMoney(RUN_OVER_FINE)}.`, 'bad');
-    Sfx.bad(); Rides.onImpact(80);
-    player.vx *= 0.85; player.vy *= 0.85;
-  }
+  for (let k = 0; k < hits; k++) onPedHit('pedestre');
+  World.update(dt, player);
+  Police.update(dt, player);
   Rides.update(dt, player);
 
   // marcas de pneu (ficam pintadas no mapa)
@@ -317,8 +378,9 @@ function update(dt) {
 function drawCar(spr, x, y, a, braking) {
   const sx = Math.round(x - camX), sy = Math.round(y - camY);
   if (sx < -20 || sy < -20 || sx > view.w + 20 || sy > view.h + 20) return;
-  ctx.save(); ctx.translate(sx + 1, sy + 2); ctx.rotate(a); ctx.drawImage(spr.shadow, -9, -5); ctx.restore();
-  ctx.save(); ctx.translate(sx, sy); ctx.rotate(a); ctx.drawImage(braking ? spr.brake : spr.img, -9, -5); ctx.restore();
+  const hw = spr.img.width >> 1, hh = spr.img.height >> 1;
+  ctx.save(); ctx.translate(sx + 1, sy + 2); ctx.rotate(a); ctx.drawImage(spr.shadow, -hw, -hh); ctx.restore();
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(a); ctx.drawImage(braking ? spr.brake : spr.img, -hw, -hh); ctx.restore();
 }
 
 function render() {
@@ -353,13 +415,15 @@ function render() {
   for (const p of city.places) {
     const sx = Math.round(p.cx - camX), sy = Math.round(p.cy - camY + Math.sin(time * 3 + p.cx) * 2);
     if (sx < -20 || sy < -20 || sx > vw + 20 || sy > vh + 20) continue;
-    const ic = p.kind === 'posto' ? ICONS.fuel : ICONS.wrench;
+    const ic = p.kind === 'posto' ? ICONS.fuel : p.kind === 'lavajato' ? ICONS.drop : ICONS.wrench;
     ctx.drawImage(ic, sx - ic.width, sy - ic.height - 4, ic.width * 2, ic.height * 2);
   }
 
+  World.draw(ctx, camX, camY, vw, vh);
   peds.draw(ctx, camX, camY, vw, vh);
   Rides.drawWorld(ctx, camX, camY);
   for (const n of traffic.cars) drawCar(SPR.npc[n.ci], n.x, n.y, n.a, n.speed < 5);
+  Police.draw();
   Multi.drawCars();
   if (Multi.ghostT > 0) ctx.globalAlpha = Math.floor(time * 8) % 2 ? 0.35 : 0.7; // pisca enquanto é fantasma
   drawCar(SPR.player, player.x, player.y, player.a, player.braking);
@@ -372,16 +436,25 @@ function render() {
     ctx.fillRect(Math.round(p.x - camX - s / 2), Math.round(p.y - camY - s / 2), s, s);
   }
   ctx.globalAlpha = 1;
+
+  // noite: escurece tudo e recorta faróis e postes
+  const moto = Veh.cur.art === 'moto';
+  const lit = [{ x: player.x, y: player.y, a: player.a, front: moto ? 6 : 8, len: 95, spread: moto ? 0.32 : 0.42 }];
+  for (const n of traffic.cars) lit.push({ x: n.x, y: n.y, a: n.a, front: 8, len: 50, k: 0.7 });
+  Multi.lightCars(lit);
+  Police.lightCars(lit);
+  Light.render(ctx, vw, vh, camX, camY, lit, (L) => World.drawLights(L, camX, camY));
+  Police.drawGlow();
   Multi.drawTags();
 
   // seta orbitando o carro apontando o objetivo
-  const tg = Rides.target();
+  const tg = (GAME.mode === 'multi' && Pega.target()) || Rides.target();
   if (tg && mode !== 'title') {
     const d = Math.hypot(tg.x - player.x, tg.y - player.y);
     if (d > 40) {
       const ang = Math.atan2(tg.y - player.y, tg.x - player.x);
       const ax = Math.round(player.x + Math.cos(ang) * 22 - camX), ay = Math.round(player.y + Math.sin(ang) * 22 - camY);
-      const ic = tg.kind === 'pick' ? ICONS.arrowGo : ICONS.arrowDrop;
+      const ic = tg.kind === 'pick' ? ICONS.arrowGo : tg.kind === 'pega' ? ICONS.arrowPega : ICONS.arrowDrop;
       ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang); ctx.drawImage(ic, -4, -4); ctx.restore();
     }
   }

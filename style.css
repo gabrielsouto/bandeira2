@@ -31,7 +31,7 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 #minimap { width: 200px; height: 200px; image-rendering: pixelated; display: block; }
 .legend { font-size: 15px; color: var(--muted); padding: 3px 2px 0; display: flex; align-items: center; gap: 4px; }
 .legend i { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; margin-left: 4px; }
-.lg-posto { background: #e74c3c; } .lg-ofi { background: #f1c40f; } .lg-surge { background: var(--surge); }
+.lg-posto { background: #e74c3c; } .lg-ofi { background: #f1c40f; } .lg-lava { background: #3fb6ff; } .lg-risk { background: #ff4d4d; } .lg-surge { background: var(--surge); }
 
 /* painel do carro */
 #dash { position: fixed; left: 16px; bottom: 40px; width: 260px; padding: 10px 12px; }
@@ -64,7 +64,7 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 .ph-row { font-size: 20px; }
 .star { color: var(--gold); }
 .ph-type { display: inline-block; font-size: 17px; padding: 0 5px; background: #222a38; color: #cfd6e4; }
-.t-pressa { background: #4a2a10; color: #ffb36b; } .t-enjoo { background: #183a28; color: #8ef0b0; } .t-exec { background: #2a2346; color: #c6b8ff; }
+.t-pressa { background: #4a2a10; color: #ffb36b; } .t-enjoo { background: #183a28; color: #8ef0b0; } .t-exec { background: #2a2346; color: #c6b8ff; } .t-praia { background: #4a4214; color: #ffe58a; }
 .ph-timer { height: 6px; background: #000; border: 1px solid #333; margin: 8px 0; }
 .ph-timer > div { height: 100%; width: 100%; background: var(--warn); }
 .ph-comfort { height: 8px; background: #000; border: 1px solid #333; }
@@ -179,3 +179,17 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 .rank-wait { margin-top: 6px; font-size: 18px; }
 #modalbox:has(table.rank) { width: min(640px, 92vw); }
 .m-sub:has(table.rank) { overflow-x: auto; }
+
+/* tela inicial: escolha do veículo */
+#vehpick { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+#vehbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+#vehbtns button { display: flex; align-items: center; gap: 6px; font-size: 19px; padding: 2px 8px; }
+#vehbtns button canvas { width: 40px; height: 24px; image-rendering: pixelated; }
+#vehbtns button.sel { background: #0f1d16; box-shadow: 0 0 0 2px var(--accent); color: var(--accent); }
+#vehdesc { color: var(--muted); font-size: 19px; min-height: 1.2em; }
+.ph-badge.b2 { background: var(--gold); margin-left: 4px; }
+#radio { color: #9fd3ff; font-size: 17px; margin-top: 6px; min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#radio:empty { display: none; }
+#aura { font-size: 20px; margin-top: 2px; color: #c77dff; text-shadow: 2px 2px 0 #000; }
+#netinfo .ni-pega { color: #ff4fd8; }
+.c-lava { color: #3fb6ff; } .c-risk { color: #ff6b6b; }

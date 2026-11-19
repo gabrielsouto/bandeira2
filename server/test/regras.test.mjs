@@ -374,3 +374,75 @@ test('visão de quem entra traz fase, chamadas, dinâmicas e placar', () => {
   assert.equal(v.placar.ana.saldo, REGRAS.SALDO_INICIAL);
   assert.ok(v.chamadas.every((c) => c.expires > 0 && c.expires <= REGRAS.CHAMADA_VIDA * 1.25));
 });
+
+// ---------- veículos, cobranças novas e pega ----------
+test('moto paga 40% menos e não leva executivo; táxi paga mais', () => {
+  const { e, rnd } = sala(3);
+  const c = e.chamadas.find((x) => x.type !== 'exec');
+  mensagem(e, 'ana', { t: 'embarcar', chamada: c.id, ...c.pick, veiculo: 'moto' }, T + 1, rnd, null);
+  assert.equal(e.jogadores.ana.corrida.fare, Math.round(c.fare * 0.6 * 100) / 100);
+  const c2 = e.chamadas.find((x) => x.id !== c.id);
+  mensagem(e, 'leo', { t: 'embarcar', chamada: c2.id, ...c2.pick, veiculo: 'taxi' }, T + 1, rnd, null);
+  assert.equal(e.jogadores.leo.corrida.fare, Math.round(c2.fare * 1.15 * 100) / 100);
+  e.chamadas.push({ ...c2, id: 999, type: 'exec', morre: T + 99 });
+  e.jogadores.ana.corrida = null;
+  const ev = mensagem(e, 'ana', { t: 'embarcar', chamada: 999, ...c2.pick, veiculo: 'moto' }, T + 2, rnd, null);
+  assert.equal(recusa(ev), 'veiculo');
+});
+
+test('assalto, franquia, radar e polícia cobram mesmo no fiado, até o teto', () => {
+  const { e, rnd } = sala(4);
+  e.jogadores.ana.saldo = -190;
+  e.livro.push({ j: 'ana', tipo: 'ajuste', valor: -340 });
+  for (const [k, v] of [['assalto', 50], ['franquia', 100], ['radar', 60], ['policia', 150]]) {
+    assert.equal(msgs(gasta(e, 'ana', [k], v, T + 1, rnd), 'gasto').length, 1, k);
+  }
+  assert.equal(recusa(gasta(e, 'ana', ['assalto'], 999, T + 1, rnd)), 'teto');
+  confere(e);
+});
+
+const pega = (e, id, acao, p, agora, rnd) => mensagem(e, id, { t: 'pega', acao, x: p.x, y: p.y }, agora, rnd, null);
+
+test('pega: inscrição, aposta, ordem de chegada e prêmio no livro', () => {
+  const { e, rnd } = sala(5);
+  const L = { x: CIDADE.curbs[0].x, y: CIDADE.curbs[0].y };
+  assert.equal(msgs(pega(e, 'ana', 'criar', L, T + 1, rnd), 'pega')[0].pega.fase, 'inscricao');
+  assert.equal(recusa(pega(e, 'leo', 'criar', L, T + 1, rnd)), 'ocupado');
+  assert.equal(recusa(pega(e, 'leo', 'entrar', { x: L.x + 300, y: L.y }, T + 2, rnd)), 'longe');
+  pega(e, 'leo', 'entrar', L, T + 2, rnd);
+  assert.deepEqual(e.pega.inscritos, ['ana', 'leo']);
+  const t0 = T + 1 + REGRAS.PEGA_INSCRICAO;
+  tick(e, t0, rnd);
+  assert.equal(e.pega.fase, 'contagem');
+  assert.equal(e.jogadores.ana.saldo, REGRAS.SALDO_INICIAL - REGRAS.PEGA_APOSTA);
+  tick(e, t0 + REGRAS.PEGA_CONTAGEM + 0.3, rnd);
+  assert.equal(e.pega.fase, 'correndo');
+  const C = e.pega.chegada, ini = e.pega.inicio;
+  assert.equal(recusa(pega(e, 'leo', 'chegar', C, ini + 0.5, rnd)), 'rapido');
+  pega(e, 'leo', 'chegar', C, ini + 30, rnd);
+  const ev = pega(e, 'ana', 'chegar', C, ini + 31, rnd);
+  const fim = msgs(ev, 'pegaFim')[0];
+  assert.deepEqual(fim.ordem, ['leo', 'ana']);
+  assert.equal(e.pega, null);
+  assert.equal(e.jogadores.leo.saldo, REGRAS.SALDO_INICIAL + REGRAS.PEGA_APOSTA);
+  assert.equal(e.jogadores.leo.ganho, REGRAS.PEGA_APOSTA * 2);
+  confere(e);
+});
+
+test('pega: sozinho não corre; ninguém chegando devolve a aposta', () => {
+  const { e, rnd } = sala(6);
+  const L = { x: CIDADE.curbs[0].x, y: CIDADE.curbs[0].y };
+  pega(e, 'ana', 'criar', L, T + 1, rnd);
+  const ev = tick(e, T + 1 + REGRAS.PEGA_INSCRICAO, rnd);
+  assert.equal(msgs(ev, 'pegaFim')[0].motivo, 'poucos');
+  assert.equal(e.pega, null);
+  pega(e, 'ana', 'criar', L, T + 30, rnd);
+  pega(e, 'leo', 'entrar', L, T + 31, rnd);
+  tick(e, T + 30 + REGRAS.PEGA_INSCRICAO, rnd);
+  tick(e, T + 30 + REGRAS.PEGA_INSCRICAO + REGRAS.PEGA_CONTAGEM, rnd);
+  tick(e, T + 30 + REGRAS.PEGA_INSCRICAO + REGRAS.PEGA_CONTAGEM + REGRAS.PEGA_MAX + 1, rnd);
+  assert.equal(e.pega, null);
+  assert.equal(e.jogadores.ana.saldo, REGRAS.SALDO_INICIAL);
+  assert.equal(e.jogadores.ana.gasto, 0);
+  confere(e);
+});

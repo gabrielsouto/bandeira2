@@ -11,6 +11,7 @@
 import {
   CIDADE, FIRST_NAMES, pickType, rideFare, rideAllowed, rideStars, ridePay, clamp,
   PROBLEMS, CREDIT_LIMIT, TOW_COST, RUN_OVER_FINE, SHOP_MAX, CANCEL_FEE, ABANDON_FEE,
+  RADAR_FINE, POLICE_FINE, ROB_MAX, INSURANCE_FEE, VEHICLES,
 } from './compartilhado.js';
 
 export const REGRAS = {
@@ -29,6 +30,15 @@ export const REGRAS = {
   DIST_CHAMADAS: 48,     // px mínimos entre passageiros esperando
   TICK: 0.25,            // s entre verificações de chamadas, dinâmicas e fase
   FORA_MAX: 300,         // s que a sala guarda quem caiu (fora do turno; no turno, guarda até o fim)
+  // pega (corrida de rua entre os jogadores)
+  PEGA_INSCRICAO: 20,    // s para chegar na largada e entrar
+  PEGA_CONTAGEM: 3,      // s de 3-2-1
+  PEGA_MAX: 150,         // s até o pega acabar sozinho
+  PEGA_RAIO: 56,         // px da largada para poder entrar
+  PEGA_CHEGADA: 40,      // px da chegada para valer
+  PEGA_APOSTA: 20,       // R$ de inscrição de cada um (só durante o turno)
+  PEGA_DIST_MIN: 900,    // px em linha reta entre largada e chegada
+  PEGA_DIST_MAX: 1700,
 };
 
 // teto de cada item que se compra no posto e na oficina
@@ -37,7 +47,8 @@ export const TETOS = {
   ...Object.fromEntries(Object.entries(PROBLEMS).map(([k, p]) => [k, p.cost])),
 };
 // cobranças que acontecem mesmo sem dinheiro (o fiado não impede)
-export const OBRIGATORIOS = { guincho: TOW_COST, multa: RUN_OVER_FINE };
+export const OBRIGATORIOS = { guincho: TOW_COST, multa: RUN_OVER_FINE, radar: RADAR_FINE, policia: POLICE_FINE,
+  assalto: ROB_MAX, franquia: INSURANCE_FEE };
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -48,7 +59,7 @@ const EM_JOGO = ['contagem', 'turno', 'prorrogacao'];
 
 export function novoEstado(agora, rnd) {
   const e = { seq: 0, ultimoTick: 0, chegada: 0, fase: 'espera', fimFase: 0, dur: REGRAS.TURNO, turnos: 0,
-    chamadas: [], dinamicas: [], jogadores: {}, livro: [], ranking: null };
+    chamadas: [], dinamicas: [], jogadores: {}, livro: [], ranking: null, pega: null };
   for (let k = 0; k < REGRAS.DINAMICAS; k++) {
     const d = novaDinamica(e, agora, rnd);
     d.nasce = agora - (2 + rnd() * (d.vida * 0.6 - 2)); // já começam com idade, como no solo
@@ -132,7 +143,8 @@ function lancar(e, id, tipo, valor, ref) {
   const j = e.jogadores[id];
   valor = r2(valor);
   j.saldo = r2(j.saldo + valor);
-  if (tipo === 'corrida') j.ganho = r2(j.ganho + valor); else j.gasto = r2(j.gasto - valor);
+  // entradas contam como ganho; saídas e estornos (devolução de um gasto) mexem no gasto
+  if (valor > 0 && tipo !== 'estorno') j.ganho = r2(j.ganho + valor); else j.gasto = r2(j.gasto - valor);
   e.livro.push({ j: id, tipo, valor, ...(ref != null ? { ref } : {}) });
 }
 
@@ -184,7 +196,7 @@ function placar(e) {
 export function visao(e, id, agora) {
   const j = e.jogadores[id];
   return { chamadas: msgChamadas(e, agora).lista, dinamicas: msgDinamicas(e, agora).lista, placar: placar(e),
-    corrida: j && j.corrida ? { id: j.corrida.id } : null, fase: msgFase(e, agora), ranking: e.ranking };
+    corrida: j && j.corrida ? { id: j.corrida.id } : null, fase: msgFase(e, agora), ranking: e.ranking, pega: msgPega(e, agora).pega };
 }
 
 // ---------- entrada, saída e relógio ----------
@@ -211,7 +223,13 @@ export function entrar(e, id, agora, rnd, apelido) {
 export function sair(e, id, agora) {
   const j = e.jogadores[id];
   if (j) j.fora = agora;
-  return [{ todos: msgFase(e, agora) }];
+  const ev = [{ todos: msgFase(e, agora) }];
+  const p = e.pega;
+  if (p && p.fase === 'inscricao' && p.inscritos.includes(id)) {
+    p.inscritos = p.inscritos.filter((k) => k !== id);
+    ev.push({ todos: msgPega(e, agora) });
+  }
+  return ev;
 }
 
 // dono pede para começar (na espera) ou revanche (no fim). "dur" (s) só vale para testes locais.
@@ -230,8 +248,9 @@ export function comecar(e, id, agora, dur) {
   e.livro = [];
   e.ranking = null;
   e.chamadas = [];
+  e.pega = null;
   for (const k in e.jogadores) e.livro.push({ j: k, tipo: 'inicio', valor: REGRAS.SALDO_INICIAL });
-  const ev = [{ todos: msgFase(e, agora) }, { todos: msgChamadas(e, agora) }];
+  const ev = [{ todos: msgFase(e, agora) }, { todos: msgChamadas(e, agora) }, { todos: msgPega(e, agora) }];
   for (const k in e.jogadores) ev.push({ todos: msgCaixa(e, k) });
   return ev;
 }
@@ -259,7 +278,7 @@ function avancar(e, agora) {
       for (const j of Object.values(e.jogadores)) j.corrida = null; // não entregou a tempo: fica sem pagamento
       e.fase = 'fim';
     } else break;
-    if (e.fase === 'fim') { e.fimFase = 0; e.ranking = ranking(e); }
+    if (e.fase === 'fim') { if (e.pega) ev.push(...fimPega(e, agora, 'turno')); e.fimFase = 0; e.ranking = ranking(e); }
     ev.push({ todos: msgFase(e, agora) });
     if (e.fase === 'fim') ev.push({ todos: { t: 'fim', ranking: e.ranking } });
   }
@@ -277,6 +296,7 @@ export function tick(e, agora, rnd) {
     }
   }
   const ev = avancar(e, agora);
+  ev.push(...avancarPega(e, agora));
   let mudouD = false;
   e.dinamicas = e.dinamicas.map((d) => {
     if (agora - d.nasce < d.vida) return d;
@@ -305,12 +325,16 @@ export function mensagem(e, id, m, agora, rnd, pos) {
     // "atual" deixa o cliente perceber uma corrida que ele já largou e liberá-la
     if (j.corrida) return recusa('embarcar', 'ocupado', m.chamada, { atual: j.corrida.id });
     if (e.fase !== 'turno') return recusa('embarcar', 'fase', m.chamada);
+    if (e.pega && e.pega.fase !== 'inscricao' && e.pega.inscritos.includes(id)) return recusa('embarcar', 'pega', m.chamada);
     const i = e.chamadas.findIndex((c) => c.id === m.chamada);
     if (i < 0) return recusa('embarcar', 'sumiu', m.chamada); // já levada por outro ou expirada
     const c = e.chamadas[i];
     if (longe(m, c.pick, REGRAS.RAIO_EMBARQUE)) return recusa('embarcar', 'longe', c.id);
+    // o veículo muda a tarifa (moto mais barata, táxi mais caro); executivo não anda de moto
+    const veh = VEHICLES[m.veiculo] || VEHICLES.uber;
+    if (veh.noExec && c.type === 'exec') return recusa('embarcar', 'veiculo', c.id);
     e.chamadas.splice(i, 1);
-    j.corrida = { id: c.id, type: c.type, fare: c.fare, tripD: c.tripD, pick: c.pick, drop: c.drop,
+    j.corrida = { id: c.id, type: c.type, fare: r2(c.fare * veh.fare), tripD: c.tripD, pick: c.pick, drop: c.drop,
       embarque: agora, allowed: rideAllowed(c.tripD, c.type) };
     return [{ todos: { t: 'embarque', chamada: c.id, jogador: id } }, { todos: msgChamadas(e, agora) }];
   }
@@ -372,5 +396,108 @@ export function mensagem(e, id, m, agora, rnd, pos) {
     lancar(e, id, itens.join('+'), -valor, ref);
     return [{ para: id, msg: { t: 'gasto', id: ref, valor, saldo: j.saldo } }, { todos: msgCaixa(e, id) }];
   }
+
+  if (m.t === 'pega') return pedidoPega(e, id, j, m, agora, rnd, pos, recusa, longe, valeDinheiro);
   return [];
+}
+
+// ---------- pega: corrida de rua entre os jogadores ----------
+// inscrição (20 s, quem estiver na largada entra) -> contagem (3 s) -> correndo (até todos chegarem ou 150 s) -> resultado.
+// Durante o turno cada um paga a inscrição e o primeiro a chegar leva o pote.
+export function msgPega(e, agora) {
+  const p = e.pega;
+  if (!p) return { t: 'pega', pega: null };
+  return { t: 'pega', pega: { id: p.id, dono: p.dono, fase: p.fase, resta: r1(Math.max(0, p.fim - agora)),
+    largada: p.largada, chegada: p.chegada, inscritos: p.inscritos, chegaram: p.chegaram, aposta: p.aposta, pote: p.pote } };
+}
+
+const podePagar = (j, aposta) => !aposta || j.saldo - aposta >= CREDIT_LIMIT - 0.001;
+
+function pedidoPega(e, id, j, m, agora, rnd, pos, recusa, longe, valeDinheiro) {
+  const p = e.pega, nega = (motivo) => recusa('pega', motivo, m.acao);
+  if (m.acao === 'criar') {
+    if (p) return nega('ocupado');
+    if (e.fase === 'contagem' || e.fase === 'prorrogacao' || e.fase === 'fim') return nega('fase');
+    if (j.corrida) return nega('corrida');
+    if (!num(m.x) || !num(m.y) || (pos && dist(pos, m) > REGRAS.TOLERANCIA_POS)) return nega('longe');
+    const aposta = valeDinheiro ? REGRAS.PEGA_APOSTA : 0;
+    if (!podePagar(j, aposta)) return nega('fiado');
+    const largada = { x: Math.round(m.x), y: Math.round(m.y) };
+    let chegada = null;
+    for (let t = 0; t < 200 && !chegada; t++) {
+      const s = escolhe(CIDADE.curbs, rnd), d = dist(s, largada);
+      if (d >= REGRAS.PEGA_DIST_MIN && d <= REGRAS.PEGA_DIST_MAX) chegada = { x: s.x, y: s.y };
+    }
+    if (!chegada) return nega('chegada');
+    e.pega = { id: ++e.seq, dono: id, fase: 'inscricao', fim: agora + REGRAS.PEGA_INSCRICAO, largada, chegada,
+      inscritos: [id], chegaram: [], aposta, pote: 0, inicio: 0 };
+    return [{ todos: msgPega(e, agora) }];
+  }
+  if (!p) return nega('sem-pega');
+  if (m.acao === 'entrar') {
+    if (p.fase !== 'inscricao') return nega('fase');
+    if (p.inscritos.includes(id)) return [];
+    if (j.corrida) return nega('corrida');
+    if (longe(m, p.largada, REGRAS.PEGA_RAIO)) return nega('longe');
+    if (!podePagar(j, p.aposta)) return nega('fiado');
+    p.inscritos.push(id);
+    return [{ todos: msgPega(e, agora) }];
+  }
+  if (m.acao === 'sair') {
+    if (!p.inscritos.includes(id) || p.chegaram.includes(id)) return [];
+    p.inscritos = p.inscritos.filter((k) => k !== id); // desistiu (com o pega rolando, a inscrição fica no pote)
+    if (p.fase === 'inscricao' && !p.inscritos.length) { e.pega = null; return [{ todos: msgPega(e, agora) }]; }
+    if (p.fase !== 'inscricao' && p.chegaram.length >= p.inscritos.length) return fimPega(e, agora, 'todos');
+    return [{ todos: msgPega(e, agora) }];
+  }
+  if (m.acao === 'chegar') {
+    if (p.fase !== 'correndo' || !p.inscritos.includes(id)) return nega('fase');
+    if (p.chegaram.includes(id)) return [];
+    if (longe(m, p.chegada, REGRAS.PEGA_CHEGADA)) return nega('longe');
+    if (agora - p.inicio < dist(p.largada, p.chegada) / REGRAS.VEL_MAX) return nega('rapido');
+    p.chegaram.push(id);
+    if (p.chegaram.length >= p.inscritos.length) return fimPega(e, agora, 'todos');
+    return [{ todos: msgPega(e, agora) }];
+  }
+  return [];
+}
+
+// o tempo de cada fase do pega
+function avancarPega(e, agora) {
+  const p = e.pega;
+  if (!p || agora < p.fim) return [];
+  if (p.fase === 'inscricao') {
+    // só corre quem está conectado, sem passageiro e pode pagar; com menos de 2, não tem pega
+    p.inscritos = p.inscritos.filter((k) => e.jogadores[k] && e.jogadores[k].fora == null && !e.jogadores[k].corrida &&
+      podePagar(e.jogadores[k], p.aposta));
+    if (p.inscritos.length < 2) {
+      e.pega = null;
+      return [{ todos: { t: 'pegaFim', id: p.id, motivo: 'poucos', ordem: [], pote: 0 } }, { todos: msgPega(e, agora) }];
+    }
+    if (!(e.fase === 'turno' || e.fase === 'prorrogacao')) p.aposta = 0; // a aposta só vale com o dinheiro valendo
+    const ev = [];
+    for (const k of p.inscritos) if (p.aposta) { lancar(e, k, 'pega', -p.aposta, p.id); ev.push({ todos: msgCaixa(e, k) }); }
+    p.pote = r2(p.aposta * p.inscritos.length);
+    p.fase = 'contagem'; p.fim = agora + REGRAS.PEGA_CONTAGEM;
+    return [{ todos: msgPega(e, agora) }, ...ev];
+  }
+  if (p.fase === 'contagem') {
+    p.fase = 'correndo'; p.inicio = p.fim; p.fim = p.fim + REGRAS.PEGA_MAX;
+    return [{ todos: msgPega(e, agora) }];
+  }
+  return fimPega(e, agora, 'tempo');
+}
+
+// resultado: o primeiro leva o pote; se ninguém chegou, quem ainda está no pega recebe a inscrição de volta
+function fimPega(e, agora, motivo) {
+  const p = e.pega;
+  if (!p) return [];
+  e.pega = null;
+  const ev = [];
+  if (p.pote > 0) {
+    const vencedor = p.chegaram.find((k) => e.jogadores[k]);
+    if (vencedor) { lancar(e, vencedor, 'pega-premio', p.pote, p.id); ev.push({ todos: msgCaixa(e, vencedor) }); }
+    else for (const k of p.inscritos) if (e.jogadores[k]) { lancar(e, k, 'estorno', p.aposta, p.id); ev.push({ todos: msgCaixa(e, k) }); }
+  }
+  return [{ todos: { t: 'pegaFim', id: p.id, motivo, ordem: p.chegaram, pote: p.pote } }, { todos: msgPega(e, agora) }, ...ev];
 }

@@ -10,6 +10,7 @@ const PTYPES = {
   pressa: { label: 'Com pressa', fare: 1.4, w: 2, timeMul: 0.75, desc: 'Paga mais, mas quer chegar voando.' },
   enjoo: { label: 'Enjoa fácil', fare: 1.2, w: 2, desc: 'Nada de derrapar, senão...' },
   exec: { label: 'Executivo', fare: 1.7, w: 1, desc: 'Exige carro inteiro e direção suave.' },
+  praia: { label: 'Voltando da praia', fare: 1.1, w: 1.5, desc: 'Cheio de areia: o carro vai ficar sujo.' },
 };
 
 const HIT_LINES = ['Ei! Cuidado!', 'Meu Deus do céu!', 'Isso vai pra avaliação, hein!', 'Tá maluco?!',
@@ -130,10 +131,11 @@ const Rides = {
       if (d > 20 && d < 85) drop = s;
     }
     if (!drop) return null;
-    const type = pickType(), pt = PTYPES[type];
+    let type = pickType();
+    if (type === 'exec' && Veh.cur.noExec) type = 'normal'; // executivo não anda de moto
     const tripD = Math.abs(drop.x - pick.x) + Math.abs(drop.y - pick.y);
     const surge = this.surgeAt(pick.x, pick.y);
-    const fare = rideFare(tripD, type, surge);
+    const fare = Math.round(rideFare(tripD, type, surge) * Veh.fareMul(gameMin) * 100) / 100;
     return { id: ++offerSeq, pick, drop, type, surge, fare, tripD, pickD: Math.hypot(pick.x - px, pick.y - py),
       name: R.pick(FIRST_NAMES), stars: R.f(4.2, 5).toFixed(1).replace('.', ','),
       expires: 12, expMax: 12, shirt: R.pick(SHIRTS), hair: R.pick(HAIRS) };
@@ -219,6 +221,10 @@ const Rides = {
   // passageiro descendo do carro
   startDrop(car) {
     const r = this.ride;
+    if (r.type === 'praia' && !Veh.cur.noDirty && !S.car.problems.dirty) {
+      S.car.problems.dirty = true;
+      toast(`${r.name} deixou areia por todo lado. Hora do lava jato!`, 'warn');
+    }
     this.state = 'dropping';
     r.dropT = 0; r.carX = car.x; r.carY = car.y; r.paxX = car.x; r.paxY = car.y;
   },
@@ -242,8 +248,11 @@ const Rides = {
       r.comfort = Math.min(100, r.comfort + dt * 2);
       if (r.comfort <= 0 && !r.vomited) {
         r.vomited = true;
-        S.car.problems.dirty = true;
-        toast(`Eca! ${r.name} passou mal no carro. Vai precisar de limpeza.`, 'bad');
+        if (Veh.cur.noDirty) toast(`Eca! ${r.name} passou mal na garupa. Pelo menos foi na rua.`, 'bad');
+        else {
+          S.car.problems.dirty = true;
+          toast(`Eca! ${r.name} passou mal no carro. Leve ao lava jato.`, 'bad');
+        }
         Sfx.bad();
       }
     }
@@ -261,7 +270,7 @@ const Rides = {
         if (this.nextOfferT <= 0) {
           const avg = this.ratingAvg();
           const f = avg >= 4.7 ? 0.8 : avg >= 4.3 ? 1 : avg >= 4 ? 1.4 : 2;
-          this.nextOfferT = R.f(3, 7) * f;
+          this.nextOfferT = R.f(3, 7) * f * Veh.cur.offerMul;
           const o = this.makeOffer(car.x, car.y);
           if (o) { this.offer = o; this.state = 'offer'; Sfx.ding(); }
         }

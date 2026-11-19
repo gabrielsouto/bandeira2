@@ -36,7 +36,7 @@ const r2 = (v) => Math.round(v * 100) / 100;
 const id = 'robo' + Math.random().toString(36).slice(2, 10);
 const ws = new WebSocket(`${BASE}/sala/${sala.toUpperCase()}`);
 const send = (m) => { if (ws.readyState === 1) ws.send(JSON.stringify(m)); };
-ws.onopen = () => send({ t: 'entrar', v: 3, id, apelido, hash: cityHash(city) });
+ws.onopen = () => send({ t: 'entrar', v: 4, id, apelido, hash: cityHash(city) });
 
 function talvezComecar() {
   if (!COMECAR || dono !== eu || pedindoComeco || (fase !== 'espera' && fase !== 'fim')) return;

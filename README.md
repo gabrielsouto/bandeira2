@@ -23,6 +23,9 @@ Até 4 amigos na mesma cidade, numa sala aberta por link (`?sala=K7QF`), disputa
 - **Turno:** todos largam iguais (R$ 150, carro do save novo), depois de um 3-2-1. As chamadas e as áreas de dinâmica vêm do servidor e são as mesmas para todos: no celular aparece a lista, **E** vai buscar a chamada destacada e **Q** passa para a próxima. Ir buscar não reserva nada: leva a corrida quem parar ao lado do passageiro primeiro.
 - **Caixa:** o dinheiro mora no servidor. Ele paga as corridas, cobra as taxas de cancelamento e confere cada compra no posto e na oficina pelo teto de cada item e pelo limite do fiado (−R$ 200). Guincho e multa são cobrados mesmo sem dinheiro. O placar ao vivo fica no canto superior esquerdo.
 - **19:00:** quem está com passageiro tem 30 s de prorrogação para entregar. Depois vem o ranking (lucro do turno, desempate pela nota média), e o dono pode pedir **revanche**.
+- **Veículo:** cada um escolhe o seu na tela inicial (Rebu, 66, Táxi ou Moto Rebu) e os outros veem o formato certo. A sala paga a corrida com o multiplicador do veículo; executivo não anda de moto.
+- **Pega:** **X** chama um pega com a largada onde você está; a sala sorteia a chegada. Quem parar na largada e apertar **X** em 20 s entra. Depois do 3-2-1 (carro travado), ganha quem chegar primeiro. Durante o turno cada piloto paga R$ 20 de inscrição e o vencedor leva o pote; se ninguém chegar, a inscrição volta. Fora do turno é só pela glória. Quem está no pega não pega passageiro.
+- Polícia, bandidos e colégios são de cada um (não aparecem para os outros), mas as multas, o assalto e a franquia do seguro passam pelo caixa da sala.
 
 O dinheiro da sala não mexe no save do single player.
 
@@ -42,6 +45,7 @@ Com o servidor local rodando, abra `http://localhost:8642/?sala=TEST` em **duas 
 | `?jitter=60` | soma até 60 ms aleatórios por mensagem |
 | `?servidor=ws://host:porta` | usa outro servidor |
 | `?turno=2` | turno de 2 minutos (só vale no servidor local) |
+| `?hora=21` | começa o solo às 21:00 (para ver a noite) |
 
 Testes do servidor:
 
@@ -50,6 +54,8 @@ npm test                       # regras da sala (disputa, pagamento, atraso...),
 npm run fumaca                 # ponta a ponta no servidor local (precisa do npm run dev), com um turno de 30 s
 node test/robo.mjs TEST        # um jogador falso disputando corridas na sala TEST
 VOLTAS=1 node test/robo.mjs TEST   # o mesmo robô só dando voltas num quarteirão
+node test/pega-bot.mjs TEST        # um piloto falso (de moto) que entra em qualquer pega aberto na sala TEST
+CRIAR=1 node test/pega-bot.mjs TEST   # o mesmo, mas ele mesmo chama o pega
 COMECAR=1 TURNO=1 TURNOS=3 node test/robo.mjs TEST   # se for o dono, joga 3 turnos de 1 min seguidos
                                                     # e confere o próprio saldo com o ranking em cada um
 ```
@@ -67,6 +73,9 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 | E / Q | aceitar / recusar corrida |
 | C | cancelar corrida |
 | H | buzina |
+| R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
+| X | pega (multiplayer): chamar, entrar ou desistir |
+| 1–4 | na tela inicial: escolher Rebu, 66, Táxi ou Moto Rebu |
 | G | guincho (quando o carro quebra ou fica sem gasolina) |
 | M | liga/desliga o som |
 | Esc / P | pausa |
@@ -78,10 +87,18 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Trânsito na mão direita que faz curvas, para atrás de obstáculos e buzina se você fechar a rua.
 - Pedestres que pulam pro lado (e multa se você atropelar).
 - Corridas: ofertas no celular, buscar, levar, prazo, avaliação, gorjeta.
-- Tipos de passageiro: normal, com pressa, enjoa fácil (pode sujar o carro), executivo.
+- Tipos de passageiro: normal, com pressa, enjoa fácil (pode sujar o carro), executivo, voltando da praia (sempre suja o carro).
+- Veículos: Rebu (equilibrado), 66 (tarifa menor, mais chamadas, econômico), Táxi (tarifa maior e bandeira 2 das 20:00 às 06:00) e Moto Rebu (ágil, tanque barato, tarifa 40% menor, sem executivo, tombo dói).
+- Dia e noite: o relógio anda 1 minuto por segundo; à noite escurece, com faróis, postes e giroflex.
+- Rádio do carro com estações sintetizadas (funk, sertanejo, pagode) e uma estação de notícias falada pela voz do navegador.
+- Posto Preço Baixo: gasolina 40% mais barata, mas batizada. Rende menos, o motor fica fraco e engasga, e o desgaste sobe. Abastecer em outro posto dilui.
+- Lava jato: carro sujo (vômito ou areia) só sai lá. A sujeira derruba a nota dos passageiros.
+- Áreas de risco (círculos vermelhos): bandidos se aproximam de quem para ou anda devagar e levam dinheiro, o carro ou os dois. Carro roubado volta pelo seguro na oficina, com franquia. Acelere para fugir. Atropelar bandido não dá multa: dá **AURA**, e quem tem muita aura assusta os bandidos.
+- Colégios: na entrada e na saída das aulas (06:45–07:30, 11:45–12:30, 17:15–18:00) a rua da frente engarrafa e crianças atravessam. Radar de 40 km/h na zona escolar.
+- Polícia: atropelar alguém, passar no radar ou bater numa viatura põe a polícia atrás de você. Parado com a viatura colada = multa e perde a corrida. Despistar (ficar bem longe por 6 s) dá AURA.
 - Tarifa dinâmica em áreas aleatórias que aparecem e somem.
 - Carro com combustível, lataria, desgaste e defeitos aleatórios (pneu furado, radiador, freio, bateria).
-- Postos e oficinas: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200.
+- Postos, oficinas e lava jatos: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200.
 - Save automático no navegador (localStorage).
 
 ## Estrutura
@@ -91,6 +108,11 @@ js/util.js         utilidades (aleatório, cores, pixels)
 js/city.js         geração da cidade
 js/render-city.js  arte gerada por código (mapa, carros, ícones)
 js/car.js          física e colisão do jogador
+js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu): física, tarifa, consumo
+js/light.js        dia e noite (escuridão, faróis, postes)
+js/radio.js        rádio do carro (música sintetizada e notícias faladas)
+js/world.js        áreas de risco com bandidos (e AURA) e colégios com trânsito
+js/police.js       perseguição da polícia
 js/traffic.js      trânsito
 js/peds.js         pedestres
 js/rides.js        corridas e tarifa dinâmica
@@ -99,14 +121,14 @@ js/hud.js          interface (celular, painel, minimapa)
 js/net.js          conexão com a sala (WebSocket, reconexão, ping, atraso simulado)
 js/multi.js        multiplayer no jogo (entrada na sala, rivais, interpolação, colisão)
 js/rides-net.js    corridas disputadas da sala (chamadas do servidor, embarque, pagamento)
+js/pega.js         pega no multiplayer (largada, chegada, contagem, resultado)
 js/main.js         loop, câmera, desenho, menus, save
 server/            servidor das salas (Cloudflare Durable Objects)
 ```
 
 ## Ideias para depois
 
-- Dia e noite (faróis, corridas noturnas com bandeira 2).
-- Semáforos e polícia.
+- Semáforos.
 - Comprar carros novos e upgrades.
 - Bairros com cara própria, eventos (chuva, show, jogo de futebol gerando demanda).
 - Sprites desenhados à mão no lugar da arte gerada por código.

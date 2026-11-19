@@ -4,6 +4,7 @@ import util from '../../js/util.js';
 import cidadeMod from '../../js/city.js';
 import corridasMod from '../../js/rides.js';
 import carroMod from '../../js/carcare.js';
+import veiculosMod from '../../js/vehicles.js';
 
 // city.js e rides.js usam funções de util.js (mulberry32, clamp) como globais, igual no navegador
 Object.assign(globalThis, util);
@@ -16,5 +17,6 @@ export const CIDADE = cidadeMod.generateCity(SEED);
 export const HASH_CIDADE = cidadeMod.cityHash(CIDADE);
 
 export const { FIRST_NAMES, PTYPES, pickType, rideFare, rideAllowed, rideStars, ridePay, CANCEL_FEE, ABANDON_FEE } = corridasMod;
-export const { PROBLEMS, CREDIT_LIMIT, TOW_COST, RUN_OVER_FINE, SHOP_MAX } = carroMod;
+export const { PROBLEMS, CREDIT_LIMIT, TOW_COST, RUN_OVER_FINE, SHOP_MAX, RADAR_FINE, POLICE_FINE, ROB_MAX, INSURANCE_FEE } = carroMod;
+export const { VEHICLES } = veiculosMod;
 export const { clamp } = util;

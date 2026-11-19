@@ -179,10 +179,13 @@ const Multi = {
       }
       case 'e': this.sample(m); break;
       case 'chamadas': RidesNet.onCalls(m.lista); break;
+      case 'pega': Pega.onMsg(m); break;
+      case 'pegaFim': Pega.onEnd(m); break;
       case 'dinamica': RidesNet.onSurges(m.lista); break;
       case 'embarque': RidesNet.onBoard(m, this.nameOf(m.jogador)); break;
       case 'recusado':
         if (m.acao === 'gastar') this.onBuyRefused(m);
+        else if (m.acao === 'pega') Pega.onRefused(m);
         else if (m.acao === 'comecar') toast(m.motivo === 'dono' ? 'Só quem criou a sala pode começar.' : 'Agora não dá pra começar.', 'warn');
         else RidesNet.onRefused(m);
         break;
@@ -227,6 +230,7 @@ const Multi = {
     if (first) { this.turnoVisto = m.fase.turno; this.begin(); }
     this.onFase(m.fase);
     RidesNet.onWelcome(m);
+    Pega.onMsg({ pega: m.pega || null });
     for (const msg of this.owed.splice(0)) Net.send(msg); // guincho ou multa de quando a conexão caiu
     if (first && this.fase === 'fim' && this.ranking) this.showRanking();
   },
@@ -254,7 +258,7 @@ const Multi = {
 
   // ---------- turno ----------
   isOwner() { return this.active && this.dono === this.me; },
-  frozen() { return this.active && this.fase === 'contagem'; },               // carro parado no 3-2-1
+  frozen() { return this.active && (this.fase === 'contagem' || Pega.frozen()); }, // carro parado no 3-2-1 (turno ou pega)
   moneyLive() { return this.active && (this.fase === 'turno' || this.fase === 'prorrogacao'); },
   phaseLeft() { return Math.max(0, this.faseEnd - performance.now() / 1000); },
 
@@ -287,6 +291,8 @@ const Multi = {
     S = defaultSave();
     S.money = TURN_START_MONEY;
     Care.resetState();
+    Police.reset();
+    Pega.p = null;
     RidesNet.resetForTurn();
     this.buyPending = null;
     this.ranking = null;
@@ -427,6 +433,7 @@ const Multi = {
     buf.push({ s: m.s, x: m.x, y: m.y, a: m.a, vx: m.vx, vy: m.vy, b: m.b, g: m.g });
     if (buf.length > 40) buf.shift();
     r.lastRecv = now;
+    if (VEHICLES[m.v]) r.v = m.v;
   },
 
   // ---------- a cada quadro ----------
@@ -441,6 +448,7 @@ const Multi = {
       toast('A sala não respondeu a compra. Tente de novo.', 'warn');
     }
     for (const r of this.rivals.values()) this.interp(r, now);
+    Pega.update(dt);
 
     this.sendAcc += dt;
     if (this.sendAcc >= SEND_EVERY) {
@@ -449,7 +457,7 @@ const Multi = {
         const r1 = (v) => Math.round(v * 10) / 10;
         Net.send({ t: 'estado', s: Math.round(now * 1000) / 1000, x: r1(player.x), y: r1(player.y),
           a: Math.round(player.a * 1000) / 1000, vx: r1(player.vx), vy: r1(player.vy),
-          b: player.braking ? 1 : 0, g: this.ghostT > 0 ? 1 : 0 });
+          b: player.braking ? 1 : 0, g: this.ghostT > 0 ? 1 : 0, v: Veh.key });
       }
     }
     this.infoT -= dt;
@@ -497,9 +505,12 @@ const Multi = {
   onTeleport() { if (this.active) this.ghostT = SPAWN_GHOST; },
 
   // ---------- desenho ----------
-  sprite(cor) {
-    if (!this.sprites) this.sprites = PLAYER_COLORS.map((c) => makeCarSprites(c, true));
-    return this.sprites[cor % this.sprites.length];
+  // carro do rival na cor dele, com o formato do veículo que ele escolheu
+  sprite(cor, v = 'uber') {
+    if (!this.sprites) this.sprites = {};
+    const k = cor + ':' + v;
+    if (!this.sprites[k]) this.sprites[k] = makeCarSprites(PLAYER_COLORS[cor % PLAYER_COLORS.length], true, (VEHICLES[v] || VEHICLES.uber).art);
+    return this.sprites[k];
   },
 
   drawCars() {
@@ -507,9 +518,15 @@ const Multi = {
     for (const r of this.rivals.values()) {
       if (!r.seen) continue;
       ctx.globalAlpha = r.g || r.away ? 0.45 : 1;
-      drawCar(this.sprite(r.cor), r.x, r.y, r.a, r.b);
+      drawCar(this.sprite(r.cor, r.v), r.x, r.y, r.a, r.b);
     }
     ctx.globalAlpha = 1;
+  },
+
+  // faróis dos rivais (noite)
+  lightCars(list) {
+    if (!this.active) return;
+    for (const r of this.rivals.values()) if (r.seen) list.push({ x: r.x, y: r.y, a: r.a, front: 8, len: 80, k: 0.8 });
   },
 
   drawTags() {
@@ -524,7 +541,7 @@ const Multi = {
       ctx.fillStyle = r.away ? '#9aa3b5' : PLAYER_COLORS[r.cor % PLAYER_COLORS.length]; ctx.fillText(text, sx, sy);
     }
     // contagem 3-2-1 e "VALENDO!" no meio da tela
-    const big = this.fase === 'contagem' ? String(Math.max(1, Math.ceil(this.phaseLeft()))) : this.goT > 0 ? 'VALENDO!' : null;
+    const big = this.fase === 'contagem' ? String(Math.max(1, Math.ceil(this.phaseLeft()))) : this.goT > 0 ? 'VALENDO!' : Pega.bigText();
     if (big) {
       ctx.font = '48px VT323, monospace';
       const x = Math.round(view.w / 2), y = Math.round(view.h / 2) - 24;
@@ -536,6 +553,7 @@ const Multi = {
   drawMinimap(g, s) {
     if (!this.active) return;
     RidesNet.drawMinimap(g, s);
+    Pega.drawMinimap(g, s);
     for (const r of this.rivals.values()) {
       if (!r.seen) continue;
       const x = Math.round(r.x * s), y = Math.round(r.y * s);
@@ -559,7 +577,7 @@ const Multi = {
     const timed = this.fase === 'turno' || this.fase === 'prorrogacao';
     const phase = PHASE_LABEL[this.fase] + (timed ? ` · faltam ${mmss(this.phaseLeft())}` : '');
     const html = `<div class="ni-top">SALA ${this.sala} · <span class="${st === 'on' ? '' : 'bad'}">${net}</span></div>` +
-      `<div class="ni-phase ${this.fase}">${phase}</div><div class="ni-list">${list}</div>`;
+      `<div class="ni-phase ${this.fase}">${phase}</div>${Pega.infoLine()}<div class="ni-list">${list}</div>`;
     if (html !== this.lastInfo) { this.el.info.innerHTML = html; this.lastInfo = html; }
     this.updatePanel();
   },

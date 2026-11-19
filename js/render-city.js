@@ -26,6 +26,15 @@ const CAR_ART = [
   'obbbbdbbbbbbdbbbbo',
   '.oooooooooooooooo.',
 ];
+// moto vista de cima, de frente para a direita: pneus (k), lanterna (t), piloto (p) e capacete (q)
+const MOTO_ART = [
+  '....pp........',
+  '...pppp.......',
+  'kttbbqqbbbbwkh',
+  'kttbbqqbbbbwkh',
+  '...pppp.......',
+  '....pp........',
+];
 const ARROW_ART = [
   '...x...',
   '...xx..',
@@ -44,6 +53,16 @@ const ICON_FUEL = [
   '.rrrr.rr',
   '.rrrr...',
   'rrrrrr..',
+];
+const ICON_DROP = [
+  '...bb...',
+  '...bb...',
+  '..bbbb..',
+  '.bbbbbb.',
+  '.bwbbbb.',
+  '.bwbbbb.',
+  '..bbbb..',
+  '...bb...',
 ];
 const ICON_WRENCH = [
   '....y..y',
@@ -72,8 +91,10 @@ function makeIconCanvas(rows, pal, outline = '#0b0b0b') {
 const ICONS = {
   fuel: makeIconCanvas(ICON_FUEL, { r: '#e74c3c', w: '#f5f5f5' }),
   wrench: makeIconCanvas(ICON_WRENCH, { y: '#f1c40f' }),
+  drop: makeIconCanvas(ICON_DROP, { b: '#3fb6ff', w: '#e8f7ff' }),
   arrowGo: makeIconCanvas(ARROW_ART, { x: '#39ff88' }),
   arrowDrop: makeIconCanvas(ARROW_ART, { x: '#ffd23f' }),
+  arrowPega: makeIconCanvas(ARROW_ART, { x: '#ff4fd8' }),
 };
 
 function artToCanvas(rows, pal) {
@@ -82,11 +103,13 @@ function artToCanvas(rows, pal) {
   return c;
 }
 
-function makeCarSprites(body, isPlayer) {
-  let rows = CAR_ART;
-  if (isPlayer) rows = rows.map((row, y) => (y === 4 || y === 5) ? row.slice(0, 8) + 'gg' + row.slice(10) : row);
+// art: 'car' (padrão), 'taxi' (luminoso no teto) ou 'moto'
+function makeCarSprites(body, isPlayer, art = 'car') {
+  let rows = art === 'moto' ? MOTO_ART : CAR_ART;
+  if (art === 'taxi') rows = rows.map((row, y) => (y >= 3 && y <= 6) ? row.slice(0, 7) + 'sss' + row.slice(10) : row);
+  if (isPlayer && art !== 'moto') rows = rows.map((row, y) => (y === 4 || y === 5) ? row.slice(0, 10) + 'g' + row.slice(11) : row);
   const pal = { o: shade(body, -0.6), b: body, d: shade(body, -0.22), l: shade(body, 0.2),
-    w: '#24323f', h: '#fff3b0', t: '#7a1c1c', g: '#39ff88' };
+    w: '#24323f', h: '#fff3b0', t: '#7a1c1c', g: '#39ff88', s: '#ff9a1f', k: '#151515', p: '#2c3e66', q: isPlayer ? '#39ff88' : '#e8e8e8' };
   const shadowPal = {};
   for (const k in pal) shadowPal[k] = 'rgba(0,0,0,0.35)';
   return {
@@ -173,6 +196,22 @@ function drawPlace(g, p, r) {
       g.fillStyle = '#c0392b';
       if (horiz) { g.fillRect(cx - 4, cy - 2, 3, 4); g.fillRect(cx + 1, cy - 2, 3, 4); }
       else { g.fillRect(cx - 2, cy - 4, 4, 3); g.fillRect(cx - 2, cy + 1, 4, 3); }
+    }
+  } else if (p.kind === 'lavajato') {
+    g.fillStyle = '#6f7f8c'; g.fillRect(x, y, w, h);
+    speckle(g, x, y, w, h, r, ['#667683', '#7a8a97'], (w * h / 40) | 0);
+    for (let k = 0; k < 6; k++) // poças
+      pxCircle(g, x + 8 + Math.floor(r() * (w - 16)), y + 8 + Math.floor(r() * (h - 16)), 2 + Math.floor(r() * 3), 'rgba(90,170,230,0.45)');
+    // túnel de lavagem com escovas azuis
+    const tw = horiz ? Math.min(40, w - 8) : 26, th = horiz ? 26 : Math.min(40, h - 8);
+    const tx = Math.round(x + (w - tw) / 2), ty = Math.round(y + (h - th) / 2);
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(tx + 2, ty + 2, tw, th);
+    g.fillStyle = '#d8dde2'; g.fillRect(tx, ty, tw, th);
+    g.fillStyle = '#3c4a57'; g.fillRect(tx + 2, ty + 2, tw - 4, th - 4);
+    g.fillStyle = '#3fb6ff';
+    for (let k = 4; k < (horiz ? tw : th) - 4; k += 6) {
+      if (horiz) { g.fillRect(tx + k, ty + 3, 3, 5); g.fillRect(tx + k, ty + th - 8, 3, 5); }
+      else { g.fillRect(tx + 3, ty + k, 5, 3); g.fillRect(tx + tw - 8, ty + k, 5, 3); }
     }
   } else {
     g.fillStyle = '#5f5b55'; g.fillRect(x, y, w, h);

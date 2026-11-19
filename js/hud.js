@@ -18,6 +18,8 @@ function mmss(s) { const neg = s < 0; s = Math.abs(Math.ceil(s)); return (neg ? 
 function multStr(m) { return 'x' + m.toFixed(1).replace('.', ','); }
 function setBar(el, v, col) { el.style.width = clamp(v, 0, 100) + '%'; el.style.background = col; }
 
+const PLACE_COLORS = { posto: '#e74c3c', oficina: '#f1c40f', lavajato: '#3fb6ff' };
+
 const HUD = {
   t: 0, lastPhone: '', lastProbs: '',
 
@@ -59,11 +61,17 @@ const HUD = {
     e.rating.textContent = `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} corridas`;
     e.spd.textContent = Math.round(player.speed * 0.55);
     e.clock.textContent = clockStr();
+    const au = `AURA ${Math.round(S.aura || 0)}`;
+    if (au !== this.lastAura) { $('aura').textContent = au; this.lastAura = au; }
+    const rs = Radio.station.id === 'off' ? '' : '♪ ' + Radio.station.name;
+    if (rs !== this.lastRadio) { $('radio').textContent = rs; this.lastRadio = rs; }
 
     const probs = [];
     if (c.health <= 0) probs.push('QUEBRADO');
     if (c.fuel <= 0) probs.push('SEM GASOLINA');
     if (Care.overheated) probs.push('SUPERAQUECIDO');
+    if ((c.bad || 0) > 0.25) probs.push('GASOLINA BATIZADA');
+    if (Police.wanted) probs.push('POLÍCIA NA COLA');
     for (const k in PROBLEMS) if (c.problems[k]) probs.push(PROBLEMS[k].label);
     const ph = probs.map((p) => `<span class="prob">${p}</span>`).join('');
     if (ph !== this.lastProbs) { e.probs.innerHTML = ph; this.lastProbs = ph; }
@@ -89,6 +97,7 @@ const HUD = {
       return `<div class="ph-title">NOVA CORRIDA</div>
         <div class="ph-fare">${fmtMoney(o.fare)}</div>
         ${o.surge > 1 ? `<div class="ph-badge">DINÂMICA ${multStr(o.surge)}</div>` : ''}
+        ${Veh.cur.bandeira2 && Veh.isNight(gameMin) ? '<div class="ph-badge b2">BANDEIRA 2</div>' : ''}
         <div class="ph-row">${esc(o.name)} <span class="star">★ ${o.stars}</span></div>
         <div class="ph-type t-${o.type}">${pt.label}</div>
         ${pt.desc ? `<div class="ph-muted">${pt.desc}</div>` : ''}
@@ -140,7 +149,7 @@ const HUD = {
     for (const p of city.places) {
       const x = Math.round(p.cx * s), y = Math.round(p.cy * s);
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
-      g.fillStyle = p.kind === 'posto' ? '#e74c3c' : '#f1c40f'; g.fillRect(x - 3, y - 3, 6, 6);
+      g.fillStyle = PLACE_COLORS[p.kind]; g.fillRect(x - 3, y - 3, 6, 6);
     }
     const tg = Rides.target();
     if (tg && Math.floor(time * 4) % 2 === 0) {
@@ -148,6 +157,8 @@ const HUD = {
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
       g.fillStyle = tg.kind === 'pick' ? '#39ff88' : '#ffd23f'; g.fillRect(x - 3, y - 3, 6, 6);
     }
+    World.drawMinimap(g, s);
+    Police.drawMinimap(g, s);
     Multi.drawMinimap(g, s);
     const px = Math.round(player.x * s), py = Math.round(player.y * s);
     g.fillStyle = '#000'; g.fillRect(px - 3, py - 3, 6, 6);

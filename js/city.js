@@ -7,6 +7,7 @@ const DIRS = [{ dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy
 const ROOF_COUNT = 12;
 const OFICINA_NAMES = ['Mecânica do Zé', 'Auto Center Rapidão', 'Oficina Dois Irmãos', 'Mecânica Boa Vista'];
 const POSTO_NAMES = ['Auto Posto Estrela', 'Posto Bandeirante', 'Posto Boa Viagem', 'Posto Avenida'];
+const LAVA_NAMES = ['Lava Jato Brilho Total', 'Lava Rápido do Tião'];
 
 function generateCity(seed) {
   const r = mulberry32(seed);
@@ -97,7 +98,7 @@ function generateCity(seed) {
   // escolhe quarteirões para oficinas e postos, espalhados pela cidade
   const order = blocks.map((_, k) => k);
   for (let k = order.length - 1; k > 0; k--) { const m = Math.floor(r() * (k + 1)); [order[k], order[m]] = [order[m], order[k]]; }
-  const want = ['posto', 'oficina', 'posto', 'oficina', 'posto', 'oficina'];
+  const want = ['posto', 'oficina', 'lavajato', 'posto', 'oficina', 'posto', 'oficina', 'lavajato'];
   const chosen = [];
   for (const k of order) {
     if (chosen.length >= want.length) break;
@@ -131,7 +132,7 @@ function generateCity(seed) {
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) set(x, y, T.BUILDING);
   }
 
-  let oi = 0, pi = 0;
+  let oi = 0, pi = 0, li = 0;
   for (const b of blocks) {
     let ix0 = b.x0 + 1, ix1 = b.x1 - 1, iy0 = b.y0 + 1, iy1 = b.y1 - 1;
     const sp = special.get(b);
@@ -142,8 +143,11 @@ function generateCity(seed) {
       else if (sp.side === 'left') { L = { x0: ix0, x1: ix0 + 2, y0: iy0, y1: iy1 }; ix0 += 3; }
       else { L = { x0: ix1 - 2, x1: ix1, y0: iy0, y1: iy1 }; ix1 -= 3; }
       for (let y = L.y0; y <= L.y1; y++) for (let x = L.x0; x <= L.x1; x++) set(x, y, T.LOT);
-      const name = sp.kind === 'oficina' ? OFICINA_NAMES[oi++ % 4] : POSTO_NAMES[pi++ % 4];
-      places.push({ kind: sp.kind, name, side: sp.side, x0: L.x0, x1: L.x1, y0: L.y0, y1: L.y1,
+      // o último posto vende gasolina batizada (só muda o nome e o preço, não os tiles)
+      const cheap = sp.kind === 'posto' && pi === 2;
+      const name = sp.kind === 'oficina' ? OFICINA_NAMES[oi++ % 4] : sp.kind === 'lavajato' ? LAVA_NAMES[li++ % 2]
+        : cheap ? (pi++, 'Posto Preço Baixo') : POSTO_NAMES[pi++ % 4];
+      places.push({ kind: sp.kind, name, cheap, side: sp.side, x0: L.x0, x1: L.x1, y0: L.y0, y1: L.y1,
         cx: (L.x0 + L.x1 + 1) * 8, cy: (L.y0 + L.y1 + 1) * 8 });
       bsp(ix0, iy0, ix1, iy1);
     } else if (r() < 0.13) {

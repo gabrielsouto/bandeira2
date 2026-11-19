@@ -6,10 +6,12 @@
 // Os dados de cada conexão ficam presos ao próprio WebSocket (serializeAttachment), e o estado das
 // regras fica no armazenamento da sala. Se a Cloudflare hibernar a sala, nada se perde.
 import { DurableObject } from 'cloudflare:workers';
-import { HASH_CIDADE } from './compartilhado.js';
+import { HASH_CIDADE, VEHICLES } from './compartilhado.js';
+
+const VEICULOS = Object.keys(VEHICLES);
 import * as regras from './regras.js';
 
-export const PROTO = 3;      // versão do protocolo; o cliente manda a dele em "entrar"
+export const PROTO = 4;      // versão do protocolo; o cliente manda a dele em "entrar"
 const MAX_JOGADORES = 4;
 const NUM_CORES = 4;
 const MAX_MSG = 1000;        // bytes; mensagem maior é ignorada
@@ -121,10 +123,11 @@ export class Sala extends DurableObject {
       const { s, x, y, a, vx, vy } = m;
       if (![s, x, y, a, vx, vy].every(num)) return;
       this.pos.set(eu.id, { x, y });
-      this.espalhar({ t: 'e', id: eu.id, s, x, y, a, vx, vy, b: m.b ? 1 : 0, g: m.g ? 1 : 0 }, ws);
+      const v = VEICULOS.includes(m.v) ? m.v : 'uber';
+      this.espalhar({ t: 'e', id: eu.id, s, x, y, a, vx, vy, b: m.b ? 1 : 0, g: m.g ? 1 : 0, v }, ws);
     } else if (m.t === 'ping') {
       this.enviar(ws, { t: 'pong', c: num(m.c) ? m.c : 0 });
-    } else if (m.t === 'embarcar' || m.t === 'entregar' || m.t === 'cancelar' || m.t === 'gastar') {
+    } else if (m.t === 'embarcar' || m.t === 'entregar' || m.t === 'cancelar' || m.t === 'gastar' || m.t === 'pega') {
       this.despachar(regras.mensagem(this.regras, eu.id, m, this.agora(), Math.random, this.pos.get(eu.id) || null));
     } else if (m.t === 'comecar') {
       // "min" (turno curto) só vale com o servidor rodando localmente
@@ -173,7 +176,7 @@ export class Sala extends DurableObject {
     const v = regras.visao(e, id, agora);
     const comPlacar = (x) => ({ id: x.id, apelido: x.apelido, cor: x.cor, ...v.placar[x.id] });
     this.enviar(ws, { t: 'bemvindo', voce: id, jogadores: [j, ...resto.map((o) => o.j)].map(comPlacar),
-      chamadas: v.chamadas, dinamicas: v.dinamicas, corrida: v.corrida, fase: v.fase, ranking: v.ranking });
+      chamadas: v.chamadas, dinamicas: v.dinamicas, corrida: v.corrida, fase: v.fase, ranking: v.ranking, pega: v.pega });
     if (!velho) this.espalhar({ t: 'entrou', j: comPlacar(j) }, ws);
     this.alarmeEm = 0;
     this.ctx.storage.deleteAlarm(); // cancela a limpeza da sala vazia; agendar() remarca o fim da fase
