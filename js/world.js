@@ -1,5 +1,6 @@
 'use strict';
 // Coisas espalhadas pela cidade, sorteadas pela seed sem mudar os tiles (o hash da sala continua o mesmo):
+//  - gatos e cachorros nas calçadas (atropelar um tira AURA)
 //  - áreas de risco, com bandidos a pé que assaltam quem para ou passa devagar (atropelar bandido dá AURA)
 //  - colégios, com trânsito parado, crianças atravessando e radar na entrada e na saída das aulas
 
@@ -11,9 +12,13 @@ const SCHOOL_TIMES = [[6 * 60 + 45, 7 * 60 + 30], [11 * 60 + 45, 12 * 60 + 30], 
 const SCHOOL_SPEED = 73;  // px/s ≈ 40 km/h no velocímetro: acima disso na zona escolar o radar pega
 const BANDIT_AURA = 10;   // aura por bandido atropelado
 const KID_SHIRT = '#f4f4f4';
+const PET_COUNT = 16;     // gatos e cachorros soltos nas calçadas
+const PET_AURA = 15;      // aura perdida por atropelar um bicho
+const DOG_COLORS = ['#8a5a2b', '#d9b26a', '#2b2b2b', '#f0e6d2'];
+const CAT_COLORS = ['#e08a2e', '#7d7d7d', '#1c1c1c', '#f4f4f4'];
 
 const World = {
-  risks: [], schools: [], bandits: [], kids: [], robCd: 0, warnCd: 0, radarCd: 0, schoolOn: false,
+  risks: [], schools: [], bandits: [], kids: [], pets: [], robCd: 0, warnCd: 0, radarCd: 0, schoolOn: false,
 
   init(city, mapCtx) {
     const r = mulberry32((city.seed ^ 0x5eed) >>> 0);
@@ -44,6 +49,83 @@ const World = {
       this.schools.push(Object.assign(z, { b, bd, name: SCHOOL_NAMES[this.schools.length % SCHOOL_NAMES.length], extra: [] }));
     }
     for (const s of this.schools) this.paintSchool(mapCtx, s);
+    this.city = city;
+    for (let k = 0; k < PET_COUNT; k++) this.pets.push(this.newPet());
+  },
+
+  // ---------- gatos e cachorros ----------
+  newPet() {
+    const t = R.pick(this.city.pedTiles), dog = R.chance(0.55);
+    return { dog, col: R.pick(dog ? DOG_COLORS : CAT_COLORS), x: t.x * 16 + 8, y: t.y * 16 + 8, tx: t.x, ty: t.y,
+      dir: R.i(0, 3), speed: dog ? R.f(14, 22) : R.f(9, 15), rest: R.f(0, 3), down: 0, anim: 0, flip: false, vx: 0, vy: 0, dodge: 0 };
+  },
+
+  updatePets(dt, car) {
+    const c = this.city, walk = (x, y) => { const t = c.get(x, y); return t === T.SIDEWALK || t === T.PLAZA; };
+    for (let k = this.pets.length - 1; k >= 0; k--) {
+      const p = this.pets[k];
+      if (p.down > 0) { p.down -= dt; if (p.down <= 0) this.pets[k] = this.newPet(); continue; }
+      const dx = p.x - car.x, dy = p.y - car.y, d = Math.hypot(dx, dy);
+      // atropelou: perde aura
+      if (d < 6 && car.speed > 28) {
+        p.down = 6;
+        S.aura = (S.aura || 0) - PET_AURA;
+        addFloater(p.x, p.y - 10, `-${PET_AURA} AURA`, '#ff4d4d');
+        toast(`Você atropelou ${p.dog ? 'um cachorro' : 'um gato'}! -${PET_AURA} de AURA. Que feio...`, 'bad');
+        Sfx.tone(p.dog ? 520 : 900, 0.25, 'triangle', 0.07, 0, p.dog ? -250 : -500);
+        continue;
+      }
+      if (p.dodge > 0) { // pulo para o lado
+        p.dodge -= dt;
+        const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
+        if (!c.solid(Math.floor(nx / 16), Math.floor(ny / 16))) { p.x = nx; p.y = ny; }
+        p.anim += dt * 12;
+        if (p.dodge <= 0) { p.tx = Math.floor(p.x / 16); p.ty = Math.floor(p.y / 16); }
+        continue;
+      }
+      // carro vindo rápido na direção do bicho: gato quase sempre escapa, cachorro às vezes
+      if (car.speed > 40 && d < 34 && !p.tried) {
+        const vx = car.vx / car.speed, vy = car.vy / car.speed, ah = dx * vx + dy * vy, lat = -dx * vy + dy * vx;
+        if (ah > 0 && Math.abs(lat) < 10) {
+          p.tried = true;
+          if (R.chance(p.dog ? 0.55 : 0.8)) { const s = lat >= 0 ? 1 : -1; p.vx = -vy * s * 90; p.vy = vx * s * 90; p.dodge = 0.3; continue; }
+        }
+      }
+      if (d > 60) p.tried = false;
+      if (p.rest > 0) { p.rest -= dt; continue; } // parado (cachorro cheirando o poste, gato tomando sol)
+      const gx = p.tx * 16 + 8, gy = p.ty * 16 + 8, ex = gx - p.x, ey = gy - p.y, ed = Math.hypot(ex, ey);
+      if (ed < 1) {
+        if (R.chance(0.15)) { p.rest = R.f(1, 4); continue; }
+        const opts = [];
+        for (let dd = 0; dd < 4; dd++) if (dd !== (p.dir + 2) % 4 && walk(p.tx + DIRS[dd].dx, p.ty + DIRS[dd].dy)) opts.push(dd);
+        const nd = opts.includes(p.dir) && R.chance(0.6) ? p.dir : opts.length ? R.pick(opts) : (p.dir + 2) % 4;
+        if (walk(p.tx + DIRS[nd].dx, p.ty + DIRS[nd].dy)) { p.dir = nd; p.tx += DIRS[nd].dx; p.ty += DIRS[nd].dy; }
+      } else {
+        const st = Math.min(ed, p.speed * dt);
+        p.x += ex / ed * st; p.y += ey / ed * st;
+        if (Math.abs(ex) > 0.1) p.flip = ex < 0;
+        p.anim += dt * p.speed * 0.5;
+      }
+    }
+  },
+
+  drawPet(g, p, sx, sy) {
+    const x = Math.round(sx), y = Math.round(sy), f = p.flip ? -1 : 1, leg = Math.floor(p.anim) % 2;
+    const px = (ox, oy, w, h) => g.fillRect(f > 0 ? x + ox : x - ox - w + 1, y + oy, w, h);
+    if (p.down > 0) { g.fillStyle = p.col; px(-2, 0, 5, 2); g.fillStyle = '#fff'; px(0, -4 - (Math.floor(time * 3) % 2), 1, 1); return; }
+    g.fillStyle = 'rgba(0,0,0,0.3)'; px(-2, 2, 6, 1);
+    g.fillStyle = shade(p.col, -0.35);
+    if (p.dog) {
+      px(-2, 1 + leg, 1, 1); px(2, 2 - leg, 1, 1);            // patas
+      g.fillStyle = p.col; px(-2, -1, 5, 2); px(2, -2, 2, 2);  // corpo e cabeça
+      px(-3, -2 + leg, 1, 1);                                 // rabo abanando
+      g.fillStyle = shade(p.col, -0.35); px(4, -2, 1, 1);      // focinho
+    } else {
+      px(-1, 1, 1, 1); px(1, 1, 1, 1);
+      g.fillStyle = p.col; px(-1, -1, 3, 2); px(2, -2, 2, 2);  // corpo e cabeça
+      px(2, -3, 1, 1); px(3, -3, 1, 1);                       // orelhas
+      px(-2, -2 - leg, 1, 2);                                 // rabo para cima
+    }
   },
 
   // trecho de rua em frente ao colégio (o lado do quarteirão mais perto do prédio que tenha rua)
@@ -101,6 +183,7 @@ const World = {
     this.robCd -= dt; this.warnCd -= dt; this.radarCd -= dt;
     this.updateSchools(dt, car);
     this.updateBandits(dt, car);
+    this.updatePets(dt, car);
   },
 
   updateSchools(dt, car) {
@@ -277,6 +360,7 @@ const World = {
       drawPedSprite(g, kd.x - camX, kd.y - camY, KID_SHIRT, kd.hair, kd.anim, false);
       g.fillStyle = '#e74c3c'; g.fillRect(Math.round(kd.x - camX) - 2, Math.round(kd.y - camY) + 1, 1, 2); // mochila
     }
+    for (const p of this.pets) if (vis(p.x, p.y, 8)) this.drawPet(g, p, p.x - camX, p.y - camY);
     for (const b of this.bandits) {
       if (!vis(b.x, b.y, 8)) continue;
       const x = Math.round(b.x - camX), y = Math.round(b.y - camY);

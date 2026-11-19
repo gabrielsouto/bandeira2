@@ -121,7 +121,10 @@ function onKey(code) {
     case 'KeyM': Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
     case 'KeyR': Radio.next(); break;
     case 'KeyX': Pega.key(); break;
-    case 'Escape': case 'KeyP': openPause(); break;
+    case 'KeyO': Nav.toggle('oficina'); break;
+    case 'KeyP': Nav.toggle('posto'); break;
+    case 'KeyL': Nav.toggle('lavajato'); break;
+    case 'Escape': openPause(); break;
   }
 }
 
@@ -211,6 +214,9 @@ function garageMenu(place) {
     const total = items.reduce((a, i) => a + i.cost, 0), fns = items.map((i) => i.fn);
     items.push(shopItem('Consertar tudo', total, () => fns.forEach((f) => f()), reopen, items.flatMap((i) => i.kinds)));
   }
+  // quebrado e sem dinheiro nem no fiado: o mecânico faz um remendo de graça para não ficar preso aqui
+  if (c.health <= 0 && !Care.canPay(Math.ceil(100 * 2.2))) items.unshift({ label: `Remendo de emergência (de graça, lataria em ${EMERGENCY_FIX}%)`, cost: null,
+    run() { c.health = EMERGENCY_FIX; c.wear = Math.min(100, c.wear + 10); toast('"Vai com Deus, mas volta pra pagar o conserto!"', 'good'); reopen(); } });
   const sub = items.length ? `${R.pick(MECH_LINES)}<br><small>Dá pra pagar no fiado até ${fmtMoney(CREDIT_LIMIT)}.</small>` : 'Seu carro está nos trinques! Nada pra fazer aqui.';
   showModal(`OFICINA · ${place.name}`, sub, items);
 }
@@ -224,6 +230,9 @@ function postoMenu(place) {
     items.push(shopItem('Completar o tanque', full, () => Care.refuel(missing, bad), reopen, ['tanque']));
     if (full > FUEL_SMALL) items.push(shopItem('Colocar R$ 20 de gasolina', FUEL_SMALL, () => Care.refuel(FUEL_SMALL / price, bad), reopen, ['gasolina']));
   }
+  // tanque vazio e sem dinheiro nem no fiado: o frentista empresta um pouquinho para não ficar preso aqui
+  if (c.fuel <= 0 && !Care.canPay(Math.min(FUEL_SMALL, Math.ceil(missing * price * 100) / 100))) items.unshift({ label: `Frentista empresta ${EMERGENCY_FUEL}% de gasolina (de graça)`, cost: null,
+    run() { Care.refuel(EMERGENCY_FUEL, false); toast('"Corre atrás de uma corrida e volta pra acertar!"', 'good'); reopen(); } });
   items.push(shopItem('Café + pão de queijo', COFFEE_PRICE, () => toast('Delícia. Bora trabalhar!', 'good'), reopen, ['cafe']));
   const sub = `Gasolina: ${fmtMoney(price)} por % do tanque · Tanque: ${Math.round(c.fuel)}%` +
     (place.cheap ? '<br><small>"Gasolina aditivada, patrão, pode confiar." (Ela rende menos, o motor engasga e gasta mais.)</small>'
@@ -256,6 +265,7 @@ function openPause(confirmReset) {
       { label: 'Continuar', run: closeModal },
       ...Multi.pauseItems(),
       { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
+      { label: 'Ajuda: todas as regras', run: openHelp },
       { label: 'Copiar o link da sala', run: () => {
         navigator.clipboard.writeText(location.href).then(() => toast('Link copiado!', 'good'),
           () => toast('Não deu pra copiar. Use o endereço da barra do navegador.', 'warn'));
@@ -267,6 +277,7 @@ function openPause(confirmReset) {
   showModal('PAUSA', `Corridas: ${S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
+    { label: 'Ajuda: todas as regras', run: openHelp },
     { label: confirmReset ? 'Tem certeza? Clique de novo pra apagar tudo' : 'Recomeçar do zero', run: () => {
       if (!confirmReset) { openPause(true); return; }
       S = defaultSave(); writeSave(); location.reload();
@@ -274,10 +285,20 @@ function openPause(confirmReset) {
   ], 'Voltar');
 }
 
+// página de ajuda numa aba nova (o jogo fica pausado aqui)
+function openHelp() { window.open('ajuda.html', '_blank', 'noopener'); }
+
 function callTow() {
   const c = S.car;
   const kind = c.health <= 0 ? 'oficina' : (c.fuel <= 0 ? 'posto' : null);
   if (!kind) { toast('O guincho só vem quando o carro não anda (quebrado ou sem gasolina).', 'warn'); return; }
+  // já está no lugar certo: o guincho não tem para onde levar (e não cobra de novo)
+  const here = city.placeAt(player.x, player.y);
+  if (here && here.kind === kind) {
+    toast(`Você já está ${kind === 'oficina' ? 'na oficina' : 'no posto'}. O guincho não precisa vir.`, 'warn');
+    openPlaceMenu(here);
+    return;
+  }
   if (Rides.ride) Rides.cancel(true);
   let best = null, bd = Infinity;
   for (const p of city.places) {
@@ -294,6 +315,28 @@ function callTow() {
   lastPlace = null;
   cam.x = player.x; cam.y = player.y;
 }
+
+// ---------- navegação até o posto, a oficina ou o lava jato mais perto (O, P, L) ----------
+const NAV_NAMES = { oficina: 'oficina', posto: 'posto', lavajato: 'lava jato' };
+const Nav = {
+  place: null,
+  // aperta de novo a mesma tecla para cancelar
+  toggle(kind) {
+    if (this.place && this.place.kind === kind) { this.clear(); toast('Navegação cancelada.'); return; }
+    let best = null, bd = Infinity;
+    for (const p of city.places) {
+      if (p.kind !== kind) continue;
+      const d = Math.hypot(p.cx - player.x, p.cy - player.y);
+      if (d < bd) { bd = d; best = p; }
+    }
+    if (!best) return;
+    this.place = best;
+    const extra = best.cheap ? ' (gasolina batizada!)' : '';
+    toast(`Seta para ${best.name}${extra}, ${NAV_NAMES[kind]} mais perto (${kmStr(bd)}). A mesma tecla cancela.`);
+  },
+  clear(msg) { this.place = null; if (msg) toast(msg, 'good'); },
+  target() { return this.place ? { x: this.place.cx, y: this.place.cy, kind: 'nav', place: this.place.kind } : null; },
+};
 
 // ---------- simulação ----------
 // atropelou alguém (pedestre ou criança na frente do colégio): multa e polícia
@@ -362,6 +405,7 @@ function update(dt) {
   }
 
   const pl = city.placeAt(player.x, player.y);
+  if (pl && pl === Nav.place) Nav.clear(`Você chegou: ${pl.name}.`);
   if (pl && pl !== lastPlace && player.speed < 18) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
 
@@ -448,13 +492,13 @@ function render() {
   Multi.drawTags();
 
   // seta orbitando o carro apontando o objetivo
-  const tg = (GAME.mode === 'multi' && Pega.target()) || Rides.target();
+  const tg = Nav.target() || (GAME.mode === 'multi' && Pega.target()) || Rides.target();
   if (tg && mode !== 'title') {
     const d = Math.hypot(tg.x - player.x, tg.y - player.y);
     if (d > 40) {
       const ang = Math.atan2(tg.y - player.y, tg.x - player.x);
       const ax = Math.round(player.x + Math.cos(ang) * 22 - camX), ay = Math.round(player.y + Math.sin(ang) * 22 - camY);
-      const ic = tg.kind === 'pick' ? ICONS.arrowGo : tg.kind === 'pega' ? ICONS.arrowPega : ICONS.arrowDrop;
+      const ic = tg.kind === 'pick' ? ICONS.arrowGo : tg.kind === 'pega' ? ICONS.arrowPega : tg.kind === 'nav' ? ICONS['arrow_' + tg.place] : ICONS.arrowDrop;
       ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang); ctx.drawImage(ic, -4, -4); ctx.restore();
     }
   }

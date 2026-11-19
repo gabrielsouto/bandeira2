@@ -193,3 +193,4 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 #aura { font-size: 20px; margin-top: 2px; color: #c77dff; text-shadow: 2px 2px 0 #000; }
 #netinfo .ni-pega { color: #ff4fd8; }
 .c-lava { color: #3fb6ff; } .c-risk { color: #ff6b6b; }
+#helplink { display: inline-block; margin-left: 12px; font-size: 20px; color: var(--accent); vertical-align: middle; }

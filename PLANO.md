@@ -77,6 +77,13 @@ Regras que valem para todas as etapas:
   **Publicar o servidor antes do site**, senão o multiplayer do site recusa a entrada.
 - Polícia, bandidos, colégios e rádio são locais de cada jogador; só o dinheiro passa pela sala.
 
+### 2026-11-19 — pedidos seguintes
+- [x] Atropelar gato ou cachorro tira 15 de AURA (`World.pets` em js/world.js).
+- [x] Guincho em looping: com o carro já na oficina (ou no posto) o G não cobra de novo, só abre o menu.
+  Quem está sem dinheiro nem no fiado ganha remendo grátis (lataria 15%) ou 8% de gasolina emprestada.
+- [x] Teclas O / P / L: seta até a oficina, o posto ou o lava jato mais perto (a pausa ficou só no Esc).
+- [x] Página de ajuda (`ajuda.html`) com todas as regras, aberta pela tela inicial e pela pausa.
+
 ### Ideias soltas para depois
 - Interpretar de novo "gasolina adulterada... vai durar mesmo": hoje ela rende MENOS. Se a ideia era render mais, é trocar o sinal do consumo em `Care.update`.
 - Viaturas também patrulhando a cidade sem perseguição; blitz à noite.

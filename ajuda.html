@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bandeira 2 · Ajuda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0d0f14; --panel: #141821; --ink: #e9ecf1; --muted: #8a93a6; --accent: #39ff88; --gold: #ffd23f;
+    --warn: #ffb020; --bad: #ff4d4d; --surge: #ff8a1f; --aura: #c77dff; --border: #2d3446; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'VT323', ui-monospace, monospace; font-size: 21px; line-height: 1.3; }
+  a { color: var(--accent); }
+  header { padding: 28px 16px 18px; text-align: center; border-bottom: 2px solid #000; box-shadow: 0 2px 0 var(--border); }
+  h1 { font-family: 'Press Start 2P', monospace; font-size: clamp(22px, 5vw, 36px); color: var(--gold); text-shadow: 4px 4px 0 #000; margin: 0; }
+  header p { color: var(--muted); margin: 10px 0 0; }
+  .back { display: inline-block; margin-top: 14px; font-family: 'Press Start 2P', monospace; font-size: 11px; background: var(--accent); color: #000;
+    padding: 10px 14px; text-decoration: none; border: 2px solid #000; box-shadow: 0 0 0 2px #1b5e37; }
+  .wrap { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 28px; max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  nav { position: sticky; top: 16px; align-self: start; background: var(--panel); border: 2px solid #000; box-shadow: 0 0 0 2px var(--border); padding: 10px 12px; }
+  nav b { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--muted); display: block; margin-bottom: 6px; }
+  nav a { display: block; color: var(--ink); text-decoration: none; padding: 1px 0; }
+  nav a:hover { color: var(--accent); }
+  section { margin-bottom: 34px; scroll-margin-top: 16px; }
+  h2 { font-family: 'Press Start 2P', monospace; font-size: 14px; color: var(--gold); line-height: 1.5; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+  h3 { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--accent); margin: 18px 0 8px; }
+  p, ul { margin: 0 0 10px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 3px; }
+  kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0 5px; color: var(--gold); white-space: nowrap; }
+  .tbl { overflow-x: auto; margin: 6px 0 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 19px; }
+  th { text-align: left; font-weight: normal; color: var(--muted); font-size: 17px; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border); }
+  td { padding: 3px 10px 3px 0; border-bottom: 1px solid #1c2130; vertical-align: top; }
+  .money { color: var(--accent); white-space: nowrap; }
+  .neg { color: var(--bad); white-space: nowrap; }
+  .aura { color: var(--aura); }
+  .tip { background: var(--panel); border-left: 4px solid var(--accent); padding: 8px 12px; margin: 10px 0 14px; }
+  .tip.warn { border-color: var(--warn); }
+  .c-posto { color: #ff7b6e; } .c-ofi { color: #f1c40f; } .c-lava { color: #3fb6ff; } .c-surge { color: var(--surge); } .c-risk { color: #ff6b6b; }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); }
+    nav { position: static; }
+    nav .links { columns: 2; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>BANDEIRA 2</h1>
+  <p>Ajuda: todas as regras e possibilidades do jogo</p>
+  <a class="back" href="./">VOLTAR PARA O JOGO</a>
+</header>
+
+<div class="wrap">
+<nav>
+  <b>NESTA PÁGINA</b>
+  <div class="links">
+    <a href="#objetivo">Objetivo</a>
+    <a href="#controles">Controles</a>
+    <a href="#veiculos">Veículos</a>
+    <a href="#corridas">Corridas</a>
+    <a href="#nota">Nota e gorjeta</a>
+    <a href="#dinamica">Tarifa dinâmica</a>
+    <a href="#carro">O carro</a>
+    <a href="#lugares">Posto, oficina, lava jato</a>
+    <a href="#dinheiro">Fiado e guincho</a>
+    <a href="#noite">Dia e noite</a>
+    <a href="#radio">Rádio</a>
+    <a href="#aura">AURA</a>
+    <a href="#risco">Áreas de risco</a>
+    <a href="#bichos">Gatos e cachorros</a>
+    <a href="#colegios">Colégios</a>
+    <a href="#policia">Polícia</a>
+    <a href="#multas">Multas e cobranças</a>
+    <a href="#multi">Multiplayer</a>
+    <a href="#pega">Pega</a>
+  </div>
+</nav>
+
+<main>
+<section id="objetivo">
+  <h2>OBJETIVO</h2>
+  <p>Você é motorista de aplicativo numa cidade inventada. Aceite corridas no celular, busque o passageiro, leve até o destino e ganhe dinheiro. Cuide do carro, fuja dos bandidos, da polícia e do trânsito, e mantenha a nota alta para receber mais chamadas.</p>
+  <p>No modo sozinho o progresso fica salvo no navegador. No multiplayer, até 4 amigos disputam um turno e ganha quem tiver mais lucro.</p>
+</section>
+
+<section id="controles">
+  <h2>CONTROLES</h2>
+  <div class="tbl"><table>
+    <tr><th>Tecla</th><th>O que faz</th></tr>
+    <tr><td><kbd>W A S D</kbd> ou setas</td><td>dirigir</td></tr>
+    <tr><td><kbd>Espaço</kbd></td><td>freio de mão (derrapagem)</td></tr>
+    <tr><td><kbd>E</kbd></td><td>aceitar a corrida (no multiplayer: ir buscar a chamada destacada)</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>recusar a corrida (no multiplayer: destacar a próxima chamada)</td></tr>
+    <tr><td><kbd>C</kbd></td><td>cancelar a corrida ou largar o passageiro</td></tr>
+    <tr><td><kbd>H</kbd></td><td>buzina (os pedestres saem da frente)</td></tr>
+    <tr><td><kbd>O</kbd> / <kbd>P</kbd> / <kbd>L</kbd></td><td>seta até a <span class="c-ofi">oficina</span>, o <span class="c-posto">posto</span> ou o <span class="c-lava">lava jato</span> mais perto (a mesma tecla cancela)</td></tr>
+    <tr><td><kbd>G</kbd></td><td>guincho (só quando o carro quebrou ou ficou sem gasolina)</td></tr>
+    <tr><td><kbd>R</kbd></td><td>rádio: troca a estação (no fim do turno da sala, abre o ranking)</td></tr>
+    <tr><td><kbd>X</kbd></td><td>pega (multiplayer): chamar, entrar ou desistir</td></tr>
+    <tr><td><kbd>M</kbd></td><td>liga e desliga o som</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>pausa</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>na tela inicial: escolher o veículo; nos menus: escolher a opção</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>na tela inicial: começar; no multiplayer: o dono começa o turno ou pede revanche</td></tr>
+  </table></div>
+</section>
+
+<section id="veiculos">
+  <h2>VEÍCULOS</h2>
+  <p>Escolha na tela inicial. A escolha fica salva e vale para os dois modos.</p>
+  <div class="tbl"><table>
+    <tr><th>Veículo</th><th>Tarifa</th><th>Chamadas</th><th>Combustível</th><th>Detalhes</th></tr>
+    <tr><td>Rebu</td><td>normal</td><td>normal</td><td>normal</td><td>equilibrado</td></tr>
+    <tr><td>66</td><td>−10%</td><td>bem mais frequentes</td><td>gasta 20% menos</td><td>acelera um pouco menos</td></tr>
+    <tr><td>Táxi</td><td>+15%, e <b>bandeira 2</b> (+30%) das 20:00 às 06:00</td><td>menos frequentes</td><td>gasta 10% mais</td><td>um pouco mais lento, aguenta mais batida</td></tr>
+    <tr><td>Moto Rebu</td><td>−40%</td><td>bem mais frequentes</td><td>gasta 30% menos; o tanque cheio custa 35% do de um carro</td><td>ágil e menor, derrapa mais; não leva executivo; batida dói 70% mais e o tombo derruba o piloto; passageiro não suja a moto</td></tr>
+  </table></div>
+</section>
+
+<section id="corridas">
+  <h2>CORRIDAS</h2>
+  <ul>
+    <li>As ofertas chegam no celular e expiram em 12 s. <kbd>E</kbd> aceita, <kbd>Q</kbd> recusa.</li>
+    <li>Siga a <b style="color:var(--accent)">seta verde</b> e pare ao lado do passageiro (devagar). Ele leva um instante para entrar: segure o carro.</li>
+    <li>Siga a <b style="color:var(--gold)">seta amarela</b> até o destino e pare lá. O celular mostra o tempo que falta.</li>
+    <li>O passageiro espera um tempo limitado (cerca de 75 s mais um pouco pela distância). Demorou demais, ele cancela.</li>
+    <li>Cancelar antes do passageiro entrar custa <span class="neg">R$ 5,00</span>. Largar o passageiro no meio da viagem custa <span class="neg">R$ 15,00</span> e nota 1.</li>
+    <li>Quanto melhor a sua nota, mais rápido chegam as ofertas (nota abaixo de 4 deixa tudo mais lento).</li>
+  </ul>
+  <h3>TIPOS DE PASSAGEIRO</h3>
+  <div class="tbl"><table>
+    <tr><th>Tipo</th><th>Paga</th><th>Cuidado com</th></tr>
+    <tr><td>Passageiro</td><td>normal</td><td>nada de especial</td></tr>
+    <tr><td>Com pressa</td><td>+40%</td><td>prazo 25% menor; atrasar tira 2 estrelas</td></tr>
+    <tr><td>Enjoa fácil</td><td>+20%</td><td>derrapagem e velocidade alta enjoam; se o estômago zerar, ele vomita e o carro fica sujo</td></tr>
+    <tr><td>Executivo</td><td>+70%</td><td>cada batida tira mais nota; carro com defeito tira 1 estrela; não anda de moto</td></tr>
+    <tr><td>Voltando da praia</td><td>+10%</td><td>sempre deixa areia: o carro fica sujo no fim da viagem</td></tr>
+  </table></div>
+</section>
+
+<section id="nota">
+  <h2>NOTA E GORJETA</h2>
+  <p>Toda corrida começa valendo 5 estrelas e perde nota assim (o resultado fica entre 1 e 5):</p>
+  <ul>
+    <li>cada batida forte com o passageiro a bordo: −0,6 (executivo: −1,2)</li>
+    <li>chegar atrasado: −1 (com pressa: −2), e o pagamento cai 15%</li>
+    <li>lataria abaixo de 35%: −0,8</li>
+    <li>carro sujo: −1,2</li>
+    <li>enjoa fácil: perde nota conforme o estômago</li>
+    <li>executivo com qualquer defeito no carro: −1</li>
+  </ul>
+  <p>Só corrida de 5 estrelas tem chance de gorjeta (65%), de 10% a 35% do valor.</p>
+</section>
+
+<section id="dinamica">
+  <h2>TARIFA DINÂMICA</h2>
+  <p>Áreas <span class="c-surge">laranjas</span> aparecem e somem pela cidade com multiplicador de x1,3 a x2,6. Corridas que começam lá dentro pagam mais, e muitas chamadas nascem nessas áreas. O celular mostra a dinâmica mais perto quando você está livre.</p>
+</section>
+
+<section id="carro">
+  <h2>O CARRO</h2>
+  <ul>
+    <li><b>Combustível:</b> acelerar gasta. Na reserva (15%) aparece um aviso. Zerou, o carro para.</li>
+    <li><b>Lataria:</b> cai a cada batida. Abaixo de 25% o carro fica mais fraco. Zerou, o carro não anda.</li>
+    <li><b>Desgaste:</b> sobe com os quilômetros e aumenta a chance de defeitos.</li>
+    <li><b>Defeitos aleatórios:</b> pneu furado (carro puxa para o lado e fica lento), radiador (a temperatura sobe e o motor perde força ao superaquecer), freio gasto (freia bem menos) e bateria (o motor morre do nada). Batida muito forte também pode furar o pneu.</li>
+    <li><b>Carro sujo:</b> vômito ou areia. Derruba a nota de todo passageiro até ir ao lava jato.</li>
+    <li><b>Gasolina batizada:</b> veja o Posto Preço Baixo abaixo.</li>
+  </ul>
+</section>
+
+<section id="lugares">
+  <h2>POSTO, OFICINA E LAVA JATO</h2>
+  <p>Entre devagar no pátio para abrir o menu. <kbd>O</kbd>, <kbd>P</kbd> e <kbd>L</kbd> mostram a seta até o mais perto de cada tipo.</p>
+  <div class="tbl"><table>
+    <tr><th>Lugar</th><th>Serviço</th><th>Preço</th></tr>
+    <tr><td class="c-posto">Posto</td><td>gasolina</td><td class="money">R$ 0,65 por % do tanque (moto: 35% disso)</td></tr>
+    <tr><td class="c-posto">Posto</td><td>café + pão de queijo</td><td class="money">R$ 8,00</td></tr>
+    <tr><td class="c-ofi">Oficina</td><td>funilaria</td><td class="money">R$ 2,20 por % de lataria</td></tr>
+    <tr><td class="c-ofi">Oficina</td><td>trocar o pneu / freio / bateria / radiador</td><td class="money">R$ 70 / 110 / 150 / 180</td></tr>
+    <tr><td class="c-ofi">Oficina</td><td>revisão (zera o desgaste)</td><td class="money">R$ 30 + R$ 1,50 por % de desgaste</td></tr>
+    <tr><td class="c-lava">Lava jato</td><td>lavagem completa com aspiração</td><td class="money">R$ 35,00</td></tr>
+  </table></div>
+  <h3>POSTO PREÇO BAIXO</h3>
+  <p>Um dos postos vende gasolina 40% mais barata... só que batizada. Com ela no tanque o carro gasta mais, perde força, engasga de vez em quando e se desgasta mais rápido. O efeito é proporcional à mistura: abastecer num posto normal dilui.</p>
+</section>
+
+<section id="dinheiro">
+  <h2>FIADO, GUINCHO E SOCORRO</h2>
+  <ul>
+    <li>Dá para pagar no fiado até o saldo chegar a <span class="neg">−R$ 200,00</span>. Abaixo disso, o posto, a oficina e o lava jato não vendem.</li>
+    <li><kbd>G</kbd> chama o guincho quando o carro quebrou (vai para a oficina mais perto) ou ficou sem gasolina (vai para o posto mais perto). Custa <span class="neg">R$ 120,00</span>, mesmo sem dinheiro. Se você tiver passageiro, ele desce e a corrida conta nota 1.</li>
+    <li>Se você já está na oficina (ou no posto), o guincho não vem e não cobra: só abre o menu.</li>
+    <li>Quebrou e não tem dinheiro nem no fiado? A oficina oferece um <b>remendo de emergência grátis</b> (lataria em 15%, um pouco de desgaste). Sem gasolina e sem dinheiro? O frentista empresta <b>8% de gasolina</b> de graça. Assim ninguém fica preso.</li>
+  </ul>
+</section>
+
+<section id="noite">
+  <h2>DIA E NOITE</h2>
+  <p>No modo sozinho o relógio anda 1 minuto por segundo e o dia começa às 07:00. Escurece das 17:00 às 19:30 e clareia das 05:00 às 07:00. À noite os faróis, os postes e o giroflex iluminam a rua, os bandidos ficam mais numerosos e rápidos, e o táxi cobra bandeira 2.</p>
+  <p>No multiplayer o turno vai das 07:00 às 19:00, então lá só chega a escurecer no fim da tarde.</p>
+</section>
+
+<section id="radio">
+  <h2>RÁDIO</h2>
+  <p><kbd>R</kbd> troca a estação: funk, sertanejo, pagode (todas tocadas na hora pelo próprio jogo) e a Rádio Trânsito, com notícias faladas pela voz do navegador. O nome da estação aparece no painel do carro. <kbd>M</kbd> desliga tudo.</p>
+</section>
+
+<section id="aura">
+  <h2>AURA</h2>
+  <p>A <span class="aura">AURA</span> aparece embaixo da nota, no canto da tela. Ela pode ficar negativa.</p>
+  <div class="tbl"><table>
+    <tr><th>O que aconteceu</th><th>AURA</th></tr>
+    <tr><td>atropelar um bandido</td><td class="aura">+10</td></tr>
+    <tr><td>despistar a polícia</td><td class="aura">+15</td></tr>
+    <tr><td>vencer um pega</td><td class="aura">+5</td></tr>
+    <tr><td>atropelar um gato ou um cachorro</td><td class="neg">−15</td></tr>
+  </table></div>
+  <p>Aura alta assusta os bandidos: a chance de o bandido desistir e fugir é a sua aura dividida por 120 (até 85%).</p>
+</section>
+
+<section id="risco">
+  <h2>ÁREAS DE RISCO E BANDIDOS</h2>
+  <ul>
+    <li>As áreas de risco são os círculos <span class="c-risk">vermelhos</span> no mapa e no minimapa.</li>
+    <li>Os bandidos andam a pé por lá: 2 por área de dia, 4 à noite.</li>
+    <li>Se você passar devagar (abaixo de uns 38 km/h) perto de um, ele vem na direção do carro. Acelere (acima de uns 60 km/h) para ele desistir.</li>
+    <li>Se ele encostar com o carro quase parado, é <b>assalto</b>: leva de 30% a 60% do seu dinheiro (até <span class="neg">R$ 200,00</span>), o carro, ou os dois. Sem dinheiro, ele leva o carro.</li>
+    <li>Carro roubado: o seguro acha o carro na oficina mais perto, mas cobra <span class="neg">R$ 100,00</span> de franquia. Ele volta amassado e com metade da gasolina, e o passageiro foge.</li>
+    <li>Depois de um assalto você tem 25 s de sossego.</li>
+    <li>Atropelar bandido não dá multa nem polícia: dá <span class="aura">+10 de AURA</span>.</li>
+  </ul>
+</section>
+
+<section id="bichos">
+  <h2>GATOS E CACHORROS</h2>
+  <p>Gatos e cachorros andam pelas calçadas, param para cheirar o poste ou tomar sol e pulam para o lado quando um carro vem rápido (gato escapa quase sempre, cachorro só às vezes). Atropelar um tira <span class="neg">15 de AURA</span>.</p>
+</section>
+
+<section id="colegios">
+  <h2>COLÉGIOS</h2>
+  <ul>
+    <li>Três prédios são colégios, com telhado de tijolinho, quadra no topo, nome em amarelo e faixa amarela no asfalto.</li>
+    <li>Na entrada e na saída das aulas (06:45–07:30, 11:45–12:30 e 17:15–18:00) a rua da frente engarrafa: aparecem carros extras andando a passo de tartaruga, e crianças atravessam.</li>
+    <li>Nesses horários tem <b>radar de 40 km/h</b> na zona escolar: <span class="neg">R$ 60,00</span> de multa e a polícia vem atrás.</li>
+    <li>Atropelar uma criança conta como atropelar um pedestre.</li>
+  </ul>
+</section>
+
+<section id="policia">
+  <h2>POLÍCIA</h2>
+  <ul>
+    <li>A polícia vem atrás de você quando você atropela alguém, passa no radar da escola ou bate numa viatura.</li>
+    <li>A viatura contorna os quarteirões para te alcançar. Depois de 25 s de perseguição vem uma segunda.</li>
+    <li><b>Pego:</b> com a viatura colada e o seu carro quase parado por pouco mais de 1 s. A multa é de <span class="neg">R$ 150,00</span> e o passageiro desce na blitz.</li>
+    <li><b>Despistou:</b> ficou bem longe de todas as viaturas por 6 s. Ganha <span class="aura">+15 de AURA</span>.</li>
+  </ul>
+</section>
+
+<section id="multas">
+  <h2>MULTAS E COBRANÇAS</h2>
+  <p>Estas são cobradas mesmo que você esteja sem dinheiro (o saldo pode passar do limite do fiado):</p>
+  <div class="tbl"><table>
+    <tr><th>Motivo</th><th>Valor</th></tr>
+    <tr><td>atropelar pedestre ou criança (e a polícia vem)</td><td class="neg">R$ 40,00</td></tr>
+    <tr><td>radar da zona escolar</td><td class="neg">R$ 60,00</td></tr>
+    <tr><td>pego pela polícia</td><td class="neg">R$ 150,00</td></tr>
+    <tr><td>guincho</td><td class="neg">R$ 120,00</td></tr>
+    <tr><td>assalto</td><td class="neg">30% a 60% do saldo, até R$ 200,00</td></tr>
+    <tr><td>franquia do seguro (carro roubado)</td><td class="neg">R$ 100,00</td></tr>
+    <tr><td>cancelar antes do embarque / largar o passageiro</td><td class="neg">R$ 5,00 / R$ 15,00</td></tr>
+  </table></div>
+</section>
+
+<section id="multi">
+  <h2>MULTIPLAYER</h2>
+  <ul>
+    <li>Na tela inicial, escolha um apelido e <b>crie uma sala</b> ou entre com o código de 4 letras. Mande o link da barra de endereço para os amigos. Cabem até 4 pessoas.</li>
+    <li><b>Espera:</b> dá para dar voltas pela cidade, mas não há chamadas e o posto, a oficina e o lava jato ficam fechados (o guincho é grátis). Quem criou a sala aperta <kbd>Enter</kbd> para começar.</li>
+    <li><b>Turno:</b> depois de um 3-2-1 todos largam iguais, com <span class="money">R$ 150,00</span> e carro novo. O turno vai das 07:00 às 19:00 em 12 minutos reais.</li>
+    <li><b>Chamadas:</b> são as mesmas para todos (sempre há o número de jogadores mais duas chamadas abertas). <kbd>E</kbd> vai buscar a destacada e <kbd>Q</kbd> passa para a próxima. Ir buscar não reserva nada: leva quem parar ao lado do passageiro primeiro.</li>
+    <li><b>Caixa:</b> o dinheiro é controlado pela sala. Ela paga as corridas com o multiplicador do seu veículo e confere cada compra e cada multa.</li>
+    <li><b>19:00:</b> quem está com passageiro tem 30 s de prorrogação para entregar. Depois vem o ranking (maior lucro; empate decidido pela nota média). O dono pode pedir <b>revanche</b>.</li>
+    <li>Polícia, bandidos, bichos e colégios são só de cada jogador (os outros não veem), mas as multas e o assalto saem do seu caixa na sala.</li>
+    <li>O dinheiro da sala não mexe no seu save do modo sozinho.</li>
+  </ul>
+</section>
+
+<section id="pega">
+  <h2>PEGA</h2>
+  <ul>
+    <li><kbd>X</kbd> chama um pega. A largada é onde você está, e a sala sorteia a chegada longe dali.</li>
+    <li>Os outros têm 20 s para ir até a bandeira de largada e apertar <kbd>X</kbd>. Precisa de pelo menos 2 pilotos. Quem está com passageiro não entra.</li>
+    <li>3-2-1 com os carros travados, e depois é chegar primeiro na bandeira quadriculada. A seta rosa mostra o caminho.</li>
+    <li>Durante o turno, cada piloto paga <span class="neg">R$ 20,00</span> de inscrição e o primeiro a chegar leva o pote inteiro. Se ninguém chegar em 150 s, a inscrição volta. Fora do turno é só pela glória.</li>
+    <li>Quem desiste no meio (<kbd>X</kbd> de novo) perde a inscrição. Durante o pega você não pega passageiro.</li>
+    <li>Vencer dá <span class="aura">+5 de AURA</span>.</li>
+  </ul>
+</section>
+</main>
+</div>
+</body>
+</html>

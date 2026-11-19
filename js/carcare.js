@@ -19,6 +19,8 @@ const RADAR_FINE = 60;       // radar da zona escolar
 const POLICE_FINE = 150;     // pego pela polícia
 const ROB_MAX = 200;         // o máximo que um assalto leva do caixa
 const INSURANCE_FEE = 100;   // franquia do seguro quando roubam o carro
+const EMERGENCY_FIX = 15;    // lataria (%) do remendo grátis de quem quebrou sem dinheiro
+const EMERGENCY_FUEL = 8;    // gasolina (%) que o frentista empresta para quem ficou sem dinheiro
 // teto de cada gasto, pelo item (o multiplayer confere estes valores no servidor)
 const SHOP_MAX = {
   tanque: Math.ceil(100 * FUEL_PRICE * 100) / 100, // tanque vazio até cheio

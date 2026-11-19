@@ -3,7 +3,7 @@
 Jogo arcade top-down em pixel art: você é motorista de aplicativo numa cidade inventada.
 Tudo é desenhado e sintetizado por código (sem arquivos de arte ou som).
 
-**Jogue online:** https://gabrielsouto.github.io/bandeira2/
+**Jogue online:** https://gabrielsouto.github.io/bandeira2/ · **Ajuda com todas as regras:** [ajuda.html](ajuda.html) (também abre pela tela inicial e pela pausa)
 
 ## Como rodar localmente
 
@@ -76,9 +76,10 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 | R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
 | X | pega (multiplayer): chamar, entrar ou desistir |
 | 1–4 | na tela inicial: escolher Rebu, 66, Táxi ou Moto Rebu |
-| G | guincho (quando o carro quebra ou fica sem gasolina) |
+| O / P / L | seta até a oficina, o posto ou o lava jato mais perto (a mesma tecla cancela) |
+| G | guincho (quando o carro quebra ou fica sem gasolina; não cobra se você já está lá) |
 | M | liga/desliga o som |
-| Esc / P | pausa |
+| Esc | pausa |
 
 ## O que já existe
 
@@ -98,7 +99,8 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Polícia: atropelar alguém, passar no radar ou bater numa viatura põe a polícia atrás de você. Parado com a viatura colada = multa e perde a corrida. Despistar (ficar bem longe por 6 s) dá AURA.
 - Tarifa dinâmica em áreas aleatórias que aparecem e somem.
 - Carro com combustível, lataria, desgaste e defeitos aleatórios (pneu furado, radiador, freio, bateria).
-- Postos, oficinas e lava jatos: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200.
+- Postos, oficinas e lava jatos: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200. Quebrou ou ficou sem gasolina sem dinheiro nem no fiado: a oficina faz um remendo grátis e o frentista empresta um pouco de gasolina, para ninguém ficar preso.
+- Gatos e cachorros nas calçadas: atropelar um tira 15 de AURA.
 - Save automático no navegador (localStorage).
 
 ## Estrutura
@@ -111,8 +113,9 @@ js/car.js          física e colisão do jogador
 js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu): física, tarifa, consumo
 js/light.js        dia e noite (escuridão, faróis, postes)
 js/radio.js        rádio do carro (música sintetizada e notícias faladas)
-js/world.js        áreas de risco com bandidos (e AURA) e colégios com trânsito
+js/world.js        áreas de risco com bandidos (e AURA), gatos e cachorros, colégios com trânsito
 js/police.js       perseguição da polícia
+ajuda.html         página de ajuda com todas as regras
 js/traffic.js      trânsito
 js/peds.js         pedestres
 js/rides.js        corridas e tarifa dinâmica

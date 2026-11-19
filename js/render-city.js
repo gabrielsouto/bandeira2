@@ -95,6 +95,9 @@ const ICONS = {
   arrowGo: makeIconCanvas(ARROW_ART, { x: '#39ff88' }),
   arrowDrop: makeIconCanvas(ARROW_ART, { x: '#ffd23f' }),
   arrowPega: makeIconCanvas(ARROW_ART, { x: '#ff4fd8' }),
+  arrow_posto: makeIconCanvas(ARROW_ART, { x: '#ff6b5e' }),
+  arrow_oficina: makeIconCanvas(ARROW_ART, { x: '#ff9a1f' }),
+  arrow_lavajato: makeIconCanvas(ARROW_ART, { x: '#3fb6ff' }),
 };
 
 function artToCanvas(rows, pal) {

@@ -151,6 +151,10 @@ const HUD = {
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
       g.fillStyle = PLACE_COLORS[p.kind]; g.fillRect(x - 3, y - 3, 6, 6);
     }
+    if (Nav.place && Math.floor(time * 4) % 2 === 0) { // destino da navegação piscando
+      const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);
+      g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x - 5.5, y - 5.5, 11, 11);
+    }
     const tg = Rides.target();
     if (tg && Math.floor(time * 4) % 2 === 0) {
       const x = Math.round(tg.x * s), y = Math.round(tg.y * s);
