@@ -17,7 +17,14 @@ Depois acesse http://localhost:8642. (Abrir o `index.html` direto com duplo cliq
 
 ## Multiplayer (em construção)
 
-Até 4 amigos na mesma cidade, numa sala aberta por link (`?sala=K7QF`). Todos veem os outros dirigindo e podem bater neles. As chamadas e as áreas de dinâmica vêm do servidor e são as mesmas para todos: no celular aparece a lista, **E** vai buscar a chamada destacada e **Q** passa para a próxima. Ir buscar não reserva nada: leva a corrida quem parar ao lado do passageiro primeiro, e o servidor paga. O dinheiro da sala não mexe no save do single player.
+Até 4 amigos na mesma cidade, numa sala aberta por link (`?sala=K7QF`), disputando um turno das 07:00 às 19:00 (12 minutos reais). Todos veem os outros dirigindo e podem bater neles.
+
+- **Espera:** quem criou a sala (o dono; se ele sair, o mais antigo) aperta **Enter** para começar. Até lá dá para dar voltas, mas não há chamadas e o posto e a oficina ficam fechados. Durante o turno só volta quem já estava nele.
+- **Turno:** todos largam iguais (R$ 150, carro do save novo), depois de um 3-2-1. As chamadas e as áreas de dinâmica vêm do servidor e são as mesmas para todos: no celular aparece a lista, **E** vai buscar a chamada destacada e **Q** passa para a próxima. Ir buscar não reserva nada: leva a corrida quem parar ao lado do passageiro primeiro.
+- **Caixa:** o dinheiro mora no servidor. Ele paga as corridas, cobra as taxas de cancelamento e confere cada compra no posto e na oficina pelo teto de cada item e pelo limite do fiado (−R$ 200). Guincho e multa são cobrados mesmo sem dinheiro. O placar ao vivo fica no canto superior esquerdo.
+- **19:00:** quem está com passageiro tem 30 s de prorrogação para entregar. Depois vem o ranking (lucro do turno, desempate pela nota média), e o dono pode pedir **revanche**.
+
+O dinheiro da sala não mexe no save do single player.
 
 O jogo continua sem build. Só o servidor das salas (pasta `server/`, Cloudflare Durable Objects) precisa de Node:
 
@@ -34,17 +41,20 @@ Com o servidor local rodando, abra `http://localhost:8642/?sala=TEST` em **duas 
 | `?lag=200` | soma 200 ms de ida e volta |
 | `?jitter=60` | soma até 60 ms aleatórios por mensagem |
 | `?servidor=ws://host:porta` | usa outro servidor |
+| `?turno=2` | turno de 2 minutos (só vale no servidor local) |
 
 Testes do servidor:
 
 ```
 npm test                       # regras da sala (disputa, pagamento, atraso...), sem rede
-npm run fumaca                 # ponta a ponta no servidor local (precisa do npm run dev)
+npm run fumaca                 # ponta a ponta no servidor local (precisa do npm run dev), com um turno de 30 s
 node test/robo.mjs TEST        # um jogador falso disputando corridas na sala TEST
 VOLTAS=1 node test/robo.mjs TEST   # o mesmo robô só dando voltas num quarteirão
+COMECAR=1 TURNO=1 TURNOS=3 node test/robo.mjs TEST   # se for o dono, joga 3 turnos de 1 min seguidos
+                                                    # e confere o próprio saldo com o ranking em cada um
 ```
 
-As regras da sala ficam em `server/src/regras.js` (lógica pura, sem rede) e usam as mesmas fórmulas de tarifa, nota e gorjeta do solo, que estão em `js/rides.js`.
+As regras da sala ficam em `server/src/regras.js` (lógica pura, sem rede) e usam as mesmas fórmulas de tarifa, nota e gorjeta do solo (`js/rides.js`) e os mesmos preços (`js/carcare.js`). Cada mudança de dinheiro vira uma linha no livro-caixa da sala; no fim do turno o servidor confere o saldo de cada um com a soma do livro e escreve o resultado no log (`npx wrangler tail`).
 
 Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano grátis da Cloudflare). Para publicar uma versão nova: `npx wrangler login` (uma vez) e `npm run deploy` dentro de `server/`. Publique sempre o servidor antes do jogo. Quando a versão do protocolo muda (`PROTO` em `server/src/sala.js` e `NET_PROTO` em `js/net.js`), quem estiver com o jogo antigo aberto recebe um aviso para recarregar a página. O endereço fica em `NET_SERVER_PROD`, no topo de `js/net.js`; se ele estiver vazio, o site publicado esconde o multiplayer.
 

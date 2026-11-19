@@ -54,7 +54,9 @@ const HUD = {
 
     e.money.textContent = fmtMoney(S.money);
     e.money.classList.toggle('neg', S.money < 0);
-    e.rating.textContent = `★ ${Rides.ratingAvg().toFixed(2).replace('.', ',')} · ${S.rides} corridas`;
+    // no multiplayer a nota é a média do turno, calculada pela sala
+    const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
+    e.rating.textContent = `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} corridas`;
     e.spd.textContent = Math.round(player.speed * 0.55);
     e.clock.textContent = clockStr();
 

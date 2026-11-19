@@ -15,6 +15,9 @@ const PTYPES = {
 const HIT_LINES = ['Ei! Cuidado!', 'Meu Deus do céu!', 'Isso vai pra avaliação, hein!', 'Tá maluco?!',
   'Eu tenho família!', 'Calma, piloto!', 'Ai, meu pescoço...'];
 
+const CANCEL_FEE = 5;    // cancelar depois de aceitar, antes do passageiro entrar
+const ABANDON_FEE = 15;  // largar o passageiro no meio da viagem (e nota 1)
+
 const PX_KM = 0.08 / 16;
 function kmStr(px) { return (px * PX_KM).toFixed(1).replace('.', ',') + ' km'; }
 
@@ -159,16 +162,19 @@ const Rides = {
   cancel(forced) {
     const st = this.state;
     if (st === 'toPickup' || st === 'boarding') {
-      if (!forced) { S.money -= 5; toast('Corrida cancelada. Taxa de R$ 5,00.', 'warn'); }
+      if (!forced) { this.chargeFee(CANCEL_FEE); toast('Corrida cancelada. Taxa de R$ 5,00.', 'warn'); }
       this.reset();
     } else if (st === 'onTrip') {
       S.ratings.push(1); if (S.ratings.length > 30) S.ratings.shift();
-      if (!forced) { S.money -= 15; toast('Você largou o passageiro no meio do caminho! -R$ 15,00 e nota 1.', 'bad'); }
+      if (!forced) { this.chargeFee(ABANDON_FEE); toast('Você largou o passageiro no meio do caminho! -R$ 15,00 e nota 1.', 'bad'); }
       else toast(`${this.ride.name} desceu e foi de ônibus. Nota 1.`, 'bad');
       Sfx.bad();
       this.reset();
     }
   },
+
+  // taxa de cancelamento (no multiplayer quem cobra é a sala, ao receber o "cancelar")
+  chargeFee(v) { S.money -= v; },
 
   reset() {
     this.ride = null;
@@ -333,5 +339,5 @@ const Rides = {
 
 // No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { FIRST_NAMES, PTYPES, pickType, rideFare, rideAllowed, rideStars, ridePay };
+  module.exports = { FIRST_NAMES, PTYPES, pickType, rideFare, rideAllowed, rideStars, ridePay, CANCEL_FEE, ABANDON_FEE };
 }

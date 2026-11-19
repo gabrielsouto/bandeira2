@@ -1,13 +1,23 @@
-// Regras da sala: chamadas, dinâmica, embarque, entrega e pagamento.
+// Regras da sala: fases do turno, chamadas, dinâmica, embarque, entrega, caixa e ranking.
 //
 // Lógica pura: não sabe de rede, de WebSocket nem de relógio. Quem chama passa "agora" (segundos)
 // e "rnd" (sorteio de 0 a 1), e recebe de volta uma lista de eventos para enviar:
 //   { todos: msg }      para todos na sala
 //   { para: id, msg }   só para um jogador
 // O estado é um objeto simples (cabe no armazenamento do Durable Object) e é alterado no lugar.
-import { CIDADE, FIRST_NAMES, pickType, rideFare, rideAllowed, rideStars, ridePay, clamp } from './compartilhado.js';
+//
+// Fases: espera -> contagem (3 s) -> turno (12 min) -> prorrogação (até 30 s) -> fim -> (revanche) contagem ...
+// Dinheiro só muda durante o turno e a prorrogação, e cada mudança vira uma linha no livro-caixa.
+import {
+  CIDADE, FIRST_NAMES, pickType, rideFare, rideAllowed, rideStars, ridePay, clamp,
+  PROBLEMS, CREDIT_LIMIT, TOW_COST, RUN_OVER_FINE, SHOP_MAX, CANCEL_FEE, ABANDON_FEE,
+} from './compartilhado.js';
 
 export const REGRAS = {
+  SALDO_INICIAL: 150,    // R$ de cada um no começo do turno (o mesmo do save novo do solo)
+  TURNO: 720,            // s: 12 min reais, das 07:00 às 19:00 no relógio do jogo
+  CONTAGEM: 3,           // s de 3-2-1 antes do turno
+  PRORROGACAO: 30,       // s para quem está com passageiro a bordo às 19:00
   CHAMADA_VIDA: 40,      // s: vida média de uma chamada aberta (sorteada entre 75% e 125%)
   CHAMADAS_EXTRA: 2,     // chamadas abertas = jogadores conectados + isto
   DINAMICAS: 3,          // áreas de tarifa dinâmica ao mesmo tempo
@@ -17,18 +27,28 @@ export const REGRAS = {
   VEL_MAX: 230,          // px/s, velocidade máxima do carro (CARP.maxSpeed)
   EMBARQUE_T: 0.9,       // s da animação de embarque, descontados do tempo de viagem
   DIST_CHAMADAS: 48,     // px mínimos entre passageiros esperando
-  TICK: 0.25,            // s entre verificações de chamadas e dinâmicas vencidas
-  FORA_MAX: 300,         // s que a sala guarda saldo e corrida de quem caiu
+  TICK: 0.25,            // s entre verificações de chamadas, dinâmicas e fase
+  FORA_MAX: 300,         // s que a sala guarda quem caiu (fora do turno; no turno, guarda até o fim)
 };
+
+// teto de cada item que se compra no posto e na oficina
+export const TETOS = {
+  ...SHOP_MAX,
+  ...Object.fromEntries(Object.entries(PROBLEMS).map(([k, p]) => [k, p.cost])),
+};
+// cobranças que acontecem mesmo sem dinheiro (o fiado não impede)
+export const OBRIGATORIOS = { guincho: TOW_COST, multa: RUN_OVER_FINE };
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
 const r1 = (v) => Math.round(v * 10) / 10;
 const r2 = (v) => Math.round(v * 100) / 100;
 const escolhe = (arr, rnd) => arr[Math.floor(rnd() * arr.length)];
+const EM_JOGO = ['contagem', 'turno', 'prorrogacao'];
 
 export function novoEstado(agora, rnd) {
-  const e = { seq: 0, ultimoTick: 0, chamadas: [], dinamicas: [], jogadores: {} };
+  const e = { seq: 0, ultimoTick: 0, chegada: 0, fase: 'espera', fimFase: 0, dur: REGRAS.TURNO, turnos: 0,
+    chamadas: [], dinamicas: [], jogadores: {}, livro: [], ranking: null };
   for (let k = 0; k < REGRAS.DINAMICAS; k++) {
     const d = novaDinamica(e, agora, rnd);
     d.nasce = agora - (2 + rnd() * (d.vida * 0.6 - 2)); // já começam com idade, como no solo
@@ -85,8 +105,9 @@ function novaChamada(e, agora, rnd) {
     morre: agora + REGRAS.CHAMADA_VIDA * (0.75 + rnd() * 0.5) };
 }
 
-const conectados = (e) => Object.values(e.jogadores).filter((j) => j.fora == null);
-const alvo = (e) => { const n = conectados(e).length; return n ? n + REGRAS.CHAMADAS_EXTRA : 0; };
+const conectados = (e) => Object.entries(e.jogadores).filter(([, j]) => j.fora == null);
+// chamadas só existem durante o turno
+const alvo = (e) => { const n = conectados(e).length; return e.fase === 'turno' && n ? n + REGRAS.CHAMADAS_EXTRA : 0; };
 
 function completar(e, agora, rnd) {
   let mudou = false;
@@ -97,6 +118,34 @@ function completar(e, agora, rnd) {
     mudou = true;
   }
   return mudou;
+}
+
+// ---------- caixa ----------
+function zerarCaixa(j) {
+  Object.assign(j, { saldo: REGRAS.SALDO_INICIAL, ganho: 0, gasto: 0, corridas: 0, notas: [], corrida: null, ultimaPaga: null });
+}
+
+const notaMedia = (j) => (j.notas.length ? r2(j.notas.reduce((a, b) => a + b, 0) / j.notas.length) : null);
+
+// lança no livro e muda o saldo; "valor" é positivo para entrada e negativo para saída
+function lancar(e, id, tipo, valor, ref) {
+  const j = e.jogadores[id];
+  valor = r2(valor);
+  j.saldo = r2(j.saldo + valor);
+  if (tipo === 'corrida') j.ganho = r2(j.ganho + valor); else j.gasto = r2(j.gasto - valor);
+  e.livro.push({ j: id, tipo, valor, ...(ref != null ? { ref } : {}) });
+}
+
+export function msgCaixa(e, id) {
+  const j = e.jogadores[id];
+  return { t: 'caixa', jogador: id, saldo: j.saldo, ganho: j.ganho, gasto: j.gasto, corridas: j.corridas, nota: notaMedia(j) };
+}
+
+// soma do livro por jogador: confere que o saldo de cada um é exatamente o que os lançamentos dizem
+export function conferirLivro(e) {
+  const soma = {};
+  for (const l of e.livro) soma[l.j] = r2((soma[l.j] || 0) + l.valor);
+  return soma;
 }
 
 // ---------- mensagens para os clientes ----------
@@ -110,36 +159,124 @@ export function msgDinamicas(e, agora) {
     age: r1(agora - d.nasce), life: r1(d.vida) })) };
 }
 
+// dono = o conectado que chegou primeiro; é quem começa o turno e pede revanche
+export function dono(e) {
+  let best = null;
+  for (const [id, j] of conectados(e)) if (!best || j.chegou < e.jogadores[best].chegou) best = id;
+  return best;
+}
+
+export function msgFase(e, agora) {
+  return { t: 'fase', fase: e.fase, resta: e.fimFase ? r1(Math.max(0, e.fimFase - agora)) : 0, dur: e.dur,
+    dono: dono(e), turno: e.turnos };
+}
+
+function placar(e) {
+  const p = {};
+  for (const k in e.jogadores) {
+    const j = e.jogadores[k];
+    p[k] = { saldo: j.saldo, ganho: j.ganho, gasto: j.gasto, corridas: j.corridas, nota: notaMedia(j) };
+  }
+  return p;
+}
+
 // o que um jogador precisa saber ao entrar (ou voltar) na sala
 export function visao(e, id, agora) {
   const j = e.jogadores[id];
-  const placar = {};
-  for (const k in e.jogadores) placar[k] = { ganho: e.jogadores[k].ganho, corridas: e.jogadores[k].corridas };
-  return { chamadas: msgChamadas(e, agora).lista, dinamicas: msgDinamicas(e, agora).lista, placar,
-    corrida: j && j.corrida ? { id: j.corrida.id } : null };
+  return { chamadas: msgChamadas(e, agora).lista, dinamicas: msgDinamicas(e, agora).lista, placar: placar(e),
+    corrida: j && j.corrida ? { id: j.corrida.id } : null, fase: msgFase(e, agora), ranking: e.ranking };
 }
 
 // ---------- entrada, saída e relógio ----------
-export function entrar(e, id, agora, rnd) {
+// motivo para não deixar entrar, ou null. Durante o turno só volta quem já estava nele.
+export function podeEntrar(e, id) {
+  if (EM_JOGO.includes(e.fase) && !e.jogadores[id]) return 'andamento';
+  return null;
+}
+
+export function entrar(e, id, agora, rnd, apelido) {
   const j = e.jogadores[id];
-  if (j) delete j.fora; // voltou depois de cair: mantém saldo e corrida
-  else e.jogadores[id] = { ganho: 0, corridas: 0, corrida: null, ultimaPaga: null };
-  return completar(e, agora, rnd) ? [{ todos: msgChamadas(e, agora) }] : [];
+  if (j) { delete j.fora; if (apelido) j.apelido = apelido; } // voltou depois de cair: mantém saldo e corrida
+  else {
+    e.jogadores[id] = { apelido: apelido || id, chegou: ++e.chegada };
+    zerarCaixa(e.jogadores[id]);
+    // (no turno, podeEntrar barra novatos; se mesmo assim entrar, o livro continua fechando com o saldo)
+    if (EM_JOGO.includes(e.fase)) e.livro.push({ j: id, tipo: 'inicio', valor: REGRAS.SALDO_INICIAL });
+  }
+  const ev = [{ todos: msgFase(e, agora) }]; // o dono pode ter mudado
+  if (completar(e, agora, rnd)) ev.push({ todos: msgChamadas(e, agora) });
+  return ev;
 }
 
 export function sair(e, id, agora) {
   const j = e.jogadores[id];
   if (j) j.fora = agora;
-  return [];
+  return [{ todos: msgFase(e, agora) }];
+}
+
+// dono pede para começar (na espera) ou revanche (no fim). "dur" (s) só vale para testes locais.
+export function comecar(e, id, agora, dur) {
+  if (id !== dono(e)) return [{ para: id, msg: { t: 'recusado', acao: 'comecar', motivo: 'dono' } }];
+  if (e.fase !== 'espera' && e.fase !== 'fim') return [{ para: id, msg: { t: 'recusado', acao: 'comecar', motivo: 'fase' } }];
+  // quem não está conectado fica de fora deste turno
+  for (const [k, j] of Object.entries(e.jogadores)) {
+    if (j.fora != null) delete e.jogadores[k];
+    else zerarCaixa(j);
+  }
+  e.dur = num(dur) ? clamp(dur, 20, REGRAS.TURNO) : REGRAS.TURNO;
+  e.fase = 'contagem';
+  e.fimFase = agora + REGRAS.CONTAGEM;
+  e.turnos++;
+  e.livro = [];
+  e.ranking = null;
+  e.chamadas = [];
+  for (const k in e.jogadores) e.livro.push({ j: k, tipo: 'inicio', valor: REGRAS.SALDO_INICIAL });
+  const ev = [{ todos: msgFase(e, agora) }, { todos: msgChamadas(e, agora) }];
+  for (const k in e.jogadores) ev.push({ todos: msgCaixa(e, k) });
+  return ev;
+}
+
+function ranking(e) {
+  return Object.entries(e.jogadores).map(([id, j]) => ({ id, apelido: j.apelido, lucro: r2(j.saldo - REGRAS.SALDO_INICIAL),
+    saldo: j.saldo, ganho: j.ganho, gasto: j.gasto, corridas: j.corridas, nota: notaMedia(j) }))
+    .sort((a, b) => b.lucro - a.lucro || (b.nota ?? 0) - (a.nota ?? 0));
+}
+
+// passa de fase quando o tempo acaba (pode pular mais de uma se a sala ficou parada)
+function avancar(e, agora) {
+  const ev = [];
+  for (let n = 0; n < 4; n++) {
+    const comCorrida = Object.values(e.jogadores).some((j) => j.corrida);
+    if (e.fase === 'contagem' && agora >= e.fimFase) {
+      e.fase = 'turno';
+      e.fimFase = e.fimFase + e.dur;
+    } else if (e.fase === 'turno' && agora >= e.fimFase) {
+      e.chamadas = [];
+      ev.push({ todos: msgChamadas(e, agora) });
+      if (comCorrida) { e.fase = 'prorrogacao'; e.fimFase = e.fimFase + REGRAS.PRORROGACAO; }
+      else e.fase = 'fim';
+    } else if (e.fase === 'prorrogacao' && (agora >= e.fimFase || !comCorrida)) {
+      for (const j of Object.values(e.jogadores)) j.corrida = null; // não entregou a tempo: fica sem pagamento
+      e.fase = 'fim';
+    } else break;
+    if (e.fase === 'fim') { e.fimFase = 0; e.ranking = ranking(e); }
+    ev.push({ todos: msgFase(e, agora) });
+    if (e.fase === 'fim') ev.push({ todos: { t: 'fim', ranking: e.ranking } });
+  }
+  return ev;
 }
 
 export function tick(e, agora, rnd) {
   if (agora - e.ultimoTick < REGRAS.TICK) return [];
   e.ultimoTick = agora;
-  for (const id in e.jogadores) {
-    const j = e.jogadores[id];
-    if (j.fora != null && agora - j.fora > REGRAS.FORA_MAX) delete e.jogadores[id];
+  // fora do turno, quem caiu é esquecido depois de um tempo; no turno, fica até o ranking
+  if (!EM_JOGO.includes(e.fase)) {
+    for (const id in e.jogadores) {
+      const j = e.jogadores[id];
+      if (j.fora != null && agora - j.fora > REGRAS.FORA_MAX) delete e.jogadores[id];
+    }
   }
+  const ev = avancar(e, agora);
   let mudouD = false;
   e.dinamicas = e.dinamicas.map((d) => {
     if (agora - d.nasce < d.vida) return d;
@@ -149,7 +286,6 @@ export function tick(e, agora, rnd) {
   const antes = e.chamadas.length;
   e.chamadas = e.chamadas.filter((c) => c.morre > agora);
   const mudouC = completar(e, agora, rnd) || e.chamadas.length !== antes;
-  const ev = [];
   if (mudouD) ev.push({ todos: msgDinamicas(e, agora) });
   if (mudouC) ev.push({ todos: msgChamadas(e, agora) });
   return ev;
@@ -163,10 +299,12 @@ export function mensagem(e, id, m, agora, rnd, pos) {
   const recusa = (acao, motivo, ref, extra) => [{ para: id, msg: { t: 'recusado', acao, id: ref, motivo, ...extra } }];
   const longe = (p, alvoP, raio) => !num(p.x) || !num(p.y) || dist(p, alvoP) > raio ||
     (pos && dist(pos, p) > REGRAS.TOLERANCIA_POS);
+  const valeDinheiro = e.fase === 'turno' || e.fase === 'prorrogacao';
 
   if (m.t === 'embarcar') {
     // "atual" deixa o cliente perceber uma corrida que ele já largou e liberá-la
     if (j.corrida) return recusa('embarcar', 'ocupado', m.chamada, { atual: j.corrida.id });
+    if (e.fase !== 'turno') return recusa('embarcar', 'fase', m.chamada);
     const i = e.chamadas.findIndex((c) => c.id === m.chamada);
     if (i < 0) return recusa('embarcar', 'sumiu', m.chamada); // já levada por outro ou expirada
     const c = e.chamadas[i];
@@ -192,17 +330,47 @@ export function mensagem(e, id, m, agora, rnd, pos) {
       comfort: clamp(num(m.conforto) ? m.conforto : 100, -1000, 100),
     });
     const { pay, tip } = ridePay(r.fare, late, stars, rnd);
-    j.ganho = r2(j.ganho + pay + tip);
+    lancar(e, id, 'corrida', pay + tip, r.id);
     j.corridas++;
+    j.notas.push(stars);
     j.corrida = null;
-    const msg = { t: 'pago', jogador: id, corrida: r.id, pay, tip, stars, late, ganho: j.ganho, corridas: j.corridas };
+    const msg = { t: 'pago', jogador: id, corrida: r.id, pay, tip, stars, late, saldo: j.saldo, corridas: j.corridas };
     j.ultimaPaga = msg;
-    return [{ todos: msg }];
+    const ev = [{ todos: msg }, { todos: msgCaixa(e, id) }];
+    if (e.fase === 'prorrogacao') ev.push(...avancar(e, agora)); // foi a última corrida: acaba já
+    return ev;
   }
 
   if (m.t === 'cancelar') {
-    if (j.corrida && j.corrida.id === m.corrida) j.corrida = null;
-    return [];
+    const r = j.corrida;
+    if (!r || r.id !== m.corrida) return [];
+    j.corrida = null;
+    const ev = [];
+    // a sala cobra a taxa: quem desiste logo no embarque paga a menor; quem larga o passageiro paga a maior e leva nota 1.
+    // "forcado" = guincho (o passageiro desce sem taxa, mas a nota 1 vale igual)
+    const largou = agora - r.embarque > REGRAS.EMBARQUE_T + 0.5;
+    if (largou) j.notas.push(1);
+    if (!m.forcado && valeDinheiro) lancar(e, id, 'cancelamento', -(largou ? ABANDON_FEE : CANCEL_FEE), r.id);
+    if (largou || (!m.forcado && valeDinheiro)) ev.push({ todos: msgCaixa(e, id) });
+    if (e.fase === 'prorrogacao') ev.push(...avancar(e, agora));
+    return ev;
+  }
+
+  if (m.t === 'gastar') {
+    // { itens: ['tanque'] | ['funilaria', 'flat', ...] | ['guincho'] | ['multa'], valor, ref }
+    const ref = m.ref;
+    const itens = Array.isArray(m.itens) ? [...new Set(m.itens.map(String))].slice(0, 12) : [];
+    const valor = num(m.valor) ? r2(m.valor) : NaN;
+    const nega = (motivo) => recusa('gastar', motivo, ref, { saldo: j.saldo });
+    if (!valeDinheiro) return nega('fase');
+    if (!itens.length || !(valor > 0)) return nega('invalido');
+    const obrig = itens.length === 1 && OBRIGATORIOS[itens[0]] != null;
+    const teto = obrig ? OBRIGATORIOS[itens[0]] : itens.reduce((a, k) => a + (TETOS[k] ?? NaN), 0);
+    if (!(teto >= 0)) return nega('invalido');
+    if (valor > teto + 0.001) return nega('teto');
+    if (!obrig && j.saldo - valor < CREDIT_LIMIT - 0.001) return nega('fiado');
+    lancar(e, id, itens.join('+'), -valor, ref);
+    return [{ para: id, msg: { t: 'gasto', id: ref, valor, saldo: j.saldo } }, { todos: msgCaixa(e, id) }];
   }
   return [];
 }

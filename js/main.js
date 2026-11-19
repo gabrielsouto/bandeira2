@@ -67,6 +67,7 @@ function addFloater(x, y, text, col) { floaters.push({ x, y, text, col, t: 0 });
 
 // ---------- entrada ----------
 const input = { up: false, down: false, left: false, right: false, hb: false };
+const NO_INPUT = { up: false, down: false, left: false, right: false, hb: false };
 const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right', Space: 'hb' };
 function clearInput() { for (const k in input) input[k] = false; }
@@ -95,6 +96,7 @@ function onKey(code) {
     else { const m = code.match(/^(Digit|Numpad)(\d)$/); if (m) clickModalIndex(+m[2]); }
     return;
   }
+  if (Multi.roomKey(code)) return;
   switch (code) {
     case 'KeyE': Rides.accept(); break;
     case 'KeyQ': Rides.decline(); break;
@@ -148,22 +150,27 @@ function clickModalIndex(n) { const it = modalItems[n - 1]; if (it && !it.disabl
 const MECH_LINES = ['"Hmm... isso aí vai dar trabalho, patrão."', '"Trouxe na hora certa!"', '"Já vi pior. Bem pior."',
   '"Quer o orçamento com ou sem chorinho?"', '"Esse barulho aí não é normal não."'];
 
-function shopItem(label, cost, fn, reopen) {
-  return { label, cost, fn, disabled: !Care.canPay(cost),
-    run() { if (!Care.canPay(cost)) return; S.money -= cost; fn(); Sfx.cash(); writeSave(); reopen(); } };
+// "kinds" = o que está sendo comprado (a sala do multiplayer confere o valor pelo teto de cada item)
+function shopItem(label, cost, fn, reopen, kinds) {
+  return { label, cost, fn, kinds, disabled: !Care.canPay(cost),
+    run() {
+      if (!Care.canPay(cost)) return;
+      if (GAME.mode === 'multi') { Multi.buy(kinds, cost, (open) => { fn(); Sfx.cash(); if (open) reopen(); }); return; }
+      S.money -= cost; fn(); Sfx.cash(); writeSave(); reopen();
+    } };
 }
 
 function garageMenu(place) {
   const c = S.car, items = [], reopen = () => garageMenu(place);
-  if (c.health < 99.5) items.push(shopItem(`Funilaria (lataria em ${Math.round(c.health)}%)`, Math.ceil((100 - c.health) * 2.2), () => { c.health = 100; }, reopen));
+  if (c.health < 99.5) items.push(shopItem(`Funilaria (lataria em ${Math.round(c.health)}%)`, Math.ceil((100 - c.health) * 2.2), () => { c.health = 100; }, reopen, ['funilaria']));
   for (const k in PROBLEMS) if (c.problems[k]) items.push(shopItem(PROBLEMS[k].fix, PROBLEMS[k].cost, () => {
     c.problems[k] = false;
     if (k === 'overheat') { Care.overheated = false; c.temp = 50; }
-  }, reopen));
-  if (c.wear >= 5) items.push(shopItem(`Revisão completa (desgaste ${Math.round(c.wear)}%)`, Math.ceil(30 + c.wear * 1.5), () => { c.wear = 0; }, reopen));
+  }, reopen, [k]));
+  if (c.wear >= 5) items.push(shopItem(`Revisão completa (desgaste ${Math.round(c.wear)}%)`, Math.ceil(30 + c.wear * 1.5), () => { c.wear = 0; }, reopen, ['revisao']));
   if (items.length > 1) {
     const total = items.reduce((a, i) => a + i.cost, 0), fns = items.map((i) => i.fn);
-    items.push(shopItem('Consertar tudo', total, () => fns.forEach((f) => f()), reopen));
+    items.push(shopItem('Consertar tudo', total, () => fns.forEach((f) => f()), reopen, items.flatMap((i) => i.kinds)));
   }
   const sub = items.length ? `${R.pick(MECH_LINES)}<br><small>Dá pra pagar no fiado até ${fmtMoney(CREDIT_LIMIT)}.</small>` : 'Seu carro está nos trinques! Nada pra fazer aqui.';
   showModal(`OFICINA · ${place.name}`, sub, items);
@@ -174,14 +181,18 @@ function postoMenu(place) {
   const missing = 100 - c.fuel;
   if (missing > 1) {
     const full = Math.ceil(missing * FUEL_PRICE * 100) / 100;
-    items.push(shopItem('Completar o tanque', full, () => { c.fuel = 100; }, reopen));
-    if (full > 20) items.push(shopItem('Colocar R$ 20 de gasolina', 20, () => { c.fuel = Math.min(100, c.fuel + 20 / FUEL_PRICE); }, reopen));
+    items.push(shopItem('Completar o tanque', full, () => { c.fuel = 100; }, reopen, ['tanque']));
+    if (full > FUEL_SMALL) items.push(shopItem('Colocar R$ 20 de gasolina', FUEL_SMALL, () => { c.fuel = Math.min(100, c.fuel + FUEL_SMALL / FUEL_PRICE); }, reopen, ['gasolina']));
   }
-  items.push(shopItem('Café + pão de queijo', 8, () => toast('Delícia. Bora trabalhar!', 'good'), reopen));
+  items.push(shopItem('Café + pão de queijo', COFFEE_PRICE, () => toast('Delícia. Bora trabalhar!', 'good'), reopen, ['cafe']));
   showModal(`POSTO · ${place.name}`, `Gasolina: ${fmtMoney(FUEL_PRICE)} por % do tanque · Tanque: ${Math.round(c.fuel)}%`, items);
 }
 
 function openPlaceMenu(pl) {
+  if (GAME.mode === 'multi' && !Multi.moneyLive()) {
+    toast(pl.kind === 'oficina' ? 'A oficina só abre durante o turno.' : 'O posto só abre durante o turno.');
+    return;
+  }
   player.vx = player.vy = 0; player.speed = 0;
   if (pl.kind === 'oficina') garageMenu(pl); else postoMenu(pl);
 }
@@ -190,6 +201,7 @@ function openPause(confirmReset) {
   if (GAME.mode === 'multi') {
     showModal(`PAUSA · SALA ${Multi.sala}`, 'O jogo continua para os outros: seu carro fica parado onde está.', [
       { label: 'Continuar', run: closeModal },
+      ...Multi.pauseItems(),
       { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
       { label: 'Copiar o link da sala', run: () => {
         navigator.clipboard.writeText(location.href).then(() => toast('Link copiado!', 'good'),
@@ -221,8 +233,9 @@ function callTow() {
     if (d < bd) { bd = d; best = p; }
   }
   if (!best) return;
-  S.money -= TOW_COST;
-  toast(`Guincho: -${fmtMoney(TOW_COST)}. Te deixamos em ${best.name}.`, 'bad');
+  const free = GAME.mode === 'multi' && !Multi.moneyLive(); // fora do turno da sala, o guincho é de graça
+  if (!free) Care.charge(TOW_COST, 'guincho');
+  toast(free ? `Guincho: te deixamos em ${best.name}.` : `Guincho: -${fmtMoney(TOW_COST)}. Te deixamos em ${best.name}.`, 'bad');
   placeCarAt(best);
   Multi.onTeleport();
   lastPlace = null;
@@ -235,7 +248,7 @@ function update(dt) {
   const surface = city.tileAtPx(player.x, player.y);
   const m = Care.mods(surface);
   const px = player.x, py = player.y;
-  stepPlayer(player, input, dt, m);
+  stepPlayer(player, Multi.frozen() ? NO_INPUT : input, dt, m); // na contagem 3-2-1 o carro espera
   // batida em outro jogador conta metade (ninguém controla o carro do outro)
   const imp = Math.max(collidePlayer(player, city, traffic.cars), Multi.collide(player) * 0.5);
   if (imp > 35) {
@@ -251,8 +264,8 @@ function update(dt) {
   traffic.update(dt, player);
   const hits = peds.update(dt, player);
   for (let k = 0; k < hits; k++) {
-    S.money -= 40;
-    toast('Você atropelou um pedestre! Multa de R$ 40,00.', 'bad');
+    Care.charge(RUN_OVER_FINE, 'multa');
+    toast(`Você atropelou um pedestre! Multa de ${fmtMoney(RUN_OVER_FINE)}.`, 'bad');
     Sfx.bad(); Rides.onImpact(80);
     player.vx *= 0.85; player.vy *= 0.85;
   }

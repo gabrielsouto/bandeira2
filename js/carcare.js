@@ -11,6 +11,16 @@ const PROBLEMS = {
 const FUEL_PRICE = 0.65;     // R$ por % do tanque
 const CREDIT_LIMIT = -200;   // dá pra pagar "no fiado" até aqui
 const TOW_COST = 120;
+const FUEL_SMALL = 20;       // "Colocar R$ 20 de gasolina"
+const COFFEE_PRICE = 8;
+const RUN_OVER_FINE = 40;    // multa por atropelar um pedestre
+// teto de cada gasto, pelo item (o multiplayer confere estes valores no servidor)
+const SHOP_MAX = {
+  tanque: Math.ceil(100 * FUEL_PRICE * 100) / 100, // tanque vazio até cheio
+  gasolina: FUEL_SMALL, cafe: COFFEE_PRICE,
+  funilaria: Math.ceil(100 * 2.2),                  // lataria em 0%
+  revisao: Math.ceil(30 + 100 * 1.5),               // desgaste em 100%
+};
 
 const Care = {
   stallT: 0, nextStall: 25, overheated: false, flatSide: 1, failAcc: 0, warnedFuel: false,
@@ -102,4 +112,20 @@ const Care = {
   },
 
   canPay(cost) { return S.money - cost >= CREDIT_LIMIT; },
+
+  // cobrança que acontece de qualquer jeito (guincho, multa). No multiplayer, quem desconta é a sala.
+  charge(value, kind) {
+    if (GAME.mode === 'multi') Multi.charge(kind, value);
+    else S.money -= value;
+  },
+
+  // carro novo (começo de um turno no multiplayer)
+  resetState() {
+    Object.assign(this, { stallT: 0, nextStall: 25, overheated: false, failAcc: 0, warnedFuel: false });
+  },
 };
+
+// no Node (servidor do multiplayer) exporta os preços; no navegador esta linha não faz nada
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { PROBLEMS, FUEL_PRICE, CREDIT_LIMIT, TOW_COST, FUEL_SMALL, COFFEE_PRICE, RUN_OVER_FINE, SHOP_MAX };
+}

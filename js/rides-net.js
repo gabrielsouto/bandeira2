@@ -3,7 +3,8 @@
 // Leva quem parar ao lado do passageiro primeiro; o servidor decide e paga.
 //
 // Ao entrar numa sala, RidesNet.install() troca estes métodos do Rides: update, accept, decline,
-// cancel, finish e drawWorld. O resto do Rides (viagem, nota, avisos) é o mesmo do solo.
+// cancel, finish, chargeFee e drawWorld. O resto do Rides (viagem, nota, avisos) é o mesmo do solo.
+// Chamadas só existem durante o turno; taxas de cancelamento são cobradas pela sala.
 // Fora de uma sala nada daqui roda.
 
 const RidesNet = {
@@ -15,8 +16,14 @@ const RidesNet = {
   install() {
     this.solo = { cancel: Rides.cancel, drawWorld: Rides.drawWorld };
     Object.assign(Rides, { update: this.update, accept: this.accept, decline: this.decline,
-      cancel: this.cancel, finish: this.finish, drawWorld: this.drawWorld });
+      cancel: this.cancel, finish: this.finish, drawWorld: this.drawWorld, chargeFee() { /* a sala cobra */ } });
     Rides.state = 'idle'; Rides.offer = null; Rides.ride = null; Rides.surges = [];
+  },
+
+  // começo de um turno: ninguém está com corrida
+  resetForTurn() {
+    this.calls = []; this.sel = null; this.pendingDrop = null;
+    Rides.reset();
   },
 
   // ---------- métodos que substituem os do Rides (aqui "this" é o Rides) ----------
@@ -67,6 +74,7 @@ const RidesNet = {
   // E: ir buscar a chamada destacada (não reserva: outros podem chegar antes)
   accept() {
     if (this.state !== 'idle') return;
+    if (Multi.fase !== 'turno') return;
     if (!this.canWork()) { toast('Com o carro assim não dá pra pegar corrida.', 'warn'); return; }
     const c = RidesNet.selected();
     if (!c) return;
@@ -97,7 +105,7 @@ const RidesNet = {
       this.reset();
       return;
     }
-    Net.send({ t: 'cancelar', corrida: r.id });
+    Net.send({ t: 'cancelar', corrida: r.id, forcado: !!forced }); // a sala cobra a taxa (o guincho não paga)
     RidesNet.solo.cancel.call(this, forced);
   },
 
@@ -211,6 +219,16 @@ const RidesNet = {
   // ---------- celular e minimapa ----------
   phoneHTML() {
     const st = Rides.state, r = Rides.ride;
+    if (st === 'idle' && Multi.fase !== 'turno') {
+      const f = Multi.fase;
+      const msg = f === 'espera' ? 'O turno ainda não começou. As chamadas aparecem às 07:00.'
+        : f === 'contagem' ? 'Preparar… o turno já vai começar!'
+        : f === 'prorrogacao' ? 'Deu 19:00! Esperando quem ainda está com passageiro.'
+        : 'Turno encerrado. Aperte <b>R</b> para ver o ranking.';
+      return `<div class="ph-title">${f === 'fim' || f === 'prorrogacao' ? 'FIM DO TURNO' : 'SALA ' + esc(Multi.sala)}</div>` +
+        `<div class="ph-muted">${msg}</div>` +
+        (f !== 'espera' ? `<div class="ph-stats">Corridas: ${Multi.myCorridas}<br>Lucro: ${fmtMoney(S.money - TURN_START_MONEY)}</div>` : '');
+    }
     if (st === 'idle') {
       const list = this.sorted().slice(0, 4), sel = this.selected();
       const rows = list.map((c) => `<div class="ph-call${sel && c.id === sel.id ? ' sel' : ''}">` +

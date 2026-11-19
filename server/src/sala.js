@@ -9,7 +9,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { HASH_CIDADE } from './compartilhado.js';
 import * as regras from './regras.js';
 
-export const PROTO = 2;      // versão do protocolo; o cliente manda a dele em "entrar"
+export const PROTO = 3;      // versão do protocolo; o cliente manda a dele em "entrar"
 const MAX_JOGADORES = 4;
 const NUM_CORES = 4;
 const MAX_MSG = 1000;        // bytes; mensagem maior é ignorada
@@ -37,6 +37,7 @@ export class Sala extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.estado = null;          // estado das regras (regras.js)
+    this.alarmeEm = 0;           // fim de fase já agendado no alarme (ms)
     this.pos = new Map();        // id -> última posição informada do carro (só em memória)
     ctx.blockConcurrencyWhile(async () => { this.estado = (await ctx.storage.get('estado')) || null; });
   }
@@ -50,9 +51,11 @@ export class Sala extends DurableObject {
 
   salvar() { this.ctx.storage.put('estado', this.estado); }
 
-  async fetch() {
+  async fetch(req) {
     const [cliente, servidor] = Object.values(new WebSocketPair());
-    this.ctx.acceptWebSocket(servidor);
+    // servidor rodando na própria máquina (wrangler dev): aceita turnos curtos para testar
+    const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(req.url).hostname);
+    this.ctx.acceptWebSocket(servidor, local ? ['local'] : []);
     return new Response(null, { status: 101, webSocket: cliente });
   }
 
@@ -80,8 +83,26 @@ export class Sala extends DurableObject {
     for (const ev of eventos) {
       if (ev.todos) this.espalhar(ev.todos);
       else for (const { ws, j } of this.jogadores()) if (j.id === ev.para) this.enviar(ws, ev.msg);
+      if (ev.todos && ev.todos.t === 'fim') this.registrarFim(ev.todos.ranking);
     }
     this.salvar();
+    this.agendar();
+  }
+
+  // a fase vira sozinha na hora certa, mesmo que ninguém mande mensagem (abas em segundo plano)
+  agendar() {
+    const fim = this.estado && this.estado.fimFase ? Math.ceil(this.estado.fimFase * 1000) + 50 : 0;
+    if (!fim || fim === this.alarmeEm || !this.jogadores().length) return;
+    this.alarmeEm = fim;
+    this.ctx.storage.setAlarm(fim);
+  }
+
+  // log do fim do turno (npx wrangler tail): ranking e conferência com a soma do livro-caixa
+  registrarFim(ranking) {
+    const soma = regras.conferirLivro(this.regras);
+    const bate = ranking.every((r) => Math.abs((soma[r.id] ?? 0) - r.saldo) < 0.005);
+    console.log(`[fim do turno ${this.regras.turnos}] livro ${bate ? 'confere' : 'NÃO CONFERE'} · ` +
+      ranking.map((r) => `${r.apelido}: lucro ${r.lucro} (saldo ${r.saldo}, livro ${soma[r.id]})`).join(' · '));
   }
 
   async webSocketMessage(ws, data) {
@@ -103,20 +124,30 @@ export class Sala extends DurableObject {
       this.espalhar({ t: 'e', id: eu.id, s, x, y, a, vx, vy, b: m.b ? 1 : 0, g: m.g ? 1 : 0 }, ws);
     } else if (m.t === 'ping') {
       this.enviar(ws, { t: 'pong', c: num(m.c) ? m.c : 0 });
-    } else if (m.t === 'embarcar' || m.t === 'entregar' || m.t === 'cancelar') {
+    } else if (m.t === 'embarcar' || m.t === 'entregar' || m.t === 'cancelar' || m.t === 'gastar') {
       this.despachar(regras.mensagem(this.regras, eu.id, m, this.agora(), Math.random, this.pos.get(eu.id) || null));
+    } else if (m.t === 'comecar') {
+      // "min" (turno curto) só vale com o servidor rodando localmente
+      const local = this.ctx.getTags(ws).includes('local');
+      const dur = local && num(m.min) ? m.min * 60 : null;
+      this.despachar(regras.comecar(this.regras, eu.id, this.agora(), dur));
     }
   }
 
   entrar(ws, m) {
-    const recusar = (motivo) => {
-      this.enviar(ws, { t: 'erro', motivo });
+    const recusar = (motivo, extra) => {
+      this.enviar(ws, { t: 'erro', motivo, ...extra });
       try { ws.close(FECHA.RECUSADO, motivo); } catch (e) { /* já fechado */ }
     };
     if (m.v !== PROTO) return recusar('versao');
     const id = String(m.id || '');
     if (!/^[a-z0-9]{8,32}$/.test(id)) return recusar('id');
     if (String(m.hash || '') !== HASH_CIDADE) return recusar('cidade');
+
+    const agora = this.agora(), e = this.regras;
+    this.despachar(regras.tick(e, agora, Math.random)); // a fase pode ter acabado enquanto a sala estava vazia
+    const barrado = regras.podeEntrar(e, id);
+    if (barrado) return recusar(barrado, { resta: regras.msgFase(e, agora).resta });
 
     const outros = this.jogadores(ws);
     const velho = outros.find((o) => o.j.id === id);          // mesma aba reconectando
@@ -134,20 +165,21 @@ export class Sala extends DurableObject {
     }
     ws.serializeAttachment(j);
 
-    const agora = this.agora(), e = this.regras;
     // quem consta nas regras mas não tem conexão (a sala reiniciou) passa a contar como fora
     const ligados = new Set([id, ...resto.map((o) => o.j.id)]);
     for (const k in e.jogadores) if (!ligados.has(k) && e.jogadores[k].fora == null) regras.sair(e, k, agora);
-    const eventos = [...regras.entrar(e, id, agora, Math.random), ...regras.tick(e, agora, Math.random)];
+    const eventos = regras.entrar(e, id, agora, Math.random, apelido);
 
     const v = regras.visao(e, id, agora);
-    const comPlacar = (x) => ({ id: x.id, apelido: x.apelido, cor: x.cor, ...(v.placar[x.id] || { ganho: 0, corridas: 0 }) });
+    const comPlacar = (x) => ({ id: x.id, apelido: x.apelido, cor: x.cor, ...v.placar[x.id] });
     this.enviar(ws, { t: 'bemvindo', voce: id, jogadores: [j, ...resto.map((o) => o.j)].map(comPlacar),
-      chamadas: v.chamadas, dinamicas: v.dinamicas, corrida: v.corrida });
+      chamadas: v.chamadas, dinamicas: v.dinamicas, corrida: v.corrida, fase: v.fase, ranking: v.ranking });
     if (!velho) this.espalhar({ t: 'entrou', j: comPlacar(j) }, ws);
+    this.alarmeEm = 0;
+    this.ctx.storage.deleteAlarm(); // cancela a limpeza da sala vazia; agendar() remarca o fim da fase
     this.despachar(eventos);
     this.salvar();
-    this.ctx.storage.deleteAlarm();
+    this.agendar();
   }
 
   sair(ws) {
@@ -156,14 +188,19 @@ export class Sala extends DurableObject {
     if (!j) return;
     this.espalhar({ t: 'saiu', id: j.id }, ws);
     this.pos.delete(j.id);
-    regras.sair(this.regras, j.id, this.agora());
-    this.salvar();
-    if (!this.jogadores().length) this.ctx.storage.setAlarm(Date.now() + LIMPA_SALA_VAZIA);
+    this.despachar(regras.sair(this.regras, j.id, this.agora()));
+    if (!this.jogadores().length) { this.alarmeEm = 0; this.ctx.storage.setAlarm(Date.now() + LIMPA_SALA_VAZIA); }
   }
 
-  // sala ficou vazia por um tempo: apaga tudo (o código pode ser usado de novo do zero)
+  // alarme: fim de uma fase (com gente na sala) ou sala vazia por um tempo (apaga tudo; o código pode ser usado de novo)
   async alarm() {
-    if (this.jogadores().length) return;
+    if (this.jogadores().length) {
+      this.alarmeEm = 0;
+      this.regras.ultimoTick = 0; // o alarme sempre confere a fase, mesmo logo depois de outra mensagem
+      this.despachar(regras.tick(this.regras, this.agora(), Math.random));
+      this.agendar();
+      return;
+    }
     this.estado = null;
     await this.ctx.storage.deleteAll();
   }

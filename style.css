@@ -155,3 +155,27 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 40px; color: var(--gol
 #netinfo em { font-style: normal; color: var(--accent); margin-left: 6px; }
 #netinfo .away em { color: inherit; }
 
+/* multiplayer: fase do turno, painel da sala e ranking */
+#netinfo .ni-phase { color: var(--gold); }
+#netinfo .ni-phase.prorrogacao { color: var(--warn); }
+#netinfo .ni-phase.espera, #netinfo .ni-phase.fim { color: var(--muted); }
+#netinfo em.neg { color: var(--bad); }
+#roompanel { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); padding: 10px 16px; text-align: center;
+  max-width: min(520px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px; }
+#roompanel.hidden { display: none; }
+.rp-title { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--gold); line-height: 1.5; }
+.rp-text { color: var(--muted); font-size: 19px; line-height: 1.1; }
+.rp-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 2px; }
+.rp-btns button { font-size: 18px; padding: 4px 10px; }
+table.rank { width: 100%; border-collapse: collapse; margin: 6px 0 2px; font-size: 20px; color: var(--ink); }
+table.rank th { font-weight: normal; color: var(--muted); font-size: 16px; text-align: right; padding: 0 6px; }
+table.rank td { text-align: right; padding: 1px 6px; white-space: nowrap; }
+table.rank td:nth-child(2), table.rank th:nth-child(2) { text-align: left; }
+table.rank td:first-child { color: var(--gold); }
+table.rank tr.me td { background: #0f1d16; }
+table.rank td.pos { color: var(--accent); }
+table.rank td.neg { color: var(--bad); }
+table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid #000; margin-right: 6px; }
+.rank-wait { margin-top: 6px; font-size: 18px; }
+#modalbox:has(table.rank) { width: min(640px, 92vw); }
+.m-sub:has(table.rank) { overflow-x: auto; }
