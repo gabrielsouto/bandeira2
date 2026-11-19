@@ -107,3 +107,6 @@ function pxDownArrow(g, cx, cy, col) {
   g.fillStyle = col;
   for (let k = 0; k < 4; k++) g.fillRect(cx - 3 + k, cy + k, 7 - 2 * k, 1);
 }
+
+// No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
+if (typeof module !== 'undefined' && module.exports) module.exports = { TILE, mulberry32, R, clamp, lerp, angDiff };

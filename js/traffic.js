@@ -8,6 +8,7 @@ class Traffic {
   constructor(city, n) {
     this.city = city;
     this.cars = [];
+    this.onHonk = null; // quem usa o trânsito decide como tocar a buzina (o servidor não tem som)
     for (let k = 0; k < n; k++) this.spawn();
   }
 
@@ -84,7 +85,7 @@ class Traffic {
 
       if (byPlayer && car.stuck > 1.2 && car.honkT <= 0) {
         car.honkT = R.f(3, 6);
-        if (Math.hypot(car.x - pl.x, car.y - pl.y) < 200) Sfx.horn(0.035);
+        if (this.onHonk && Math.hypot(car.x - pl.x, car.y - pl.y) < 200) this.onHonk(car);
       }
 
       let step = car.speed * dt, guard = 0;

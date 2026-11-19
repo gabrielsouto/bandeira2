@@ -63,8 +63,9 @@ function stepPlayer(c, inp, dt, m) {
   c.y += c.vy * dt;
 }
 
-// Resolve colisões com o cenário e com o trânsito. Retorna a força do impacto (px/s).
-function collidePlayer(c, city, npcs) {
+// Resolve colisões com o cenário, com o trânsito e (opcional) com carros que não podem ser empurrados,
+// como os de outros jogadores. Retorna a força do impacto (px/s).
+function collidePlayer(c, city, npcs, rivals) {
   let impact = 0;
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
   const rad = CARP.r;
@@ -101,7 +102,17 @@ function collidePlayer(c, city, npcs) {
     }
   }
 
-  for (const n of npcs) {
+  impact = Math.max(impact, collideCars(c, npcs, true, 1.3));
+  if (rivals) impact = Math.max(impact, collideCars(c, rivals, false, 1.1));
+  return impact;
+}
+
+// Colisão do carro c contra uma lista de carros com { x, y, a, speed }. Só c é deslocado.
+// push = true deixa o outro carro "sentir" a batida (NPC freia); false não mexe nele.
+function collideCars(c, list, push, bounce) {
+  let impact = 0;
+  const fx = Math.cos(c.a), fy = Math.sin(c.a);
+  for (const n of list) {
     if (Math.abs(n.x - c.x) > 30 || Math.abs(n.y - c.y) > 30) continue;
     const nfx = Math.cos(n.a), nfy = Math.sin(n.a);
     for (const po of [5, -5]) for (const no of [5, -5]) {
@@ -112,9 +123,9 @@ function collidePlayer(c, city, npcs) {
       c.x += nx * pen; c.y += ny * pen;
       const rvn = (c.vx - nfx * n.speed) * nx + (c.vy - nfy * n.speed) * ny;
       if (rvn < 0) {
-        c.vx -= 1.3 * rvn * nx; c.vy -= 1.3 * rvn * ny;
+        c.vx -= bounce * rvn * nx; c.vy -= bounce * rvn * ny;
         impact = Math.max(impact, -rvn);
-        if (-rvn > 30) { n.hitT = 1.2; n.speed *= 0.3; }
+        if (push && -rvn > 30) { n.hitT = 1.2; n.speed *= 0.3; }
       }
     }
   }

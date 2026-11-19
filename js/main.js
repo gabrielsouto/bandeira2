@@ -10,7 +10,12 @@ function loadSave() {
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return s; } catch (e) { /* sem save */ }
   return null;
 }
-function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage bloqueado */ } }
+// Modo de jogo. Só o solo lê e grava o save local; o multiplayer terá um estado próprio que nunca toca no save.
+const GAME = { mode: 'solo' };
+function writeSave() {
+  if (GAME.mode !== 'solo') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage bloqueado */ }
+}
 
 let S = loadSave() || defaultSave();
 
@@ -47,6 +52,7 @@ placeCarAt(city.places.find((p) => p.kind === 'posto') || city.places[0]);
 const cam = { x: player.x, y: player.y };
 let shake = 0;
 const traffic = new Traffic(city, 46);
+traffic.onHonk = () => Sfx.horn(0.035);
 const peds = new Peds(city, 70);
 Rides.init(city);
 HUD.init();

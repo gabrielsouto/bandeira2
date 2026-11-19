@@ -220,3 +220,6 @@ function generateCity(seed) {
     },
   };
 }
+
+// No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
+if (typeof module !== 'undefined' && module.exports) module.exports = { T, DIRS, generateCity };
