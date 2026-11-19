@@ -8,9 +8,9 @@
 //   ?jitter=60                 soma até 60 ms aleatórios por mensagem, sem embaralhar a ordem
 
 const NET_PROTO = 1;
-// Endereço do servidor publicado (preencher depois do primeiro "npm run deploy" na pasta server/).
+// Endereço do servidor publicado ("npm run deploy" na pasta server/).
 // Vazio = multiplayer escondido no site publicado; em localhost usa o servidor local.
-const NET_SERVER_PROD = '';
+const NET_SERVER_PROD = 'wss://bandeira2-servidor.gabrielsouto.workers.dev';
 const NET_RETRY = [0.5, 1, 2, 4, 8]; // segundos entre tentativas de reconexão
 
 const Net = {

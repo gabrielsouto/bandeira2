@@ -42,7 +42,7 @@ npm run fumaca                 # confere entrada, repasse, recusas e saída
 node test/robo.mjs TEST        # um jogador falso dando voltas na sala TEST
 ```
 
-Para publicar: `npx wrangler login` e `npm run deploy` dentro de `server/` (plano grátis da Cloudflare). Depois coloque o endereço `wss://...workers.dev` em `NET_SERVER_PROD`, no topo de `js/net.js`. Enquanto ele estiver vazio, o site publicado esconde o multiplayer.
+Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano grátis da Cloudflare). Para publicar uma versão nova: `npx wrangler login` (uma vez) e `npm run deploy` dentro de `server/`. Publique sempre o servidor antes do jogo. O endereço fica em `NET_SERVER_PROD`, no topo de `js/net.js`; se ele estiver vazio, o site publicado esconde o multiplayer.
 
 ## Controles
 
