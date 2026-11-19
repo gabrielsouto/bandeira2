@@ -18,12 +18,43 @@ const HIT_LINES = ['Ei! Cuidado!', 'Meu Deus do céu!', 'Isso vai pra avaliaçã
 const PX_KM = 0.08 / 16;
 function kmStr(px) { return (px * PX_KM).toFixed(1).replace('.', ',') + ' km'; }
 
-function pickType() {
+function pickType(rnd = Math.random) {
   let tot = 0;
   for (const k in PTYPES) tot += PTYPES[k].w;
-  let x = Math.random() * tot;
+  let x = rnd() * tot;
   for (const k in PTYPES) { x -= PTYPES[k].w; if (x <= 0) return k; }
   return 'normal';
+}
+
+// ---------- fórmulas da corrida (as mesmas no solo e no servidor do multiplayer) ----------
+
+// valor da corrida em R$
+function rideFare(tripD, type, surge) {
+  return Math.round((6 + tripD / 16 * 0.24) * PTYPES[type].fare * surge * 100) / 100;
+}
+
+// tempo de viagem sem atraso, em segundos
+function rideAllowed(tripD, type) {
+  return (14 + tripD / 75) * (PTYPES[type].timeMul || 1);
+}
+
+// nota de 1 a 5. v = { hits, late, carBad, dirty, comfort, defect }
+function rideStars(type, v) {
+  let s = 5;
+  s -= v.hits * (type === 'exec' ? 1.2 : 0.6);
+  if (v.late) s -= (type === 'pressa' ? 2 : 1);
+  if (v.carBad) s -= 0.8;
+  if (v.dirty) s -= 1.2;
+  if (type === 'enjoo') s -= (100 - Math.max(0, v.comfort)) / 60;
+  if (type === 'exec' && v.defect) s -= 1;
+  return clamp(Math.round(s), 1, 5);
+}
+
+// pagamento e gorjeta (só nota 5 tem chance de gorjeta)
+function ridePay(fare, late, stars, rnd = Math.random) {
+  const pay = Math.round(fare * (late ? 0.85 : 1) * 100) / 100;
+  const tip = (stars === 5 && rnd() < 0.65) ? Math.round(fare * (0.1 + rnd() * 0.25) * 100) / 100 : 0;
+  return { pay, tip };
 }
 
 let offerSeq = 0;
@@ -99,7 +130,7 @@ const Rides = {
     const type = pickType(), pt = PTYPES[type];
     const tripD = Math.abs(drop.x - pick.x) + Math.abs(drop.y - pick.y);
     const surge = this.surgeAt(pick.x, pick.y);
-    const fare = Math.round((6 + tripD / 16 * 0.24) * pt.fare * surge * 100) / 100;
+    const fare = rideFare(tripD, type, surge);
     return { id: ++offerSeq, pick, drop, type, surge, fare, tripD, pickD: Math.hypot(pick.x - px, pick.y - py),
       name: R.pick(FIRST_NAMES), stars: R.f(4.2, 5).toFixed(1).replace('.', ','),
       expires: 12, expMax: 12, shirt: R.pick(SHIRTS), hair: R.pick(HAIRS) };
@@ -111,7 +142,7 @@ const Rides = {
     this.offer = null;
     this.ride = Object.assign({}, o, {
       waitT: 0, maxWait: 75 + o.pickD / 16 * 0.8, hits: 0, comfort: 100, t: 0, vomited: false,
-      allowed: (14 + o.tripD / 75) * (PTYPES[o.type].timeMul || 1), paxX: o.pick.x, paxY: o.pick.y,
+      allowed: rideAllowed(o.tripD, o.type), paxX: o.pick.x, paxY: o.pick.y,
     });
     this.state = 'toPickup';
     Sfx.tone(660, 0.08, 'square', 0.05);
@@ -154,36 +185,68 @@ const Rides = {
     if (this.hitCd <= 0) { toast(`${r.name}: "${R.pick(HIT_LINES)}"`, 'warn'); this.hitCd = 2.5; }
   },
 
+  // o que o passageiro avalia, medido durante a viagem
+  tripReport(r) {
+    return { hits: r.hits, late: r.t > r.allowed, carBad: S.car.health < 35, dirty: S.car.problems.dirty && !r.vomited,
+      comfort: r.comfort, defect: Object.values(S.car.problems).some(Boolean) };
+  },
+
   finish(car) {
-    const r = this.ride;
-    let s = 5;
-    s -= r.hits * (r.type === 'exec' ? 1.2 : 0.6);
-    const late = r.t > r.allowed;
-    if (late) s -= (r.type === 'pressa' ? 2 : 1);
-    if (S.car.health < 35) s -= 0.8;
-    if (S.car.problems.dirty && !r.vomited) s -= 1.2;
-    if (r.type === 'enjoo') s -= (100 - Math.max(0, r.comfort)) / 60;
-    if (r.type === 'exec' && Object.values(S.car.problems).some(Boolean)) s -= 1;
-    const stars = clamp(Math.round(s), 1, 5);
-    const pay = Math.round(r.fare * (late ? 0.85 : 1) * 100) / 100;
-    const tip = (stars === 5 && R.chance(0.65)) ? Math.round(r.fare * R.f(0.1, 0.35) * 100) / 100 : 0;
+    const r = this.ride, v = this.tripReport(r);
+    const stars = rideStars(r.type, v);
+    const { pay, tip } = ridePay(r.fare, v.late, stars);
+    this.applyResult(car, { pay, tip, stars, late: v.late });
+    this.startDrop(car);
+  },
+
+  // credita a corrida e avisa (no multiplayer, os valores vêm do servidor)
+  applyResult(car, res) {
+    const { pay, tip, stars, late } = res;
     S.money += pay + tip; S.earned += pay + tip; S.rides++;
     S.ratings.push(stars); if (S.ratings.length > 30) S.ratings.shift();
     this.lastResult = { pay, tip, total: pay + tip, stars, late };
     toast(`Corrida concluída! +${fmtMoney(pay + tip)} · ${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}`, 'good');
     Sfx.cash();
     addFloater(car.x, car.y - 12, '+' + fmtMoney(pay + tip), '#39ff88');
+  },
+
+  // passageiro descendo do carro
+  startDrop(car) {
+    const r = this.ride;
     this.state = 'dropping';
     r.dropT = 0; r.carX = car.x; r.carY = car.y; r.paxX = car.x; r.paxY = car.y;
   },
 
-  update(dt, car) {
-    this.hitCd -= dt;
+  stepSurges(dt) {
     for (let k = 0; k < this.surges.length; k++) {
       const s = this.surges[k];
       s.age += dt;
       if (s.age >= s.life) this.surges[k] = this.newSurge();
     }
+  },
+
+  // viagem em andamento: conforto do passageiro e chegada ao destino
+  stepTrip(dt, car) {
+    const r = this.ride;
+    r.t += dt;
+    if (r.type === 'enjoo') {
+      const slide = Math.abs(car.vR);
+      if (slide > 45) r.comfort -= dt * (slide - 45) * 0.9;
+      if (car.speed > 190) r.comfort -= dt * 6;
+      r.comfort = Math.min(100, r.comfort + dt * 2);
+      if (r.comfort <= 0 && !r.vomited) {
+        r.vomited = true;
+        S.car.problems.dirty = true;
+        toast(`Eca! ${r.name} passou mal no carro. Vai precisar de limpeza.`, 'bad');
+        Sfx.bad();
+      }
+    }
+    if (Math.hypot(car.x - r.drop.x, car.y - r.drop.y) < 30 && car.speed < 30) this.finish(car);
+  },
+
+  update(dt, car) {
+    this.hitCd -= dt;
+    this.stepSurges(dt);
     const r = this.ride;
     switch (this.state) {
       case 'idle': {
@@ -232,23 +295,7 @@ const Rides = {
         }
         break;
       }
-      case 'onTrip': {
-        r.t += dt;
-        if (r.type === 'enjoo') {
-          const slide = Math.abs(car.vR);
-          if (slide > 45) r.comfort -= dt * (slide - 45) * 0.9;
-          if (car.speed > 190) r.comfort -= dt * 6;
-          r.comfort = Math.min(100, r.comfort + dt * 2);
-          if (r.comfort <= 0 && !r.vomited) {
-            r.vomited = true;
-            S.car.problems.dirty = true;
-            toast(`Eca! ${r.name} passou mal no carro. Vai precisar de limpeza.`, 'bad');
-            Sfx.bad();
-          }
-        }
-        if (Math.hypot(car.x - r.drop.x, car.y - r.drop.y) < 30 && car.speed < 30) this.finish(car);
-        break;
-      }
+      case 'onTrip': this.stepTrip(dt, car); break;
       case 'dropping': {
         r.dropT += dt;
         const k = Math.min(1, r.dropT / 0.9);
@@ -283,3 +330,8 @@ const Rides = {
     }
   },
 };
+
+// No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { FIRST_NAMES, PTYPES, pickType, rideFare, rideAllowed, rideStars, ridePay };
+}

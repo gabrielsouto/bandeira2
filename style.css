@@ -146,3 +146,12 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 40px; color: var(--gol
   #minimap { width: 150px; height: 150px; }
 }
 @media (max-width: 1100px) { #help { display: none; } }
+
+/* multiplayer: lista de chamadas no celular e saldo de cada um na sala */
+.ph-call { display: grid; grid-template-columns: 1fr auto; column-gap: 8px; padding: 1px 6px; border: 1px solid transparent; }
+.ph-call b { color: var(--accent); }
+.ph-call small { grid-column: 1 / -1; color: var(--muted); font-size: 16px; line-height: 1; }
+.ph-call.sel { border-color: var(--accent); background: #0f1d16; }
+#netinfo em { font-style: normal; color: var(--accent); margin-left: 6px; }
+#netinfo .away em { color: inherit; }
+

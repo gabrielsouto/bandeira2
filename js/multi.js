@@ -11,6 +11,8 @@ const AWAY_AFTER = 5;      // s sem notícias de um rival = ausente (fantasma)
 const SEND_EVERY = 1 / 15; // s entre envios do próprio estado
 const SPAWN_GHOST = 3;     // s de fantasma ao entrar na sala ou usar o guincho
 
+const CODE_HINT = 'Os códigos de sala têm 4 caracteres e não usam I, O, 0 nem 1.';
+
 const NET_ERRORS = {
   cidade: 'Sua versão do jogo gera uma cidade diferente da sala. Recarregue a página.',
   versao: 'Sua versão do jogo é diferente da do servidor. Recarregue a página.',
@@ -22,7 +24,7 @@ const NET_ERRORS = {
 };
 
 const Multi = {
-  active: false, sala: null, urlSala: null, me: null, myColor: 0, myName: '',
+  active: false, sala: null, urlSala: null, me: null, myColor: 0, myName: '', myGanho: 0, myCorridas: 0,
   rivals: new Map(), sprites: null, el: null,
   sendAcc: 0, infoT: 0, lastInfo: '', ghostT: 0, lostToast: false,
 
@@ -30,12 +32,14 @@ const Multi = {
   initTitle() {
     this.el = { box: $('multibox'), nick: $('nick'), code: $('code'), coderow: $('coderow'), create: $('createbtn'),
       join: $('joinbtn'), msg: $('multimsg'), solo: $('startbtn'), info: $('netinfo') };
-    const urlSala = this.normCode(new URLSearchParams(location.search).get('sala') || '');
+    const rawSala = new URLSearchParams(location.search).get('sala') || '';
+    const urlSala = this.normCode(rawSala);
     if (!Net.available()) {
       if (urlSala) this.say('O multiplayer ainda não está disponível nesta versão. Dá pra jogar sozinho.', true, true);
       return;
     }
     this.el.box.classList.remove('hidden');
+    if (rawSala && urlSala.length !== 4) this.say(`O código "${rawSala.slice(0, 8)}" do link não existe. ${CODE_HINT}`, true);
     try { this.el.nick.value = localStorage.getItem('bandeira2-apelido') || ''; } catch (e) { /* storage bloqueado */ }
     if (urlSala.length === 4) {
       this.urlSala = urlSala;
@@ -49,7 +53,11 @@ const Multi = {
     }
     this.el.create.addEventListener('click', () => this.join(this.newCode()));
     this.el.join.addEventListener('click', () => this.join(this.el.code.value));
-    this.el.code.addEventListener('input', () => { this.el.code.value = this.normCode(this.el.code.value); });
+    this.el.code.addEventListener('input', () => {
+      const raw = this.el.code.value.toUpperCase(), clean = this.normCode(raw);
+      if (raw.replace(/[^A-Z0-9]/g, '') !== clean) this.say(CODE_HINT, true);
+      this.el.code.value = clean;
+    });
     for (const inp of [this.el.nick, this.el.code]) {
       inp.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
@@ -119,6 +127,7 @@ const Multi = {
       if (!this.active) { this.say(text, true); this.setBusy(false); return; }
       toast(text, 'bad');
       this.rivals.clear();
+      RidesNet.onCalls([]);
     } else if (s === 'conectando' && this.active && !this.lostToast) {
       this.lostToast = true;
       toast('Conexão com a sala perdida. Reconectando…', 'warn');
@@ -144,6 +153,17 @@ const Multi = {
         break;
       }
       case 'e': this.sample(m); break;
+      case 'chamadas': RidesNet.onCalls(m.lista); break;
+      case 'dinamica': RidesNet.onSurges(m.lista); break;
+      case 'embarque': RidesNet.onBoard(m, this.nameOf(m.jogador)); break;
+      case 'recusado': RidesNet.onRefused(m); break;
+      case 'pago': {
+        const r = this.rivals.get(m.jogador);
+        if (m.jogador === this.me) { this.myGanho = m.ganho; this.myCorridas = m.corridas; }
+        else if (r) { r.ganho = m.ganho; r.corridas = m.corridas; toast(`${r.apelido} recebeu ${fmtMoney(m.pay + m.tip)} numa corrida.`); }
+        RidesNet.onPaid(m);
+        break;
+      }
       case 'erro': // chega depois do aviso genérico de recusa e traz o motivo certo
         if (!this.active) { this.say(NET_ERRORS[m.motivo] || NET_ERRORS.recusado, true); this.setBusy(false); }
         break;
@@ -156,17 +176,29 @@ const Multi = {
     const old = this.rivals;
     this.rivals = new Map();
     for (const j of m.jogadores) {
-      if (j.id === this.me) { this.myColor = j.cor; this.myName = j.apelido; continue; }
+      if (j.id === this.me) {
+        this.myColor = j.cor; this.myName = j.apelido; this.myGanho = j.ganho; this.myCorridas = j.corridas;
+        continue;
+      }
       const r = old.get(j.id);
-      this.rivals.set(j.id, r ? Object.assign(r, { apelido: j.apelido, cor: j.cor }) : this.newRival(j));
+      this.rivals.set(j.id, r ? Object.assign(r, { apelido: j.apelido, cor: j.cor, ganho: j.ganho, corridas: j.corridas }) : this.newRival(j));
     }
     if (!this.active) this.begin();
+    RidesNet.onWelcome(m);
+  },
+
+  nameOf(id) {
+    if (id === this.me) return this.myName;
+    const r = this.rivals.get(id);
+    return r ? r.apelido : 'Outro motorista';
   },
 
   begin() {
     this.active = true;
     GAME.mode = 'multi';
     S = defaultSave(); // estado só desta sessão: o save do solo não é lido nem gravado
+    S.money += this.myGanho; S.earned = this.myGanho; S.rides = this.myCorridas; // voltando para a sala
+    RidesNet.install();
     placeCarAt(city.places[this.myColor % city.places.length]); // cada cor nasce num lugar diferente
     cam.x = player.x; cam.y = player.y;
     this.ghostT = SPAWN_GHOST;
@@ -177,7 +209,7 @@ const Multi = {
   },
 
   newRival(j) {
-    return { id: j.id, apelido: j.apelido, cor: j.cor, buf: [], off: null, lastRecv: -1e9,
+    return { id: j.id, apelido: j.apelido, cor: j.cor, ganho: j.ganho || 0, corridas: j.corridas || 0, buf: [], off: null, lastRecv: -1e9,
       x: 0, y: 0, a: 0, speed: 0, b: 0, g: 1, seen: false, away: false };
   },
 
@@ -292,6 +324,7 @@ const Multi = {
 
   drawMinimap(g, s) {
     if (!this.active) return;
+    RidesNet.drawMinimap(g, s);
     for (const r of this.rivals.values()) {
       if (!r.seen) continue;
       const x = Math.round(r.x * s), y = Math.round(r.y * s);
@@ -306,8 +339,9 @@ const Multi = {
     const st = Net.status;
     const net = st === 'on' ? `ping ${Math.round(Net.ping)} ms` : st === 'conectando' ? 'reconectando…' : 'desconectado';
     const dot = (cor, away) => `<i style="background:${away ? '#666' : PLAYER_COLORS[cor % PLAYER_COLORS.length]}"></i>`;
-    let list = `<span>${dot(this.myColor)}${esc(this.myName)} (você)</span>`;
-    for (const r of this.rivals.values()) list += `<span class="${r.away ? 'away' : ''}">${dot(r.cor, r.away)}${esc(r.apelido)}</span>`;
+    const money = (v) => `<em>${fmtMoney(v)}</em>`;
+    let list = `<span>${dot(this.myColor)}${esc(this.myName)} (você)${money(this.myGanho)}</span>`;
+    for (const r of this.rivals.values()) list += `<span class="${r.away ? 'away' : ''}">${dot(r.cor, r.away)}${esc(r.apelido)}${money(r.ganho)}</span>`;
     const html = `<div class="ni-top">SALA ${this.sala} · <span class="${st === 'on' ? '' : 'bad'}">${net}</span></div><div class="ni-list">${list}</div>`;
     if (html !== this.lastInfo) { this.el.info.innerHTML = html; this.lastInfo = html; }
   },

@@ -75,6 +75,7 @@ const HUD = {
     const c = S.car, st = Rides.state, r = Rides.ride;
     if (c.health <= 0 && !r) return `<div class="ph-alert">CARRO QUEBRADO</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
     if (c.fuel <= 0 && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
+    if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (st === 'idle') {
       const ns = Rides.nearestSurge(player.x, player.y);
       return `<div class="ph-status"><span class="dot"></span>ONLINE</div><div class="ph-muted">Procurando corridas…</div>` +

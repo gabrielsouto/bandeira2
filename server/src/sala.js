@@ -1,17 +1,19 @@
 // Uma sala do multiplayer (um Durable Object por código de sala).
 //
-// Etapa A: só presença. A sala aceita até 4 jogadores, confere versão e cidade,
-// e repassa o estado de cada carro para os outros assim que ele chega.
+// Cuida da parte de rede: quem está conectado, repasse das posições dos carros e envio de mensagens.
+// As regras do jogo (chamadas, dinâmica, embarque, pagamento) ficam em regras.js, que não sabe de rede.
 //
-// Os dados de cada jogador ficam presos ao próprio WebSocket (serializeAttachment).
-// Assim, se a Cloudflare hibernar a sala com as conexões abertas, nada se perde:
-// a lista de jogadores é sempre lida de this.ctx.getWebSockets().
+// Os dados de cada conexão ficam presos ao próprio WebSocket (serializeAttachment), e o estado das
+// regras fica no armazenamento da sala. Se a Cloudflare hibernar a sala, nada se perde.
 import { DurableObject } from 'cloudflare:workers';
+import { HASH_CIDADE } from './compartilhado.js';
+import * as regras from './regras.js';
 
-export const PROTO = 1;      // versão do protocolo; o cliente manda a dele em "entrar"
+export const PROTO = 2;      // versão do protocolo; o cliente manda a dele em "entrar"
 const MAX_JOGADORES = 4;
 const NUM_CORES = 4;
 const MAX_MSG = 1000;        // bytes; mensagem maior é ignorada
+const LIMPA_SALA_VAZIA = 10 * 60 * 1000; // ms: sala vazia por mais que isso é apagada
 
 // Códigos de fechamento (4000-4999 são livres para a aplicação). O cliente não reconecta nesses.
 export const FECHA = { SUBSTITUIDO: 4000, RECUSADO: 4001 };
@@ -30,9 +32,24 @@ function apelidoUnico(base, usados) {
 }
 
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
-const publico = (j) => ({ id: j.id, apelido: j.apelido, cor: j.cor });
 
 export class Sala extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.estado = null;          // estado das regras (regras.js)
+    this.pos = new Map();        // id -> última posição informada do carro (só em memória)
+    ctx.blockConcurrencyWhile(async () => { this.estado = (await ctx.storage.get('estado')) || null; });
+  }
+
+  agora() { return Date.now() / 1000; }
+
+  get regras() {
+    if (!this.estado) this.estado = regras.novoEstado(this.agora(), Math.random);
+    return this.estado;
+  }
+
+  salvar() { this.ctx.storage.put('estado', this.estado); }
+
   async fetch() {
     const [cliente, servidor] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(servidor);
@@ -57,6 +74,16 @@ export class Sala extends DurableObject {
     for (const { ws } of this.jogadores(exceto)) { try { ws.send(s); } catch (e) { /* idem */ } }
   }
 
+  // entrega os eventos devolvidos pelas regras e guarda o estado se algo mudou
+  despachar(eventos) {
+    if (!eventos.length) return;
+    for (const ev of eventos) {
+      if (ev.todos) this.espalhar(ev.todos);
+      else for (const { ws, j } of this.jogadores()) if (j.id === ev.para) this.enviar(ws, ev.msg);
+    }
+    this.salvar();
+  }
+
   async webSocketMessage(ws, data) {
     if (typeof data !== 'string' || data.length > MAX_MSG) return;
     let m;
@@ -66,12 +93,18 @@ export class Sala extends DurableObject {
 
     if (!eu) { if (m.t === 'entrar') this.entrar(ws, m); return; }
 
+    // o relógio da sala anda a cada mensagem (chegam ~15 por segundo por jogador); sem jogadores, nada precisa andar
+    this.despachar(regras.tick(this.regras, this.agora(), Math.random));
+
     if (m.t === 'estado') {
       const { s, x, y, a, vx, vy } = m;
       if (![s, x, y, a, vx, vy].every(num)) return;
+      this.pos.set(eu.id, { x, y });
       this.espalhar({ t: 'e', id: eu.id, s, x, y, a, vx, vy, b: m.b ? 1 : 0, g: m.g ? 1 : 0 }, ws);
     } else if (m.t === 'ping') {
       this.enviar(ws, { t: 'pong', c: num(m.c) ? m.c : 0 });
+    } else if (m.t === 'embarcar' || m.t === 'entregar' || m.t === 'cancelar') {
+      this.despachar(regras.mensagem(this.regras, eu.id, m, this.agora(), Math.random, this.pos.get(eu.id) || null));
     }
   }
 
@@ -83,17 +116,16 @@ export class Sala extends DurableObject {
     if (m.v !== PROTO) return recusar('versao');
     const id = String(m.id || '');
     if (!/^[a-z0-9]{8,32}$/.test(id)) return recusar('id');
-    const hash = String(m.hash || '').slice(0, 16);
+    if (String(m.hash || '') !== HASH_CIDADE) return recusar('cidade');
 
     const outros = this.jogadores(ws);
     const velho = outros.find((o) => o.j.id === id);          // mesma aba reconectando
     const resto = outros.filter((o) => o.j.id !== id);
-    if (resto.length && resto[0].j.hash !== hash) return recusar('cidade');
     if (resto.length >= MAX_JOGADORES) return recusar('cheia');
 
     const cor = velho ? velho.j.cor : [...Array(NUM_CORES).keys()].find((c) => !resto.some((o) => o.j.cor === c));
     const apelido = velho ? velho.j.apelido : apelidoUnico(limparApelido(m.apelido), resto.map((o) => o.j.apelido));
-    const j = { id, apelido, cor, hash };
+    const j = { id, apelido, cor };
 
     if (velho) {
       // a conexão antiga é descartada sem avisar "saiu" para os outros
@@ -101,14 +133,39 @@ export class Sala extends DurableObject {
       try { velho.ws.close(FECHA.SUBSTITUIDO, 'substituido'); } catch (e) { /* já fechado */ }
     }
     ws.serializeAttachment(j);
-    this.enviar(ws, { t: 'bemvindo', voce: id, jogadores: [j, ...resto.map((o) => o.j)].map(publico) });
-    if (!velho) this.espalhar({ t: 'entrou', j: publico(j) }, ws);
+
+    const agora = this.agora(), e = this.regras;
+    // quem consta nas regras mas não tem conexão (a sala reiniciou) passa a contar como fora
+    const ligados = new Set([id, ...resto.map((o) => o.j.id)]);
+    for (const k in e.jogadores) if (!ligados.has(k) && e.jogadores[k].fora == null) regras.sair(e, k, agora);
+    const eventos = [...regras.entrar(e, id, agora, Math.random), ...regras.tick(e, agora, Math.random)];
+
+    const v = regras.visao(e, id, agora);
+    const comPlacar = (x) => ({ id: x.id, apelido: x.apelido, cor: x.cor, ...(v.placar[x.id] || { ganho: 0, corridas: 0 }) });
+    this.enviar(ws, { t: 'bemvindo', voce: id, jogadores: [j, ...resto.map((o) => o.j)].map(comPlacar),
+      chamadas: v.chamadas, dinamicas: v.dinamicas, corrida: v.corrida });
+    if (!velho) this.espalhar({ t: 'entrou', j: comPlacar(j) }, ws);
+    this.despachar(eventos);
+    this.salvar();
+    this.ctx.storage.deleteAlarm();
   }
 
   sair(ws) {
     const j = ws.deserializeAttachment();
     ws.serializeAttachment(null);
-    if (j) this.espalhar({ t: 'saiu', id: j.id }, ws);
+    if (!j) return;
+    this.espalhar({ t: 'saiu', id: j.id }, ws);
+    this.pos.delete(j.id);
+    regras.sair(this.regras, j.id, this.agora());
+    this.salvar();
+    if (!this.jogadores().length) this.ctx.storage.setAlarm(Date.now() + LIMPA_SALA_VAZIA);
+  }
+
+  // sala ficou vazia por um tempo: apaga tudo (o código pode ser usado de novo do zero)
+  async alarm() {
+    if (this.jogadores().length) return;
+    this.estado = null;
+    await this.ctx.storage.deleteAll();
   }
 
   async webSocketClose(ws, code) {

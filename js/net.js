@@ -7,7 +7,7 @@
 //   ?lag=200                   soma 200 ms de ida e volta (metade em cada sentido)
 //   ?jitter=60                 soma até 60 ms aleatórios por mensagem, sem embaralhar a ordem
 
-const NET_PROTO = 1;
+const NET_PROTO = 2; // igual ao PROTO de server/src/sala.js
 // Endereço do servidor publicado ("npm run deploy" na pasta server/).
 // Vazio = multiplayer escondido no site publicado; em localhost usa o servidor local.
 const NET_SERVER_PROD = 'wss://bandeira2-servidor.gabrielsouto.workers.dev';
