@@ -14,8 +14,8 @@ const Light = {
     const { xs, ys, NX, NY } = city;
     for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++) {
       this.lamps.push({ x: xs[i] * 16 - 3, y: ys[j] * 16 - 3, r: 46 });
-      if (i < NX - 1 && city.hSeg[j][i] && xs[i + 1] - xs[i] > 9) this.lamps.push({ x: (xs[i] + xs[i + 1] + 2) * 8, y: ys[j] * 16 - 3, r: 40 });
-      if (j < NY - 1 && city.vSeg[i][j] && ys[j + 1] - ys[j] > 9) this.lamps.push({ x: xs[i] * 16 - 3, y: (ys[j] + ys[j + 1] + 2) * 8, r: 40 });
+      if (i < NX - 1 && city.hSeg[j][i] && xs[i + 1] - xs[i] - city.wx[i] > 7) this.lamps.push({ x: (xs[i] + xs[i + 1] + city.wx[i]) * 8, y: ys[j] * 16 - 3, r: 40 });
+      if (j < NY - 1 && city.vSeg[i][j] && ys[j + 1] - ys[j] - city.wy[j] > 7) this.lamps.push({ x: xs[i] * 16 - 3, y: (ys[j] + ys[j + 1] + city.wy[j]) * 8, r: 40 });
     }
     for (const p of city.places) this.lamps.push({ x: p.cx, y: p.cy, r: 70 });
   },

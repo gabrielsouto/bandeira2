@@ -27,15 +27,16 @@ class Traffic {
   spawnAt(i, j, d, t) {
     const c = this.city;
     if (!c.exits(i, j).includes(d)) return null;
-    const a = c.exitPoint(i, j, d);
+    const lane = R.i(0, c.laneCount(i, j, d) - 1);
+    const a = c.exitPoint(i, j, d, lane);
     const ni = i + DIRS[d].dx, nj = j + DIRS[d].dy;
-    const b = c.entryPoint(ni, nj, d);
+    const b = c.entryPoint(ni, nj, d, lane);
     const x = lerp(a.x, b.x, t), y = lerp(a.y, b.y, t);
     if (this.cars.some((o) => Math.hypot(o.x - x, o.y - y) < 20)) return null;
     const ang = Math.atan2(DIRS[d].dy, DIRS[d].dx);
     const car = { x, y, a: ang, ma: ang, speed: 0, cruise: R.f(55, 85),
       wps: [{ x: b.x, y: b.y, turn: false }], ti: ni, tj: nj, dir: d,
-      ci: R.i(0, NPC_COLORS.length - 1), stuck: 0, ghost: 0, honkT: 0, hitT: 0 };
+      lane, ci: R.i(0, NPC_COLORS.length - 1), stuck: 0, ghost: 0, honkT: 0, hitT: 0 };
     this.cars.push(car);
     return car;
   }
@@ -47,7 +48,10 @@ class Traffic {
     let opts = ex.filter((d) => d !== (car.dir + 2) % 4);
     if (!opts.length) opts = ex;
     const d = (opts.includes(car.dir) && R.chance(0.5)) ? car.dir : R.pick(opts);
-    const E = c.entryPoint(car.ti, car.tj, car.dir), X = c.exitPoint(car.ti, car.tj, d);
+    // faixa de saída: reto segue na mesma (às vezes troca); curva escolhe uma qualquer
+    const nl = c.laneCount(car.ti, car.tj, d);
+    const lane = d === car.dir && !R.chance(0.2) ? Math.min(car.lane, nl - 1) : R.i(0, nl - 1);
+    const E = c.entryPoint(car.ti, car.tj, car.dir, car.lane), X = c.exitPoint(car.ti, car.tj, d, lane);
     if (d !== car.dir) {
       const C = (car.dir % 2 === 1) ? { x: E.x, y: X.y } : { x: X.x, y: E.y };
       for (const t of [0.25, 0.5, 0.75]) {
@@ -57,9 +61,9 @@ class Traffic {
     }
     car.wps.push({ x: X.x, y: X.y, turn: d !== car.dir });
     const ni = car.ti + DIRS[d].dx, nj = car.tj + DIRS[d].dy;
-    const N = c.entryPoint(ni, nj, d);
+    const N = c.entryPoint(ni, nj, d, lane);
     car.wps.push({ x: N.x, y: N.y, turn: false });
-    car.ti = ni; car.tj = nj; car.dir = d;
+    car.ti = ni; car.tj = nj; car.dir = d; car.lane = lane;
   }
 
   update(dt, pl) {

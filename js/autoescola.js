@@ -53,8 +53,8 @@ const Autoescola = {
     // em qual rua (coluna i / linha j da grade) fica cada tile
     this.colOf = new Int16Array(city.W).fill(-1);
     this.rowOf = new Int16Array(city.H).fill(-1);
-    city.xs.forEach((x, i) => { this.colOf[x] = i; this.colOf[x + 1] = i; });
-    city.ys.forEach((y, j) => { this.rowOf[y] = j; this.rowOf[y + 1] = j; });
+    city.xs.forEach((x, i) => { for (let a = 0; a < city.wx[i]; a++) this.colOf[x + a] = i; });
+    city.ys.forEach((y, j) => { for (let a = 0; a < city.wy[j]; a++) this.rowOf[y + a] = j; });
     this.prog = { best: [], cnh: false };
     try {
       const p = JSON.parse(localStorage.getItem(SCHOOL_KEY));
@@ -121,10 +121,10 @@ const Autoescola = {
     this.say(this.instrText(this.route.nodes[0]));
   },
 
-  center(nd) { return { x: this.city.xs[nd.i] * 16 + 16, y: this.city.ys[nd.j] * 16 + 16 }; },
+  center(nd) { return { x: this.city.xs[nd.i] * 16 + this.city.wx[nd.i] * 8, y: this.city.ys[nd.j] * 16 + this.city.wy[nd.j] * 8 }; },
   inNode(car, nd) {
     const tx = Math.floor(car.x / 16), ty = Math.floor(car.y / 16), x = this.city.xs[nd.i], y = this.city.ys[nd.j];
-    return tx >= x && tx <= x + 1 && ty >= y && ty <= y + 1;
+    return tx >= x && tx < x + this.city.wx[nd.i] && ty >= y && ty < y + this.city.wy[nd.j];
   },
   turnOf(nd) {
     if (nd.dout === nd.din) return 'reto';
@@ -145,7 +145,7 @@ const Autoescola = {
     const c = this.city, fx = Math.cos(car.a), fy = Math.sin(car.a);
     let start = null, best = Infinity, near = null, nd = Infinity;
     for (let i = 0; i < c.NX; i++) for (let j = 0; j < c.NY; j++) {
-      const dx = c.xs[i] * 16 + 16 - car.x, dy = c.ys[j] * 16 + 16 - car.y, d = Math.hypot(dx, dy);
+      const cc = this.center({ i, j }), dx = cc.x - car.x, dy = cc.y - car.y, d = Math.hypot(dx, dy);
       if (d < nd) { nd = d; near = { i, j, dx, dy }; }
       const ah = dx * fx + dy * fy, lat = Math.abs(-dx * fy + dy * fx);
       if (ah < 24) continue;
@@ -195,8 +195,10 @@ const Autoescola = {
     const i = this.colOf[tx], j = this.rowOf[ty];
     if ((i >= 0) === (j >= 0)) return false; // cruzamento (ou fora da grade)
     const fx = Math.cos(car.a), fy = Math.sin(car.a);
-    if (j >= 0) { if (fx > 0.7) return ty !== c.ys[j] + 1; if (fx < -0.7) return ty !== c.ys[j]; }
-    else { if (fy > 0.7) return tx !== c.xs[i]; if (fy < -0.7) return tx !== c.xs[i] + 1; }
+    // a faixa certa para quem anda nessa direção (rua de mão única: só o sentido dela)
+    const ok = (d, rel) => c.laneOffsets(i < 0 ? 0 : i, j < 0 ? 0 : j, d).some((o) => Math.floor(o / 16) === rel);
+    if (j >= 0) { const rel = ty - c.ys[j]; if (fx > 0.7) return !ok(0, rel); if (fx < -0.7) return !ok(2, rel); }
+    else { const rel = tx - c.xs[i]; if (fy > 0.7) return !ok(1, rel); if (fy < -0.7) return !ok(3, rel); }
     return false;
   },
 

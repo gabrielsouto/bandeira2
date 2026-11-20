@@ -19,14 +19,14 @@ const Signals = {
     this.city = city;
     this.colOf = new Int16Array(city.W).fill(-1);
     this.rowOf = new Int16Array(city.H).fill(-1);
-    city.xs.forEach((x, i) => { this.colOf[x] = i; this.colOf[x + 1] = i; });
-    city.ys.forEach((y, j) => { this.rowOf[y] = j; this.rowOf[y + 1] = j; });
+    city.xs.forEach((x, i) => { for (let a = 0; a < city.wx[i]; a++) this.colOf[x + a] = i; });
+    city.ys.forEach((y, j) => { for (let a = 0; a < city.wy[j]; a++) this.rowOf[y + a] = j; });
     const r = mulberry32((city.seed ^ 0x5e3a) >>> 0);
     for (let i = 0; i < city.NX; i++) for (let j = 0; j < city.NY; j++) {
-      const ex = city.exits(i, j);
+      const ex = city.entries(i, j);
       const pick = r() < SIG_SHARE, off = r() * SIG_CYCLE; // sorteia sempre os dois (a sequência não depende do resultado)
-      if (ex.length < 3 || !pick) continue;
-      const s = { i, j, off, exits: ex };
+      if (city.links(i, j) < 3 || !pick) continue;
+      const s = { i, j, off, entries: ex };
       this.list.push(s);
       this.map.set(i * 100 + j, s);
     }
@@ -86,9 +86,9 @@ const Signals = {
   heads(s) {
     const out = [];
     for (let d = 0; d < 4; d++) {
-      if (!s.exits.includes((d + 2) % 4)) continue; // ninguém chega por esse lado
+      if (!s.entries.includes(d)) continue; // ninguém chega por esse lado
       const a = DIRS[d], e = this.city.entryPoint(s.i, s.j, d), rx = -a.dy, ry = a.dx;
-      out.push({ d, a, e, hx: e.x - a.dx * 6 + rx * 14, hy: e.y - a.dy * 6 + ry * 14 });
+      out.push({ d, a, e, lanes: this.city.laneCount(s.i, s.j, d), hx: e.x - a.dx * 6 + rx * 14, hy: e.y - a.dy * 6 + ry * 14 });
     }
     return out;
   },
@@ -96,12 +96,14 @@ const Signals = {
   draw(g, camX, camY, vw, vh) {
     const COLS = { r: ['#ff3030', '#4a1010'], y: ['#ffc21a', '#4a3a08'], g: ['#3dff6e', '#0f3a1a'] };
     for (const s of this.list) {
-      const cx = this.city.xs[s.i] * 16 + 16 - camX, cy = this.city.ys[s.j] * 16 + 16 - camY;
+      const cx = this.city.xs[s.i] * 16 + this.city.wx[s.i] * 8 - camX, cy = this.city.ys[s.j] * 16 + this.city.wy[s.j] * 8 - camY;
       if (cx < -50 || cy < -50 || cx > vw + 50 || cy > vh + 50) continue;
       for (const h of this.heads(s)) {
-        const lx = Math.round(h.e.x - h.a.dx * 2 - camX), ly = Math.round(h.e.y - h.a.dy * 2 - camY);
         g.fillStyle = 'rgba(255,255,255,0.75)';
-        if (h.a.dx) g.fillRect(lx - 1, ly - 7, 2, 14); else g.fillRect(lx - 7, ly - 1, 14, 2);
+        for (let k = 0; k < h.lanes; k++) {
+          const e = this.city.entryPoint(s.i, s.j, h.d, k), mx = Math.round(e.x - h.a.dx * 2 - camX), my = Math.round(e.y - h.a.dy * 2 - camY);
+          if (h.a.dx) g.fillRect(mx - 1, my - 7, 2, 14); else g.fillRect(mx - 7, my - 1, 14, 2);
+        }
         const l = this.light(s, h.d), x = Math.round(h.hx - camX), y = Math.round(h.hy - camY);
         g.fillStyle = '#000'; g.fillRect(x - 2, y - 5, 5, 11);
         g.fillStyle = '#26282e'; g.fillRect(x - 1, y - 4, 3, 9);
@@ -115,7 +117,7 @@ const Signals = {
   // de noite a luz acesa aparece
   drawLights(L, camX, camY) {
     for (const s of this.list) {
-      const cx = this.city.xs[s.i] * 16 + 16 - camX, cy = this.city.ys[s.j] * 16 + 16 - camY;
+      const cx = this.city.xs[s.i] * 16 + this.city.wx[s.i] * 8 - camX, cy = this.city.ys[s.j] * 16 + this.city.wy[s.j] * 8 - camY;
       if (cx < -50 || cy < -50 || cx > L.cv.width + 50 || cy > L.cv.height + 50) continue;
       for (const h of this.heads(s)) L.hole(h.hx - camX, h.hy - camY, 7, 0.9);
     }

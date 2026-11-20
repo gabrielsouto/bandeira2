@@ -14,57 +14,94 @@ function generateCity(seed) {
   const ri = (a, b) => Math.floor(a + r() * (b - a + 1));
   const NX = 9, NY = 9, MARGIN = 6;
 
-  const xs = [], ys = [];
-  let p = MARGIN;
-  for (let i = 0; i < NX; i++) { xs.push(p); p += 2 + ri(8, 13); }
-  p = MARGIN;
-  for (let j = 0; j < NY; j++) { ys.push(p); p += 2 + ri(8, 13); }
-  const W = xs[NX - 1] + 2 + MARGIN, H = ys[NY - 1] + 2 + MARGIN;
-
-  const tiles = new Uint8Array(W * H);
-  const get = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? T.WATER : tiles[y * W + x];
-  const set = (x, y, t) => { if (x >= 0 && y >= 0 && x < W && y < H) tiles[y * W + x] = t; };
-
   // segmentos de rua entre cruzamentos (alguns são removidos e viram calçadão)
   const hSeg = [], vSeg = [];
   for (let j = 0; j < NY; j++) hSeg.push(new Array(NX - 1).fill(true));
   for (let i = 0; i < NX; i++) vSeg.push(new Array(NY - 1).fill(true));
 
-  const exits = (i, j) => {
+  // tipo de cada rua inteira (linha j = horizontal, coluna i = vertical):
+  //   'dupla' = 2 tiles, 1 faixa por sentido;  'unica' = 2 tiles, 2 faixas no mesmo sentido (rowDir/colDir);
+  //   'larga' = 4 tiles, 2 faixas por sentido (avenida)
+  const rowKind = new Array(NY).fill('dupla'), colKind = new Array(NX).fill('dupla');
+  const rowDir = new Array(NY).fill(0), colDir = new Array(NX).fill(1); // sentido da mão única: 0 leste / 1 sul (ou 2 oeste / 3 norte)
+
+  // pode sair do cruzamento (i,j) indo na direção d? (a rua existe e a mão deixa)
+  const canGo = (i, j, d) => {
+    if (i < 0 || j < 0 || i >= NX || j >= NY) return false;
+    if (d === 0) return i < NX - 1 && hSeg[j][i] && !(rowKind[j] === 'unica' && rowDir[j] !== 0);
+    if (d === 2) return i > 0 && hSeg[j][i - 1] && !(rowKind[j] === 'unica' && rowDir[j] !== 2);
+    if (d === 1) return j < NY - 1 && vSeg[i][j] && !(colKind[i] === 'unica' && colDir[i] !== 1);
+    return j > 0 && vSeg[i][j - 1] && !(colKind[i] === 'unica' && colDir[i] !== 3);
+  };
+  const exits = (i, j) => { const e = []; for (let d = 0; d < 4; d++) if (canGo(i, j, d)) e.push(d); return e; };
+  // por onde dá para chegar no cruzamento (i,j) andando na direção d
+  const entries = (i, j) => {
     const e = [];
-    if (i < NX - 1 && hSeg[j][i]) e.push(0);
-    if (j < NY - 1 && vSeg[i][j]) e.push(1);
-    if (i > 0 && hSeg[j][i - 1]) e.push(2);
-    if (j > 0 && vSeg[i][j - 1]) e.push(3);
+    for (let d = 0; d < 4; d++) if (canGo(i - DIRS[d].dx, j - DIRS[d].dy, d)) e.push(d);
     return e;
   };
-  const connected = () => {
+  // quantas ruas (de qualquer mão) saem do cruzamento
+  const links = (i, j) => (i < NX - 1 && hSeg[j][i] ? 1 : 0) + (j < NY - 1 && vSeg[i][j] ? 1 : 0)
+    + (i > 0 && hSeg[j][i - 1] ? 1 : 0) + (j > 0 && vSeg[i][j - 1] ? 1 : 0);
+  // todos os cruzamentos alcançam todos (respeitando a mão)? "back" anda ao contrário, para checar que todos voltam
+  const reach = (back) => {
     const seen = new Uint8Array(NX * NY);
     const st = [[0, 0]]; seen[0] = 1; let n = 1;
     while (st.length) {
       const [i, j] = st.pop();
-      for (const d of exits(i, j)) {
+      for (let d = 0; d < 4; d++) {
         const a = i + DIRS[d].dx, b = j + DIRS[d].dy;
-        if (!seen[b * NX + a]) { seen[b * NX + a] = 1; n++; st.push([a, b]); }
+        const ok = back ? canGo(a, b, (d + 2) % 4) : canGo(i, j, d);
+        if (ok && !seen[b * NX + a]) { seen[b * NX + a] = 1; n++; st.push([a, b]); }
       }
     }
     return n === NX * NY;
   };
+  const connected = () => reach(false) && reach(true);
   let removed = 0;
   for (let tries = 0; tries < 300 && removed < 14; tries++) {
     if (r() < 0.5) {
       const i = ri(0, NX - 2), j = ri(0, NY - 1);
       if (!hSeg[j][i]) continue;
       hSeg[j][i] = false;
-      if (exits(i, j).length < 2 || exits(i + 1, j).length < 2 || !connected()) { hSeg[j][i] = true; continue; }
+      if (links(i, j) < 2 || links(i + 1, j) < 2 || !connected()) { hSeg[j][i] = true; continue; }
     } else {
       const i = ri(0, NX - 1), j = ri(0, NY - 2);
       if (!vSeg[i][j]) continue;
       vSeg[i][j] = false;
-      if (exits(i, j).length < 2 || exits(i, j + 1).length < 2 || !connected()) { vSeg[i][j] = true; continue; }
+      if (links(i, j) < 2 || links(i, j + 1) < 2 || !connected()) { vSeg[i][j] = true; continue; }
     }
     removed++;
   }
+
+  // sorteia ruas de mão única e avenidas largas (só nas ruas de dentro; a mão única precisa deixar a cidade toda alcançável)
+  const streets = [];
+  for (let k = 1; k < NY - 1; k++) streets.push({ row: true, k });
+  for (let k = 1; k < NX - 1; k++) streets.push({ row: false, k });
+  for (let k = streets.length - 1; k > 0; k--) { const m = Math.floor(r() * (k + 1)); [streets[k], streets[m]] = [streets[m], streets[k]]; }
+  let nUni = 0, nLarga = 0;
+  for (const st of streets) {
+    const kinds = st.row ? rowKind : colKind, dirs = st.row ? rowDir : colDir;
+    const flip = r() < 0.5;
+    if (nUni < 4 && (nUni <= nLarga || nLarga >= 3)) {
+      kinds[st.k] = 'unica'; dirs[st.k] = st.row ? (flip ? 2 : 0) : (flip ? 3 : 1);
+      if (connected()) nUni++; else kinds[st.k] = 'dupla';
+    } else if (nLarga < 3) {
+      kinds[st.k] = 'larga'; nLarga++;
+    }
+  }
+  const wy = rowKind.map((k) => (k === 'larga' ? 4 : 2)), wx = colKind.map((k) => (k === 'larga' ? 4 : 2));
+
+  const xs = [], ys = [];
+  let p = MARGIN;
+  for (let i = 0; i < NX; i++) { xs.push(p); p += wx[i] + ri(8, 13); }
+  p = MARGIN;
+  for (let j = 0; j < NY; j++) { ys.push(p); p += wy[j] + ri(8, 13); }
+  const W = xs[NX - 1] + wx[NX - 1] + MARGIN, H = ys[NY - 1] + wy[NY - 1] + MARGIN;
+
+  const tiles = new Uint8Array(W * H);
+  const get = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? T.WATER : tiles[y * W + x];
+  const set = (x, y, t) => { if (x >= 0 && y >= 0 && x < W && y < H) tiles[y * W + x] = t; };
 
   // água na borda
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -72,24 +109,24 @@ function generateCity(seed) {
   }
 
   const colRoad = new Uint8Array(W), rowRoad = new Uint8Array(H);
-  for (const x of xs) { colRoad[x] = 1; colRoad[x + 1] = 1; }
-  for (const y of ys) { rowRoad[y] = 1; rowRoad[y + 1] = 1; }
+  xs.forEach((x, i) => { for (let a = 0; a < wx[i]; a++) colRoad[x + a] = 1; });
+  ys.forEach((y, j) => { for (let a = 0; a < wy[j]; a++) rowRoad[y + a] = 1; });
 
   for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++)
-    for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) set(xs[i] + a, ys[j] + b, T.ROAD);
+    for (let a = 0; a < wx[i]; a++) for (let b = 0; b < wy[j]; b++) set(xs[i] + a, ys[j] + b, T.ROAD);
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX - 1; i++) {
     const t = hSeg[j][i] ? T.ROAD : T.PLAZA;
-    for (let x = xs[i] + 2; x < xs[i + 1]; x++) for (let b = 0; b < 2; b++) set(x, ys[j] + b, t);
+    for (let x = xs[i] + wx[i]; x < xs[i + 1]; x++) for (let b = 0; b < wy[j]; b++) set(x, ys[j] + b, t);
   }
   for (let i = 0; i < NX; i++) for (let j = 0; j < NY - 1; j++) {
     const t = vSeg[i][j] ? T.ROAD : T.PLAZA;
-    for (let y = ys[j] + 2; y < ys[j + 1]; y++) for (let a = 0; a < 2; a++) set(xs[i] + a, y, t);
+    for (let y = ys[j] + wy[j]; y < ys[j + 1]; y++) for (let a = 0; a < wx[i]; a++) set(xs[i] + a, y, t);
   }
 
   // quarteirões
   const buildings = [], places = [], blocks = [];
   for (let j = 0; j < NY - 1; j++) for (let i = 0; i < NX - 1; i++) {
-    const b = { i, j, x0: xs[i] + 2, x1: xs[i + 1] - 1, y0: ys[j] + 2, y1: ys[j + 1] - 1 };
+    const b = { i, j, x0: xs[i] + wx[i], x1: xs[i + 1] - 1, y0: ys[j] + wy[j], y1: ys[j + 1] - 1 };
     blocks.push(b);
     for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++)
       set(x, y, (x === b.x0 || x === b.x1 || y === b.y0 || y === b.y1) ? T.SIDEWALK : T.GRASS);
@@ -159,7 +196,7 @@ function generateCity(seed) {
   }
 
   // periferia: calçada colada nas ruas e árvores espalhadas
-  const inCore = (x, y) => x >= xs[0] && x <= xs[NX - 1] + 1 && y >= ys[0] && y <= ys[NY - 1] + 1;
+  const inCore = (x, y) => x >= xs[0] && x <= xs[NX - 1] + wx[NX - 1] - 1 && y >= ys[0] && y <= ys[NY - 1] + wy[NY - 1] - 1;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     if (get(x, y) !== T.GRASS || inCore(x, y)) continue;
     let near = false;
@@ -195,31 +232,40 @@ function generateCity(seed) {
   }
 
   return {
-    seed, W, H, tiles, xs, ys, NX, NY, hSeg, vSeg, buildings, places, blocks, curbs, pedTiles, roadTiles,
-    get, exits,
+    seed, W, H, tiles, xs, ys, wx, wy, NX, NY, hSeg, vSeg, rowKind, colKind, rowDir, colDir, buildings, places, blocks, curbs, pedTiles, roadTiles,
+    get, exits, entries, links, canGo,
     solid(tx, ty) { const t = get(tx, ty); return t === T.BUILDING || t === T.WATER || t === T.TREE; },
     tileAtPx(px, py) { return get(Math.floor(px / 16), Math.floor(py / 16)); },
     placeAt(px, py) {
       const tx = Math.floor(px / 16), ty = Math.floor(py / 16);
       return places.find((p) => tx >= p.x0 && tx <= p.x1 && ty >= p.y0 && ty <= p.y1) || null;
     },
-    // pontos das faixas (mão direita) ao entrar/sair de um cruzamento
-    entryPoint(i, j, d) {
-      const ox = xs[i] * 16, oy = ys[j] * 16;
+    // faixas de uma rua: centros (em px, a partir da borda de cima/esquerda da rua) das faixas de quem anda na direção d.
+    // A faixa 0 é a da direita (a mais perto da calçada). Na rua de mão única as duas faixas vão para o mesmo lado.
+    laneOffsets(i, j, d) {
+      const horiz = d % 2 === 0, kind = horiz ? rowKind[j] : colKind[i], w = (horiz ? wy[j] : wx[i]) * 16;
+      if (kind === 'unica' && (horiz ? rowDir[j] : colDir[i]) !== d) return [];
+      const n = kind === 'dupla' ? 1 : 2, high = d === 0 || d === 3; // leste e norte andam do lado de cima/direita da rua
+      return Array.from({ length: n }, (_, k) => (high ? w - 8 - k * 16 : 8 + k * 16));
+    },
+    laneCount(i, j, d) { return this.laneOffsets(i, j, d).length; },
+    // pontos das faixas ao entrar/sair de um cruzamento (k = faixa, 0 = a da direita)
+    entryPoint(i, j, d, k = 0) {
+      const ox = xs[i] * 16, oy = ys[j] * 16, o = this.laneOffsets(i, j, d)[k] || 0;
       switch (d) {
-        case 0: return { x: ox, y: oy + 24 };
-        case 1: return { x: ox + 8, y: oy };
-        case 2: return { x: ox + 32, y: oy + 8 };
-        default: return { x: ox + 24, y: oy + 32 };
+        case 0: return { x: ox, y: oy + o };
+        case 1: return { x: ox + o, y: oy };
+        case 2: return { x: ox + wx[i] * 16, y: oy + o };
+        default: return { x: ox + o, y: oy + wy[j] * 16 };
       }
     },
-    exitPoint(i, j, d) {
-      const ox = xs[i] * 16, oy = ys[j] * 16;
+    exitPoint(i, j, d, k = 0) {
+      const ox = xs[i] * 16, oy = ys[j] * 16, o = this.laneOffsets(i, j, d)[k] || 0;
       switch (d) {
-        case 0: return { x: ox + 32, y: oy + 24 };
-        case 1: return { x: ox + 8, y: oy + 32 };
-        case 2: return { x: ox, y: oy + 8 };
-        default: return { x: ox + 24, y: oy };
+        case 0: return { x: ox + wx[i] * 16, y: oy + o };
+        case 1: return { x: ox + o, y: oy + wy[j] * 16 };
+        case 2: return { x: ox, y: oy + o };
+        default: return { x: ox + o, y: oy };
       }
     },
   };

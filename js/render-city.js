@@ -307,23 +307,40 @@ function prerenderCity(city) {
     }
   }
 
-  // sinalização: faixa central tracejada e faixas de pedestre
-  const { xs, ys, NX, NY, hSeg, vSeg } = city;
+  // sinalização: faixa central (dupla amarela nas avenidas), faixas de pedestre e setas nas ruas de mão única
+  const { xs, ys, NX, NY, hSeg, vSeg, wx, wy, rowKind, colKind, rowDir, colDir } = city;
+  // seta branca apontando para a direção d (0 leste, 1 sul, 2 oeste, 3 norte), centrada em (cx, cy)
+  const arrow = (cx, cy, d) => {
+    const a = DIRS[d], px = -a.dy, py = a.dx;
+    g.fillStyle = PAL.white;
+    for (let t = -6; t <= 3; t++) g.fillRect(cx + a.dx * t - (a.dx ? 0 : 1), cy + a.dy * t - (a.dy ? 0 : 1), a.dx ? 1 : 2, a.dy ? 1 : 2);
+    for (let t = 0; t <= 4; t++) for (const sg of [-1, 1]) g.fillRect(cx + a.dx * (3 + t) - a.dx * 0 + px * sg * (4 - t), cy + a.dy * (3 + t) + py * sg * (4 - t), 1, 1);
+  };
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX - 1; i++) {
     if (!hSeg[j][i]) continue;
-    const x0 = (xs[i] + 2) * 16, x1 = xs[i + 1] * 16, yy = ys[j] * 16;
-    g.fillStyle = PAL.line;
-    for (let x = x0 + 20; x < x1 - 24; x += 12) g.fillRect(x, yy + 15, 6, 2);
+    const x0 = (xs[i] + wx[i]) * 16, x1 = xs[i + 1] * 16, yy = ys[j] * 16, h = wy[j] * 16, kind = rowKind[j];
+    for (let x = x0 + 20; x < x1 - 24; x += 12) {
+      if (kind === 'dupla') { g.fillStyle = PAL.line; g.fillRect(x, yy + 15, 6, 2); }
+      else if (kind === 'unica') { g.fillStyle = PAL.white; g.fillRect(x, yy + 15, 6, 2); }
+      else { g.fillStyle = PAL.white; g.fillRect(x, yy + 15, 6, 2); g.fillRect(x, yy + h - 17, 6, 2); }
+    }
+    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(x0 + 6, yy + h / 2 - 2, x1 - x0 - 12, 1); g.fillRect(x0 + 6, yy + h / 2 + 1, x1 - x0 - 12, 1); }
+    if (kind === 'unica') for (let x = x0 + 30; x < x1 - 30; x += 90) for (const o of [8, 24]) arrow(x, yy + o, rowDir[j]);
     g.fillStyle = PAL.white;
-    for (let k = 0; k < 8; k++) { g.fillRect(x0 + 3, yy + 1 + k * 4, 10, 2); g.fillRect(x1 - 13, yy + 1 + k * 4, 10, 2); }
+    for (let k = 0; k < h / 4; k++) { g.fillRect(x0 + 3, yy + 1 + k * 4, 10, 2); g.fillRect(x1 - 13, yy + 1 + k * 4, 10, 2); }
   }
   for (let i = 0; i < NX; i++) for (let j = 0; j < NY - 1; j++) {
     if (!vSeg[i][j]) continue;
-    const y0 = (ys[j] + 2) * 16, y1 = ys[j + 1] * 16, xx = xs[i] * 16;
-    g.fillStyle = PAL.line;
-    for (let y = y0 + 20; y < y1 - 24; y += 12) g.fillRect(xx + 15, y, 2, 6);
+    const y0 = (ys[j] + wy[j]) * 16, y1 = ys[j + 1] * 16, xx = xs[i] * 16, w = wx[i] * 16, kind = colKind[i];
+    for (let y = y0 + 20; y < y1 - 24; y += 12) {
+      if (kind === 'dupla') { g.fillStyle = PAL.line; g.fillRect(xx + 15, y, 2, 6); }
+      else if (kind === 'unica') { g.fillStyle = PAL.white; g.fillRect(xx + 15, y, 2, 6); }
+      else { g.fillStyle = PAL.white; g.fillRect(xx + 15, y, 2, 6); g.fillRect(xx + w - 17, y, 2, 6); }
+    }
+    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(xx + w / 2 - 2, y0 + 6, 1, y1 - y0 - 12); g.fillRect(xx + w / 2 + 1, y0 + 6, 1, y1 - y0 - 12); }
+    if (kind === 'unica') for (let y = y0 + 30; y < y1 - 30; y += 90) for (const o of [8, 24]) arrow(xx + o, y, colDir[i]);
     g.fillStyle = PAL.white;
-    for (let k = 0; k < 8; k++) { g.fillRect(xx + 1 + k * 4, y0 + 3, 2, 10); g.fillRect(xx + 1 + k * 4, y1 - 13, 2, 10); }
+    for (let k = 0; k < w / 4; k++) { g.fillRect(xx + 1 + k * 4, y0 + 3, 2, 10); g.fillRect(xx + 1 + k * 4, y1 - 13, 2, 10); }
   }
 
   for (const p of city.places) drawPlace(g, p, r);

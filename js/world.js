@@ -141,10 +141,10 @@ const World = {
     if (!s) return null;
     if (s.horiz) {
       const x0 = Math.max((b.x0) * 16, bd.x0 * 16 - 24), x1 = Math.min((b.x1 + 1) * 16, (bd.x1 + 1) * 16 + 24);
-      return { horiz: true, i: s.i, j: s.j, zone: { x0, x1, y0: s.row * 16, y1: s.row * 16 + 32 } };
+      return { horiz: true, i: s.i, j: s.j, zone: { x0, x1, y0: s.row * 16, y1: s.row * 16 + city.wy[s.j] * 16 } };
     }
     const y0 = Math.max(b.y0 * 16, bd.y0 * 16 - 24), y1 = Math.min((b.y1 + 1) * 16, (bd.y1 + 1) * 16 + 24);
-    return { horiz: false, i: s.i, j: s.j, zone: { x0: s.col * 16, x1: s.col * 16 + 32, y0, y1 } };
+    return { horiz: false, i: s.i, j: s.j, zone: { x0: s.col * 16, x1: s.col * 16 + city.wx[s.i] * 16, y0, y1 } };
   },
 
   // telhado de tijolinho com uma quadra de esportes pintada em cima
