@@ -17,6 +17,12 @@ const PET_AURA = 15;      // aura perdida por atropelar um bicho
 const DOG_COLORS = ['#8a5a2b', '#d9b26a', '#2b2b2b', '#f0e6d2'];
 const CAT_COLORS = ['#e08a2e', '#7d7d7d', '#1c1c1c', '#f4f4f4'];
 
+function drawSchoolKid(g, x, y, hair, anim) {
+  drawPedSprite(g, x, y, KID_SHIRT, hair, anim, false);
+  g.fillStyle = '#e74c3c';
+  g.fillRect(Math.round(x) - 2, Math.round(y) + 1, 1, 2); // mochila
+}
+
 const World = {
   risks: [], schools: [], bandits: [], kids: [], pets: [], robCd: 0, warnCd: 0, radarCd: 0, schoolOn: false,
 
@@ -360,8 +366,7 @@ const World = {
     for (const kd of this.kids) {
       if (!vis(kd.x, kd.y, 8)) continue;
       if (kd.down > 0) { g.fillStyle = KID_SHIRT; g.fillRect(Math.round(kd.x - camX) - 2, Math.round(kd.y - camY) - 1, 5, 2); continue; }
-      drawPedSprite(g, kd.x - camX, kd.y - camY, KID_SHIRT, kd.hair, kd.anim, false);
-      g.fillStyle = '#e74c3c'; g.fillRect(Math.round(kd.x - camX) - 2, Math.round(kd.y - camY) + 1, 1, 2); // mochila
+      drawSchoolKid(g, kd.x - camX, kd.y - camY, kd.hair, kd.anim);
     }
     for (const p of this.pets) if (vis(p.x, p.y, 8)) this.drawPet(g, p, p.x - camX, p.y - camY);
     for (const b of this.bandits) {

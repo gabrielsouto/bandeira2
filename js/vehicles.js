@@ -111,10 +111,6 @@ const Veh = {
       cap: work.cap, bag: (base.art === 'moto' || base.art === 'bike') && work.bag };
   },
   get cur() { return this.profile; },
-  slot(k = this.key) {
-    const v = VEHICLES[k];
-    return v.electric || k === 'n99' ? k : v.art;
-  },
 
   // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
   twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },

@@ -20,21 +20,27 @@ function game(files) {
   return { context, run };
 }
 
-test('a van mantém a física ao trocar de trabalho e a moto só aceita trabalhos compatíveis', () => {
-  const { run } = game(['vehicles']);
-  run("Veh.set('escolar', false)");
-  for (const job of ['amazoom', 'envios', 'uber', 'eucomida', 'escolar']) {
-    run(`Veh.setJob('${job}')`);
-    assert.equal(run('Veh.job'), job);
-    assert.equal(run('Veh.cur.art'), 'van');
-    assert.equal(run('Veh.cur.phys === PARCEL_VAN.phys'), true);
-    assert.equal(run('!!Veh.cur.parcels'), job === 'amazoom');
-    assert.equal(run('Veh.cur.delivery'), job === 'eucomida');
+test('o menu troca o veículo e recupera a mecânica individual mesmo entre duas vans', () => {
+  const { run, context } = game(['vehicles', 'garagem']);
+  const idle = { state: 'idle' };
+  let menu;
+  Object.assign(context, { GAME: { mode: 'solo' }, Escolar: { busy: false }, activeJob: () => idle,
+    showModal: (_title, _sub, items) => { menu = items; }, closeModal() {}, applyVehicle() {},
+    defaultSave: () => ({ car: { fuel: 70 } }), Care: { resetState() {} }, Nav: { clear() {} }, HUD: {} });
+  context.S.garage = {};
+  run("Garagem.takeVehicle('escolar'); S.car.fuel = 12");
+  for (const [key, label, art] of [
+    ['amazoom', 'Amazoom', 'van'], ['uber', 'Rebu', 'car'], ['eucomida', 'euComida', 'moto'], ['escolar', 'Van escolar', 'van'],
+  ]) {
+    run('Garagem.jobsMenu()');
+    const item = menu.find(i => i.label.startsWith(label + ' · '));
+    assert.equal(item.disabled, false);
+    item.run();
+    assert.equal(run('Veh.key'), key);
+    assert.equal(run('Veh.cur.art'), art);
+    assert.equal(context.S.vehicle, key);
+    assert.equal(context.S.car.fuel, key === 'escolar' ? 12 : 70);
   }
-  run("Veh.set('moto', false); Veh.setJob('escolar')");
-  assert.equal(run('Veh.job'), 'moto');
-  run("Veh.setJob('xopi')");
-  assert.equal(run('Veh.cur.cap'), 5);
 });
 
 test('Rebu Envios exige coleta, parada no destinatário e o PIN combinado para pagar uma única vez', () => {
@@ -90,7 +96,7 @@ test('o contrato escolar paga cada família uma vez por trecho e sobrevive à au
   ] }; Escolar.accept()`);
   const stop = () => {
     Object.assign(context.player, run('Escolar.target()'));
-    run('Escolar.update(1.3, player)');
+    run('Escolar.update(3, player)');
   };
   stop(); stop();
   assert.equal(s.money, 0);
@@ -111,4 +117,29 @@ test('o contrato escolar paga cada família uma vez por trecho e sobrevive à au
   assert.equal(s.money, 40);
   assert.equal(s.schoolLegs, 4);
   assert.equal(s.schoolRoute, null);
+});
+
+test('no portão os alunos caminham em fila e a van espera o último entrar', () => {
+  const { run, context } = game(['util', 'escolar']);
+  const drawn = [];
+  Object.assign(context, { DIRS: [{ dx: 0, dy: 1 }], T: { ROAD: 1 }, city: { tileAtPx: () => 1 },
+    HAIRS: ['A', 'B', 'C'], pxRing() {}, drawSchoolKid: (_g, x, y, hair) => drawn.push({ x, y, hair }) });
+  Object.assign(context.player, { x: 110, y: 105, a: 0 });
+  context.S.schoolRoute = { phase: 'saida', gate: { x: 100, y: 100 }, families: [{}, {}, {}], index: 0 };
+  const frame = dt => {
+    drawn.length = 0;
+    run(`Escolar.update(${dt}, player); Escolar.drawWorld(null, 0, 0)`);
+    return drawn.slice();
+  };
+  const start = frame(0), moving = frame(0.35);
+  assert.notDeepEqual(start[0], moving[0]);
+  assert.deepEqual(start.slice(1), moving.slice(1));
+  assert.equal(run('Escolar.busy'), true);
+  context.player.speed = 15;
+  assert.deepEqual(frame(0.5), start);
+  context.player.speed = 0;
+  assert.deepEqual(frame(1.3).map(k => k.hair), ['B', 'C']);
+  assert.equal(context.S.schoolRoute.phase, 'saida');
+  run('Escolar.update(0.9, player)');
+  assert.equal(context.S.schoolRoute.phase, 'volta');
 });

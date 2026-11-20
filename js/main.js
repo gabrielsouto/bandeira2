@@ -10,9 +10,11 @@ function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (s && s.v === 1) {
-      // Antes da garagem só havia um veículo, identificado pela escolha da tela inicial.
-      const carSlot = Veh.cur.school ? 'car' : Veh.slot();
-      return { parcels: 0, envios: 0, schoolLegs: 0, garage: {}, carSlot, ...s, car: { spare: true, ...s.car } };
+      // Garagens antigas guardavam carros, vans e bikes pelo tipo de carroceria.
+      const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
+      const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
+      const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
+      return { parcels: 0, envios: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;

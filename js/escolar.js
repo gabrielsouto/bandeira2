@@ -1,10 +1,14 @@
 'use strict';
 
 // O contrato fica no save inclusive enquanto a van trabalha em outro aplicativo.
+const SCHOOL_WALK_TIME = 1.2; // segundos da calçada até a porta
+const SCHOOL_LINE_DELAY = 0.45; // intervalo entre os alunos no portão
 const Escolar = {
   offer: null, nextOfferT: 2, dwell: 0,
   get route() { return S.schoolRoute; },
-  get busy() { return !!this.route && !['aula', 'saida'].includes(this.route.phase); },
+  get busy() { return !!this.route && (!['aula', 'saida'].includes(this.route.phase) || this.dwell > 0); },
+  get atGate() { return this.route?.phase === 'escola' || this.route?.phase === 'saida'; },
+  get stopCount() { return this.atGate ? this.route.families.length : 1; },
 
   makeOffer() {
     const school = R.pick(World.schools);
@@ -76,7 +80,7 @@ const Escolar = {
     const p = this.target();
     if (!p || car.speed >= 7 || Math.hypot(car.x - p.x, car.y - p.y) >= 26) { this.dwell = 0; return; }
     this.dwell += dt;
-    if (this.dwell < 1.2) return;
+    if (this.dwell < SCHOOL_WALK_TIME + (this.stopCount - 1) * SCHOOL_LINE_DELAY) return;
     this.dwell = 0; Sfx.door();
     const family = r.families[r.index];
     if (r.phase === 'casas') {
@@ -109,7 +113,8 @@ const Escolar = {
       '</div><div class="ph-timer"><div></div></div><div class="ph-btns"><button data-act="accept">E · ACEITAR</button><button data-act="decline" class="ghost">Q · RECUSAR</button></div>';
     const f = r.families[r.index];
     const title = { casas: 'BUSCAR NA CASA', escola: 'LEVAR À ESCOLA', aula: 'TURMA EM AULA', saida: 'BUSCAR NA ESCOLA', volta: 'LEVAR PARA CASA' }[r.phase];
-    const message = r.phase === 'aula' ? 'Saída em ' + mmss(r.wait) + '. Use J para trabalhar em outro app.' :
+    const message = this.dwell > 0 ? (this.target().kind === 'pick' ? 'Embarcando…' : 'Desembarcando…') + ' Mantenha a van parada.' :
+      r.phase === 'aula' ? 'Saída em ' + mmss(r.wait) + '. Use J para trabalhar em outro app.' :
       ['casas', 'volta'].includes(r.phase) ? esc(f.name) + ' · parada ' + (r.index + 1) + '/' + r.families.length : esc(r.school);
     return '<div class="ph-title">' + title + '</div><div class="ph-row">' + message +
       '</div>' + (r.phase === 'aula' ? '<div class="ph-muted">Ida paga pelas famílias</div><div class="ph-row">' + fares + '</div>' :
@@ -120,6 +125,25 @@ const Escolar = {
     const p = this.target();
     if (!p) return;
     pxRing(g, p.x - cx, p.y - cy, 10, p.kind === 'pick' ? '#39ff88' : '#ffd23f');
-    if (p.kind === 'pick') drawPedSprite(g, p.x - cx, p.y - cy, KID_SHIRT, '#533624', time, false);
+    const boarding = p.kind === 'pick';
+    if (!boarding && this.dwell === 0) return;
+
+    // A fila acompanha a calçada. A porta usada é a lateral da van voltada para a parada.
+    const street = DIRS.find(d => city.tileAtPx(p.x + d.dx * TILE, p.y + d.dy * TILE) === T.ROAD);
+    const nx = street?.dx ?? 0, ny = street?.dy ?? 1;
+    const sideX = -Math.sin(player.a), sideY = Math.cos(player.a);
+    const side = (p.x - nx * 6 - player.x) * sideX + (p.y - ny * 6 - player.y) * sideY >= 0 ? 1 : -1;
+    const doorX = player.x + side * sideX * 5, doorY = player.y + side * sideY * 5;
+    for (let i = 0; i < this.stopCount; i++) {
+      const progress = clamp((this.dwell - i * SCHOOL_LINE_DELAY) / SCHOOL_WALK_TIME, 0, 1);
+      if ((boarding && progress === 1) || (!boarding && progress === 0)) continue;
+      // A turma espera ao lado do ponto, visível até quando a van para sobre o marcador.
+      const offset = 12 + (i - (this.stopCount - 1) / 2) * 6;
+      const curbX = p.x - nx * 6 + ny * offset, curbY = p.y - ny * 6 - nx * offset;
+      const towardVan = boarding ? progress : 1 - progress;
+      const x = lerp(curbX, doorX, towardVan), y = lerp(curbY, doorY, towardVan);
+      const familyIndex = this.atGate ? i : this.route.index;
+      drawSchoolKid(g, x - cx, y - cy, HAIRS[familyIndex % HAIRS.length], progress * 8);
+    }
   },
 };

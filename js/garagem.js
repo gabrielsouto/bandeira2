@@ -19,10 +19,9 @@ const Garagem = {
   takeVehicle(key, job) {
     if (S.carSlot) S.garage[S.carSlot] = S.car;
     Veh.set(key); Veh.setJob(job);
-    const slot = Veh.slot();
-    S.car = S.garage[slot] || (S.carSlot ? defaultSave().car : S.car);
-    S.carSlot = slot;
-    delete S.garage[slot];
+    S.car = S.garage[key] || (S.carSlot ? defaultSave().car : S.car);
+    S.carSlot = key;
+    delete S.garage[key];
     S.vehicle = key; S.job = Veh.job;
     Care.resetState(); this.pushing = false; applyVehicle();
   },
@@ -38,19 +37,23 @@ const Garagem = {
   jobsMenu() {
     if (!this.enabled) return;
     const ready = this.canSwitch();
-    showModal('MODALIDADE DE TRABALHO', ready ? 'Escolha o app para este veículo.' :
-      'Estacione e conclua ou cancele o serviço atual para trocar.', Veh.jobs.map(k => ({
-      label: VEHICLES[k].name + (Veh.job === k ? ' · atual' : ''), disabled: !ready || k === Veh.job,
-      run: () => {
-        this.clearOffer(); Veh.setJob(k); S.job = k; applyVehicle(); closeModal();
-        toast('Você está online no ' + Veh.cur.app + '.', 'good');
-      },
-    })));
+    const items = VEH_ORDER.filter(k => !VEHICLES[k].school).map(key => {
+      const current = Veh.key === key && Veh.job === (key === 'eletrico' ? 'uber' : key);
+      return {
+        label: VEHICLES[key].name + ' · ' + Veh.noun(key) + (current ? ' (atual)' : ''), disabled: !ready || current,
+        run: () => {
+          this.clearOffer(); this.takeVehicle(key); Nav.clear(); closeModal();
+          toast('Você está online no ' + Veh.cur.app + '.', 'good');
+        },
+      };
+    });
+    showModal('MODALIDADE DE TRABALHO', ready ? 'Escolha a modalidade para pegar o veículo dela aqui.' :
+      'Estacione e conclua ou cancele o serviço atual para trocar.', items);
   },
   fleetMenu() {
     const options = { uber: 'Carro Rebu', n99: 'Carro 66', taxi: 'Táxi', eletrico: 'Carro elétrico', escolar: 'Van', moto: 'Moto', comida66: 'Bicicleta' };
     showModal('VEÍCULOS DE CASA', 'Cada veículo guarda seu combustível, desgaste e estepe.', Object.entries(options).map(([key, label]) => ({
-      label, disabled: Veh.slot(key) === Veh.slot() || !this.canSwitch(),
+      label, disabled: key === Veh.key || !this.canSwitch(),
       run: () => {
         this.clearOffer(); this.takeVehicle(key); Nav.clear(); writeSave(); this.menu();
       },
