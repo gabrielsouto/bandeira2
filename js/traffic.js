@@ -9,6 +9,7 @@ class Traffic {
     this.city = city;
     this.cars = [];
     this.onHonk = null; // quem usa o trânsito decide como tocar a buzina (o servidor não tem som)
+    this.stopFn = null; // semáforo: (i, j, dir, distância até a faixa) → true se o carro deve parar
     for (let k = 0; k < n; k++) this.spawn();
   }
 
@@ -74,20 +75,30 @@ class Traffic {
         if (ah <= 3 || ah > 28) return false;
         return Math.abs(-dx * fy + dy * fx) < 10;
       };
-      let blocked = false, byPlayer = false;
+      let blocked = false, byPlayer = false, queued = false;
       if (ahead(pl.x, pl.y)) { blocked = true; byPlayer = true; }
       else if (car.ghost <= 0) {
-        for (const o of cars) if (o !== car && ahead(o.x, o.y)) { blocked = true; break; }
+        for (const o of cars) if (o !== car && ahead(o.x, o.y)) { blocked = true; queued = o.atLight || o.queued; break; }
       }
       if (car.hitT > 0) blocked = true;
+      car.queued = blocked && queued; // fila do sinal: espera sem "atravessar" o carro da frente
 
       const wp = car.wps[0];
       const cap = this.capFn ? this.capFn(car.x, car.y) : Infinity; // engarrafamento (colégios)
-      const target = blocked ? 0 : Math.min(cap, wp && wp.turn ? 36 : car.cruise);
+      let target = blocked ? 0 : Math.min(cap, wp && wp.turn ? 36 : car.cruise);
+      // chegando no cruzamento (o próximo ponto é a faixa de entrada): sinal fechado, para na faixa
+      car.atLight = false;
+      if (this.stopFn && car.wps.length === 1 && !wp.turn) {
+        const dd = Math.hypot(wp.x - car.x, wp.y - car.y);
+        if (dd < 70 && this.stopFn(car.ti, car.tj, car.dir, dd)) {
+          target = Math.min(target, Math.max(0, (dd - 4) * 2.2));
+          car.atLight = dd < 30;
+        }
+      }
       if (car.speed < target) car.speed = Math.min(target, car.speed + 60 * dt);
       else car.speed = Math.max(target, car.speed - 240 * dt);
 
-      if (blocked && car.hitT <= 0) {
+      if (blocked && car.hitT <= 0 && !car.queued) {
         car.stuck += dt;
         if (car.stuck > 3.5 && !byPlayer) { car.ghost = 1.5; car.stuck = 0; }
       } else car.stuck = Math.max(0, car.stuck - dt * 2);

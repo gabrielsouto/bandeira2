@@ -71,6 +71,8 @@ World.init(city, mapCtx);
 Delivery.init(city, mapCtx); // restaurantes do euComida (depois do World: não pega colégio nem área de risco)
 Autoescola.init(city);
 traffic.capFn = (x, y) => World.trafficCap(x, y);
+Signals.init(city);
+traffic.stopFn = (i, j, d, dist) => Signals.npcStop(i, j, d, dist);
 HUD.init();
 Multi.initTitle();
 const particles = [], floaters = [];
@@ -408,6 +410,7 @@ function update(dt) {
   const hits = peds.update(dt, player);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
   World.update(dt, player);
+  Signals.update(dt, player); // avançou o sinal vermelho?
   Police.update(dt, player);
   if (Veh.cur.school) Autoescola.update(dt, player); else Rides.update(dt, player);
 
@@ -499,6 +502,7 @@ function render() {
     ctx.drawImage(ic, sx - ic.width, sy - ic.height - 4, ic.width * 2, ic.height * 2);
   }
 
+  Signals.draw(ctx, camX, camY, vw, vh);
   World.draw(ctx, camX, camY, vw, vh);
   Delivery.draw(ctx, camX, camY, vw, vh);
   peds.draw(ctx, camX, camY, vw, vh);
@@ -525,7 +529,9 @@ function render() {
   for (const n of traffic.cars) lit.push({ x: n.x, y: n.y, a: n.a, front: 8, len: 50, k: 0.7 });
   Multi.lightCars(lit);
   Police.lightCars(lit);
-  Light.render(ctx, vw, vh, camX, camY, lit, (L) => { World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); Autoescola.drawLights(L, camX, camY); });
+  Light.render(ctx, vw, vh, camX, camY, lit, (L) => {
+    World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); Autoescola.drawLights(L, camX, camY); Signals.drawLights(L, camX, camY);
+  });
   Police.drawGlow();
   Multi.drawTags();
 

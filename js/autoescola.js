@@ -34,6 +34,7 @@ const FAULTS = {
   calcada: { pts: 5, cd: 4, label: 'Fora da rua', line: () => 'Volta pra rua! A calçada é dos pedestres.' },
   contramao: { pts: 5, cd: 5, label: 'Contramão', line: () => 'Mão direita! Volte para a sua faixa.' },
   pare: { pts: 15, cd: 0, label: 'PARE furado', line: () => 'Passou direto no PARE! Tem que parar o carro.' },
+  sinal: { pts: 15, cd: 0, label: 'Sinal vermelho', line: () => 'Avançou o sinal vermelho! No vermelho, pare antes da faixa e espere o verde.' },
   atropelou: { pts: 25, cd: 2, label: 'Atropelamentos', line: () => 'Nããão! Pedestre sempre tem a vez. Mais atenção!' },
   errou: { pts: 5, cd: 0, label: 'Caminho errado', line: () => 'Ops, caminho errado! Tudo bem, vou te guiar por outro.' },
 };
@@ -135,6 +136,7 @@ const Autoescola = {
     if (!nd) return 'Agora pare o carro dentro do quadrado branco.';
     const tr = this.turnOf(nd), act = tr === 'reto' ? 'siga reto' : TURN_WORDS[tr];
     if (nd.stop) return `No próximo cruzamento tem placa de PARE. Pare o carro e depois ${act}.`;
+    if (Signals.at(nd.i, nd.j)) return `No próximo cruzamento tem semáforo: no vermelho, espere o verde. Depois, ${act}.`;
     return `No próximo cruzamento, ${act}.`;
   },
 
@@ -170,7 +172,7 @@ const Autoescola = {
       i += DIRS[dout].dx; j += DIRS[dout].dy; din = dout;
     }
     // placas de PARE (nunca no primeiro cruzamento: dá tempo de entender)
-    const cand = nodes.slice(1);
+    const cand = nodes.slice(1).filter((nd) => !Signals.at(nd.i, nd.j));
     for (let k = 0; k < stops && cand.length; k++) cand.splice(Math.floor(Math.random() * cand.length), 1)[0].stop = true;
     const last = nodes[nodes.length - 1], ep = c.exitPoint(last.i, last.j, last.dout);
     const park = { x: ep.x + DIRS[last.dout].dx * 44, y: ep.y + DIRS[last.dout].dy * 44, d: last.dout };
@@ -234,15 +236,24 @@ const Autoescola = {
       const p = this.center(nd), d = Math.hypot(car.x - p.x, car.y - p.y);
       rt.minD = Math.min(rt.minD, d);
       if (nd.stop && !nd.stopped && d < 64 && car.speed < 12) { nd.stopped = true; this.say('Isso! Parou certinho. Agora pode ir.', true, 'good'); }
+      const sig = Signals.at(nd.i, nd.j), lt = sig ? Signals.light(sig, nd.din) : 'g';
       if (!nd.warned && d < 84) {
         nd.warned = true;
         const tr = this.turnOf(nd);
         if (nd.stop && !nd.stopped) this.say('Placa de PARE! Pare o carro antes da faixa branca.', true, 'warn');
+        else if (lt !== 'g') { nd.waitRed = true; this.say(`Sinal ${lt === 'r' ? 'vermelho' : 'amarelo'}! Pare antes da faixa branca e espere o verde.`, true, 'warn'); }
         else if (tr !== 'reto') this.say(`Agora, ${TURN_WORDS[tr]}!`, true);
       }
+      if (sig && nd.warned && lt === 'r' && d < 84) nd.waitRed = true;
+      if (nd.waitRed && lt === 'g' && d < 90) {
+        nd.waitRed = false;
+        const tr = this.turnOf(nd);
+        this.say(tr === 'reto' ? 'Abriu o verde! Pode seguir reto.' : `Abriu o verde! Pode ir e ${TURN_WORDS[tr]}.`, true, 'good');
+      }
       if (this.inNode(car, nd)) {
-        const ran = nd.stop && !nd.stopped;
-        if (ran) this.fault('pare');
+        const redRun = sig && lt === 'r' && Signals.redFor(sig, nd.din) > RED_GRACE; // a falta vem do Signals
+        if (nd.stop && !nd.stopped) this.fault('pare');
+        const ran = (nd.stop && !nd.stopped) || redRun;
         rt.k++; rt.left = nd;
         const nx = rt.nodes[rt.k], q = nx ? this.center(nx) : rt.park;
         rt.minD = Math.hypot(q.x - car.x, q.y - car.y);
@@ -386,6 +397,11 @@ const Autoescola = {
         const tr = this.turnOf(nd);
         icon = TURN_ICONS[tr]; cls = ''; text = TURN_WORDS[tr].replace(/^./, (s) => s.toUpperCase());
         if (nd.stop && !nd.stopped) { icon = 'PARE'; cls = 'stop'; text = `Pare o carro, depois ${TURN_WORDS[tr]}`; }
+        const sig = Signals.at(nd.i, nd.j);
+        if (sig) {
+          const lt = Signals.light(sig, nd.din);
+          text += `<div class="es-sig"><i class="${lt}"></i>${lt === 'g' ? 'Sinal verde' : lt === 'y' ? 'Sinal amarelo' : 'Sinal vermelho: espere'}</div>`;
+        }
       }
       return `<div class="ph-title">${this.lessonNum()} · ${esc(L.name.toUpperCase())}</div>
         <div class="es-next"><div class="es-arrow ${cls}">${icon}</div><div class="es-txt">${text}</div></div>

@@ -101,6 +101,7 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Áreas de risco (círculos vermelhos): bandidos se aproximam de quem para ou anda devagar e levam dinheiro, o carro ou os dois. Carro roubado volta pelo seguro na oficina, com franquia. Acelere para fugir. Atropelar bandido não dá multa: dá **AURA**, e quem tem muita aura assusta os bandidos.
 - Colégios: na entrada e na saída das aulas (06:45–07:30, 11:45–12:30, 17:15–18:00) a rua da frente engarrafa e crianças atravessam. Radar de 40 km/h na zona escolar.
 - Polícia: atropelar alguém, passar no radar ou bater numa viatura põe a polícia atrás de você. Parado com a viatura colada = multa e perde a corrida. Despistar (ficar bem longe por 6 s) dá AURA.
+- Semáforos em metade dos cruzamentos de 3 ou 4 saídas: verde, amarelo e vermelho, com faixa branca antes do cruzamento. O trânsito para no vermelho. Avançar o vermelho = multa de radar (R$ 60); na direção fácil do solo é só um aviso; na autoescola tira 15 pontos.
 - Tarifa dinâmica em áreas aleatórias que aparecem e somem.
 - Carro com combustível, lataria, desgaste e defeitos aleatórios (pneu furado, radiador, freio, bateria).
 - Postos, oficinas e lava jatos: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200. Quebrou ou ficou sem gasolina sem dinheiro nem no fiado: a oficina faz um remendo grátis e o frentista empresta um pouco de gasolina, para ninguém ficar preso.
@@ -122,6 +123,7 @@ js/light.js        dia e noite (escuridão, faróis, postes)
 js/radio.js        rádio do carro (música sintetizada e notícias faladas)
 js/world.js        áreas de risco com bandidos (e AURA), gatos e cachorros, colégios com trânsito
 js/police.js       perseguição da polícia
+js/semaforo.js     semáforos: ciclo das luzes, trânsito parando no vermelho, multa de quem avança
 ajuda.html         página de ajuda com todas as regras
 js/traffic.js      trânsito
 js/peds.js         pedestres

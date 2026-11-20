@@ -228,3 +228,8 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
   box-shadow: 4px 4px 0 rgba(0,0,0,.4); font-size: 20px; line-height: 1.15; }
 .cnh-h { font-family: 'Press Start 2P', monospace; font-size: 8px; margin-bottom: 6px; }
 .cnh b { color: #10301a; }
+
+/* semáforo no celular da autoescola */
+.es-sig { font-size: 18px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.es-sig i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #000; display: inline-block; }
+.es-sig i.g { background: #3dff6e; } .es-sig i.y { background: #ffc21a; } .es-sig i.r { background: #ff3030; }

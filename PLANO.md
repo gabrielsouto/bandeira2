@@ -93,8 +93,15 @@ Regras que valem para todas as etapas:
   limite de velocidade, contramão, PARE furado, caminho errado com recálculo, aula à noite e a carteira depois da prova;
   direção fácil com velocidade máxima, volante voltando sozinho e freio automático antes do pedestre. O servidor não mudou.
 
+- [x] **Semáforos** (`js/semaforo.js`): metade dos cruzamentos com 3 ou 4 saídas, sorteados pela seed (sem mudar tiles),
+  ciclo pelo relógio do computador (numa sala fica quase igual para todos). Trânsito para no vermelho e espera em fila
+  (sem o "fantasma" atravessar a fila). Avançar o vermelho: multa de R$ 60 como `radar` (a sala já aceita, o servidor
+  não mudou); na direção fácil do solo só avisa; na autoescola é falta de 15 pontos e o instrutor avisa do sinal.
+  Testado no navegador: 54 entradas do trânsito em cruzamentos com semáforo em 15 s, nenhuma no vermelho.
+
 ### Ideias soltas para depois
-- Autoescola: dar seta (pisca) antes de virar; baliza; semáforo nos cruzamentos; aula com chuva.
+- Autoescola: dar seta (pisca) antes de virar; baliza; aula com chuva.
+- Semáforo piscando amarelo de madrugada; viatura que vê você avançar o vermelho vem atrás.
 - euComida no multiplayer: pedidos vindos da sala (precisa de regras novas no servidor e protocolo 5).
 - Bike do euComida: sem gasolina, lenta, mas não paga posto.
 - Interpretar de novo "gasolina adulterada... vai durar mesmo": hoje ela rende MENOS. Se a ideia era render mais, é trocar o sinal do consumo em `Care.update`.
