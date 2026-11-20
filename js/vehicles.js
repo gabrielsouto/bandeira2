@@ -66,23 +66,55 @@ const VEHICLES = {
     phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
     fare: 1, offerMul: 0.7, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
+  escolar: {
+    ...PARCEL_VAN, name: 'Van escolar', app: 'ESCOLAR', color: '#ffcb39', shuttle: true,
+    desc: 'Busque os alunos, leve a turma à escola e volte na saída. Cada família paga por trecho. Só no solo.',
+  },
+  eletrico: {
+    name: 'Carro elétrico', app: 'REBU', color: '#52d8bd', art: 'car', electric: true, soloOnly: true,
+    phys: { accel: 175 }, fare: 1, offerMul: 1, fuelUse: 0.8, tankMul: 1, dmgMul: 1,
+    desc: 'Começa no Rebu. A bateria recarrega no posto marcado com um raio. Só no solo.',
+  },
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi'];
+VEHICLES.envios = {
+  ...VEHICLES.uber, name: 'Rebu Envios', app: 'REBU ENVIOS', color: '#69ccad', soloOnly: true, bag: '#69ccad',
+  desc: 'Retire o pacote com o remetente e entregue em mãos. Alguns envios pedem um código na chegada. Só no solo.',
+};
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios'];
+const JOBS_BY_ART = {
+  van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
+  car: ['uber', 'n99', 'eucomida', 'envios'], taxi: ['taxi', 'uber', 'n99', 'eucomida', 'envios'],
+  moto: ['moto', 'eucomida', 'xopi', 'envios'], bike: ['comida66'], escola: ['escola'],
+};
 const VEH_KEY = 'bandeira2-veiculo';
 
 const Veh = {
-  key: 'uber',
+  key: 'uber', job: 'uber', profile: VEHICLES.uber,
 
   load() {
-    try { const k = localStorage.getItem(VEH_KEY); if (VEHICLES[k]) this.key = k; } catch (e) { /* storage bloqueado */ }
+    try { this.set(localStorage.getItem(VEH_KEY), false); } catch (e) { /* storage bloqueado */ }
   },
   // persist = false troca só nesta partida (ex.: o euComida vira Moto Rebu dentro de uma sala)
   set(k, persist = true) {
     if (!VEHICLES[k]) return;
     this.key = k;
+    this.setJob(k === 'eletrico' ? 'uber' : k);
     if (persist) try { localStorage.setItem(VEH_KEY, k); } catch (e) { /* idem */ }
   },
-  get cur() { return VEHICLES[this.key]; },
+  get jobs() { return JOBS_BY_ART[VEHICLES[this.key].art]; },
+  setJob(k) {
+    if (!this.jobs.includes(k)) return;
+    const base = VEHICLES[this.key], work = VEHICLES[k];
+    this.job = k;
+    this.profile = { ...base, app: work.app, delivery: !!work.delivery, parcels: work.parcels,
+      shuttle: !!work.shuttle, offerMul: work.offerMul, fare: work.fare, bandeira2: work.bandeira2,
+      cap: work.cap, bag: (base.art === 'moto' || base.art === 'bike') && work.bag };
+  },
+  get cur() { return this.profile; },
+  slot(k = this.key) {
+    const v = VEHICLES[k];
+    return v.electric || k === 'n99' ? k : v.art;
+  },
 
   // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
   twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },
@@ -96,7 +128,7 @@ const Veh = {
   // bandeira 2 do táxi: das 20:00 às 06:00 do relógio do jogo
   isNight(min) { const h = Math.floor(min / 60) % 24; return h >= 20 || h < 6; },
   // multiplicador da tarifa para o veículo atual na hora "min"
-  fareMul(min, k = this.key) {
+  fareMul(min, k = this.job) {
     const v = VEHICLES[k];
     return v.fare * (v.bandeira2 && this.isNight(min) ? v.bandeira2 : 1);
   },

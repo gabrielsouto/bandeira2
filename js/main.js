@@ -3,17 +3,24 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, earned: 0, aura: 0,
-    car: { fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
+    car: { spare: true, fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return { parcels: 0, ...s }; } catch (e) { /* sem save */ }
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (s && s.v === 1) {
+      // Antes da garagem só havia um veículo, identificado pela escolha da tela inicial.
+      const carSlot = Veh.cur.school ? 'car' : Veh.slot();
+      return { parcels: 0, envios: 0, schoolLegs: 0, garage: {}, carSlot, ...s, car: { spare: true, ...s.car } };
+    }
+  } catch (e) { /* sem save */ }
   return null;
 }
 // Modo de jogo. Só o solo lê e grava o save local; o multiplayer terá um estado próprio que nunca toca no save.
 const GAME = { mode: 'solo' };
 function writeSave() {
-  if (GAME.mode !== 'solo' || Veh.cur.school) return; // a autoescola não mexe no save (o carro é da escola)
+  if (mode === 'title' || GAME.mode !== 'solo' || Veh.cur.school) return; // a autoescola não mexe no save (o carro é da escola)
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage bloqueado */ }
 }
 
@@ -41,6 +48,8 @@ resize();
 
 const player = makePlayer(0, 0, 0);
 function activeJob() {
+  if (Veh.job === 'envios') return Envios;
+  if (Veh.cur.shuttle) return Escolar;
   if (Veh.cur.parcels) return Parcels;
   return Veh.cur.school ? Autoescola : Rides;
 }
@@ -52,18 +61,22 @@ function applyVehicle() {
   $('appname').textContent = v.app;
   $('phone').classList.toggle('food', !!v.delivery);
   $('phone').classList.toggle('food66', !!v.pedal);
-  $('fuellbl').textContent = v.pedal ? 'FÔLEGO' : 'COMBUST.';
+  $('fuellbl').textContent = v.pedal ? 'FÔLEGO' : v.electric ? 'BATERIA' : 'COMBUST.';
   $('phone').classList.toggle('escola', !!v.school);
   $('phone').classList.toggle('parcels', !!v.parcels);
-  document.documentElement.style.setProperty('--parcel-color', v.color);
+  document.documentElement.style.setProperty('--parcel-color', VEHICLES[Veh.job].color);
   $('lghub').classList.toggle('hidden', !v.parcels);
   $('lgstops').classList.toggle('hidden', !v.parcels);
-  $('lgsurge').classList.toggle('hidden', !!v.parcels || !!v.school);
+  $('lgsurge').classList.toggle('hidden', !!v.parcels || !!v.school || !!v.shuttle);
+  $('lgcasa').classList.toggle('hidden', !Garagem.enabled);
+  $('lgrecarga').classList.toggle('hidden', !Garagem.enabled);
+  $('jobbtn').classList.toggle('hidden', !Garagem.enabled);
   $('lgrest').classList.toggle('hidden', !v.delivery);
 }
 applyVehicle();
 let lastPlace = null;
 function placeCarAt(p) {
+  Garagem.pushing = false;
   player.x = p.cx; player.y = p.cy;
   player.a = { top: -Math.PI / 2, bottom: Math.PI / 2, left: Math.PI, right: 0 }[p.side];
   player.vx = player.vy = 0; player.steer = 0; player.speed = 0;
@@ -81,6 +94,7 @@ Light.init(city);
 World.init(city, mapCtx);
 Delivery.init(city, mapCtx); // restaurantes do euComida (depois do World: não pega colégio nem área de risco)
 Parcels.init(city, mapCtx);
+Garagem.init();
 Autoescola.init(city);
 traffic.capFn = (x, y) => World.trafficCap(x, y);
 Signals.init(city);
@@ -121,6 +135,9 @@ function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
+    if (code === 'KeyN') { pickVehicle('envios'); return; }
+    if (code === 'KeyV') { pickVehicle('escolar'); return; }
+    if (code === 'KeyE') { pickVehicle('eletrico'); return; }
     const d = code.match(/^(Digit|Numpad)(\d)$/);
     if (d) { pickVehicle(VEH_ORDER[(+d[2] || 10) - 1]); return; }
     if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
@@ -128,7 +145,7 @@ function onKey(code) {
   }
   if (mode === 'menu') {
     if (code === 'Escape') closeModal();
-    else { const m = code.match(/^(Digit|Numpad)(\d)$/); if (m) clickModalIndex(+m[2]); }
+    else { const m = code.match(/^(Digit|Numpad)(\d)$/); if (m) clickModalIndex(+m[2] || 10); }
     return;
   }
   if (Multi.roomKey(code)) return;
@@ -144,7 +161,11 @@ function onKey(code) {
     case 'KeyR': Radio.next(); break;
     case 'KeyX': Pega.key(); break;
     case 'KeyO': Nav.toggle('oficina'); break;
-    case 'KeyP': Nav.toggle('posto'); break;
+    case 'KeyJ': Garagem.jobsMenu(); break;
+    case 'KeyB': if (Garagem.enabled) Nav.toggle('casa'); break;
+    case 'KeyT': Garagem.spare(); break;
+    case 'KeyU': Garagem.push(); break;
+    case 'KeyP': Nav.toggle(Care.station()); break;
     case 'KeyL': Nav.toggle('lavajato'); break;
     case 'Escape': openPause(); break;
   }
@@ -156,11 +177,23 @@ function startGame() {
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   mode = 'play';
+  if (Garagem.enabled) {
+    if (Escolar.busy) {
+      Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
+      toast('Rota escolar retomada. Termine o trecho ou aperte C para encerrar o contrato.');
+    } else if (S.shipment) {
+      Garagem.takeVehicle(S.vehicle || 'envios', 'envios');
+    } else Garagem.takeVehicle(Veh.key, resumeJob);
+  } else applyVehicle();
   if (Veh.cur.school) {
     // o carro da escola: tanque cheio e inteiro (o carro do save fica guardado, a autoescola não grava nada)
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.job === 'envios') {
+    toast(S.shipment ? 'Envio retomado. Siga a seta para continuar.' : 'Rebu Envios online. Os pedidos chegam no celular.', 'good');
+  } else if (Veh.cur.shuttle) {
+    toast('Van escolar online! Os contratos das famílias chegam no celular.', 'good');
   } else if (Veh.cur.parcels) {
     toast(`Você está online no ${Veh.cur.app}! Aceite uma rota no celular e carregue no galpão.`, 'good');
   } else if (Veh.cur.delivery) {
@@ -173,14 +206,18 @@ function startGame() {
     setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
   }
 }
+$('jobbtn').addEventListener('click', () => { if (mode === 'play') Garagem.jobsMenu(); });
 $('startbtn').addEventListener('click', startGame);
 
 // ---------- escolha do veículo (tela inicial) ----------
-function pickVehicle(k) {
+let resumeJob;
+function pickVehicle(k, resume = false) {
   Veh.set(k);
+  resumeJob = resume && S.vehicle === k ? S.job : undefined;
   applyVehicle();
   for (const b of document.querySelectorAll('#vehbtns button')) b.classList.toggle('sel', b.dataset.veh === Veh.key);
-  $('vehdesc').textContent = Veh.cur.desc;
+  $('vehdesc').textContent = VEHICLES[resumeJob] && resumeJob !== Veh.job
+    ? 'Retomar com ' + Veh.cur.name + ' no app ' + VEHICLES[resumeJob].name + '.' : Veh.cur.desc;
 }
 $('easybtn').addEventListener('click', (e) => { Easy.toggle(true); e.currentTarget.blur(); });
 Easy.refresh();
@@ -191,11 +228,12 @@ Easy.refresh();
     b.className = 'ghost'; b.dataset.veh = k;
     const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(44, 24);
     g.drawImage(spr.img, Math.round(22 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
-    b.append(cv, document.createTextNode(`${(i + 1) % 10} · ${v.name}`));
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N' }[k];
+    b.append(cv, document.createTextNode(`${shortcut} · ${v.name}`));
     b.addEventListener('click', () => { pickVehicle(k); b.blur(); });
     box.appendChild(b);
   });
-  pickVehicle(Veh.key);
+  pickVehicle(Veh.key, true);
 })();
 window.addEventListener('beforeunload', writeSave);
 
@@ -209,7 +247,7 @@ function showModal(title, sub, items, closeLabel, noMoney) {
     (sub ? `<div class="m-sub">${sub}</div>` : '') +
     (noMoney ? '' : `<div class="m-money">Saldo: <b class="${S.money < 0 ? 'neg' : ''}">${fmtMoney(S.money)}</b></div>`) +
     `<div class="m-list">${items.map((it, i) =>
-      `<button class="mbtn" data-i="${i + 1}" ${it.disabled ? 'disabled' : ''}><span><kbd>${i + 1}</kbd> ${it.label}</span>` +
+      `<button class="mbtn" data-i="${i + 1}" ${it.disabled ? 'disabled' : ''}><span>${i < 10 ? `<kbd>${(i + 1) % 10}</kbd> ` : ''}${it.label}</span>` +
       `${it.cost != null ? `<span class="price">${fmtMoney(it.cost)}</span>` : ''}</button>`).join('')}</div>` +
     `<button class="mbtn ghost" data-close="1"><span><kbd>Esc</kbd> ${closeLabel || 'Sair'}</span></button>`;
   modal.classList.remove('hidden');
@@ -255,6 +293,7 @@ function garageMenu(place) {
   // quebrado e sem dinheiro nem no fiado: o mecânico faz um remendo de graça para não ficar preso aqui
   if (c.health <= 0 && !Care.canPay(Math.ceil(100 * 2.2))) items.unshift({ label: `Remendo de emergência (de graça, lataria em ${EMERGENCY_FIX}%)`, cost: null,
     run() { c.health = EMERGENCY_FIX; c.wear = Math.min(100, c.wear + 10); toast('"Vai com Deus, mas volta pra pagar o conserto!"', 'good'); reopen(); } });
+  if (Garagem.enabled && !Veh.twoWheel() && !c.spare) items.push(shopItem('Repor estepe no porta-malas', PROBLEMS.flat.cost, () => { c.spare = true; }, reopen));
   const sub = items.length ? `${R.pick(MECH_LINES)}<br><small>Dá pra pagar no fiado até ${fmtMoney(CREDIT_LIMIT)}.</small>` : 'Seu carro está nos trinques! Nada pra fazer aqui.';
   showModal(`OFICINA · ${place.name}`, sub, items);
 }
@@ -266,15 +305,28 @@ function postoMenu(place) {
     showModal(`POSTO · ${place.name}`, `"Gasolina pra bike? Essa é boa!"<br><small>Fôlego: ${Math.round(Care.legs)}%</small>`, items);
     return;
   }
+  if (Veh.cur.electric) {
+    const plugged = place === Garagem.charger;
+    if (plugged && c.fuel < 100) items.push({ label: 'Recarregar bateria · grátis', run() {
+      c.fuel = 100; writeSave(); Sfx.ding(); reopen();
+    } });
+    if (!plugged) items.push({ label: 'Traçar rota para recarga', run() { closeModal(); Nav.go('recarga'); } });
+    showModal(plugged ? 'PONTO DE RECARGA' : place.name, (plugged ? 'Carregador público' : 'Este posto só vende combustível') + ' · Bateria ' + Math.round(c.fuel) + '%', items);
+    return;
+  }
+  if (c.kitGas && c.gas < 100) {
+    const cost = Math.ceil((100 - c.gas) * 0.32 * Veh.cur.tankMul * 100) / 100;
+    items.push(shopItem('Completar GNV (' + Math.round(c.gas) + '% no cilindro)', cost, () => { c.gas = 100; }, reopen));
+  }
   // tanque de moto é menor; o posto preço baixo é mais barato... e batiza a gasolina
   const missing = 100 - c.fuel, price = FUEL_PRICE * Veh.cur.tankMul * (place.cheap ? CHEAP_FUEL : 1), bad = !!place.cheap;
   if (missing > 1) {
     const full = Math.ceil(missing * price * 100) / 100;
-    items.push(shopItem('Completar o tanque', full, () => Care.refuel(missing, bad), reopen, ['tanque']));
+    items.push(shopItem('Completar o tanque de gasolina', full, () => Care.refuel(missing, bad), reopen, ['tanque']));
     if (full > FUEL_SMALL) items.push(shopItem('Colocar R$ 20 de gasolina', FUEL_SMALL, () => Care.refuel(FUEL_SMALL / price, bad), reopen, ['gasolina']));
   }
   // tanque vazio e sem dinheiro nem no fiado: o frentista empresta um pouquinho para não ficar preso aqui
-  if (c.fuel <= 0 && !Care.canPay(Math.min(FUEL_SMALL, Math.ceil(missing * price * 100) / 100))) items.unshift({ label: `Frentista empresta ${EMERGENCY_FUEL}% de gasolina (de graça)`, cost: null,
+  if (Care.empty() && !Care.canPay(Math.min(FUEL_SMALL, Math.ceil(missing * price * 100) / 100))) items.unshift({ label: `Frentista empresta ${EMERGENCY_FUEL}% de gasolina (de graça)`, cost: null,
     run() { Care.refuel(EMERGENCY_FUEL, false); toast('"Corre atrás de uma corrida e volta pra acertar!"', 'good'); reopen(); } });
   items.push(shopItem('Café + pão de queijo', COFFEE_PRICE, () => toast('Delícia. Bora trabalhar!', 'good'), reopen, ['cafe']));
   const sub = `Gasolina: ${fmtMoney(price)} por % do tanque · Tanque: ${Math.round(c.fuel)}%` +
@@ -299,7 +351,11 @@ function openPlaceMenu(pl) {
     return;
   }
   player.vx = player.vy = 0; player.speed = 0;
-  if (pl.kind === 'oficina') garageMenu(pl); else if (pl.kind === 'lavajato') lavaMenu(pl); else postoMenu(pl);
+  Garagem.pushing = false;
+  if (pl.kind === 'casa') Garagem.menu();
+  else if (pl.kind === 'oficina') garageMenu(pl);
+  else if (pl.kind === 'lavajato') lavaMenu(pl);
+  else postoMenu(pl);
 }
 
 function openPause(confirmReset) {
@@ -329,8 +385,12 @@ function openPause(confirmReset) {
     ], 'Voltar', true);
     return;
   }
-  showModal('PAUSA', `${Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
+  showModal('PAUSA', `${Veh.job === 'envios' ? 'Envios' : Veh.cur.shuttle ? 'Trechos escolares' : Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.job === 'envios' ? S.envios : Veh.cur.shuttle ? S.schoolLegs : Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
+    { label: 'Trocar modalidade · J', run: () => Garagem.jobsMenu() },
+    { label: 'Minha casa · B', run: () => { if (Garagem.atHome()) Garagem.menu(); else { closeModal(); Nav.go('casa'); } } },
+    ...(!Veh.twoWheel() && S.car.problems.flat ? [{ label: S.car.spare ? 'Montar estepe · grátis' : 'Estepe usado · reponha na oficina', disabled: !S.car.spare || player.speed >= 8, run: () => { closeModal(); Garagem.spare(); } }] : []),
+    ...(!Rides.canWork() || Garagem.pushing ? [{ label: Garagem.pushing ? 'Voltar ao volante · U' : 'Descer e empurrar · U', run: () => { closeModal(); Garagem.push(); } }] : []),
     { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
     { label: 'Ajuda: todas as regras', run: openHelp },
@@ -346,23 +406,20 @@ function openHelp() { window.open('ajuda.html', '_blank', 'noopener'); }
 
 function callTow() {
   const c = S.car;
-  const kind = c.health <= 0 ? 'oficina' : (Care.empty() ? 'posto' : null);
-  if (!kind) { toast('O guincho só vem quando o carro não anda (quebrado ou sem gasolina).', 'warn'); return; }
+  const kind = c.health <= 0 ? 'oficina' : (Care.empty() ? Care.station() : null);
+  if (!kind) { toast('O guincho só vem quando o carro não anda (quebrado ou sem energia).', 'warn'); return; }
   // já está no lugar certo: o guincho não tem para onde levar (e não cobra de novo)
   const here = city.placeAt(player.x, player.y);
-  if (here && here.kind === kind) {
+  if (here && Nav.matches(here, kind)) {
     toast(`Você já está ${kind === 'oficina' ? 'na oficina' : 'no posto'}. O guincho não precisa vir.`, 'warn');
     openPlaceMenu(here);
     return;
   }
-  if (Veh.cur.parcels) Parcels.cancel(true);
+  if (Veh.job === 'envios') Envios.cancel(true);
+  else if (Veh.cur.shuttle) Escolar.cancel(true);
+  else if (Veh.cur.parcels) Parcels.cancel(true);
   else if (Rides.ride) Rides.cancel(true);
-  let best = null, bd = Infinity;
-  for (const p of city.places) {
-    if (p.kind !== kind) continue;
-    const d = Math.hypot(p.cx - player.x, p.cy - player.y);
-    if (d < bd) { bd = d; best = p; }
-  }
+  const best = Nav.nearest(kind);
   if (!best) return;
   const free = GAME.mode === 'multi' && !Multi.moneyLive(); // fora do turno da sala, o guincho é de graça
   if (!free) Care.charge(TOW_COST, 'guincho');
@@ -374,25 +431,33 @@ function callTow() {
 }
 
 // ---------- navegação até o posto, a oficina ou o lava jato mais perto (O, P, L) ----------
-const NAV_NAMES = { oficina: 'oficina', posto: 'posto', lavajato: 'lava jato' };
+const NAV_NAMES = { oficina: 'oficina', posto: 'posto', lavajato: 'lava jato', casa: 'casa', recarga: 'ponto de recarga' };
 const Nav = {
-  place: null,
+  place: null, kind: null,
+  matches(p, kind) { return kind === 'recarga' ? p === Garagem.charger : p.kind === kind; },
+  nearest(kind) {
+    if (kind === 'casa') return Garagem.home;
+    const distance = p => Math.hypot(p.cx - player.x, p.cy - player.y);
+    return city.places.filter(p => this.matches(p, kind)).sort((a,b) => distance(a) - distance(b))[0];
+  },
   // aperta de novo a mesma tecla para cancelar
   toggle(kind) {
-    if (this.place && this.place.kind === kind) { this.clear(); toast('Navegação cancelada.'); return; }
-    let best = null, bd = Infinity;
-    for (const p of city.places) {
-      if (p.kind !== kind) continue;
-      const d = Math.hypot(p.cx - player.x, p.cy - player.y);
-      if (d < bd) { bd = d; best = p; }
-    }
+    if (this.place && this.kind === kind) { this.clear(); toast('Navegação cancelada.'); return; }
+    this.go(kind);
+  },
+  go(kind) {
+    const best = this.nearest(kind);
     if (!best) return;
-    this.place = best;
+    this.place = best; this.kind = kind;
+    const bd = Math.hypot(best.cx - player.x, best.cy - player.y);
+    if (!Veh.cur.school && player.speed < 8 && (kind === 'casa' ? Garagem.atHome() : city.placeAt(player.x, player.y) === best)) {
+      this.clear(); lastPlace = best; openPlaceMenu(best); return;
+    }
     const extra = best.cheap ? ' (gasolina batizada!)' : '';
     toast(`Seta para ${best.name}${extra}, ${NAV_NAMES[kind]} mais perto (${kmStr(bd)}). A mesma tecla cancela.`);
   },
   clear(msg) { this.place = null; if (msg) toast(msg, 'good'); },
-  target() { return this.place ? { x: this.place.cx, y: this.place.cy, kind: 'nav', place: this.place.kind } : null; },
+  target() { return this.place ? { x: this.place.cx, y: this.place.cy, kind: 'nav', place: this.kind } : null; },
 };
 
 // ---------- simulação ----------
@@ -411,7 +476,8 @@ function update(dt) {
   const surface = city.tileAtPx(player.x, player.y);
   const m = Easy.mods(Care.mods(surface));
   const px = player.x, py = player.y, inp = Multi.frozen() ? NO_INPUT : input; // na contagem 3-2-1 o carro espera
-  stepPlayer(player, inp, dt, m);
+  if (Garagem.pushing) Garagem.stepPush(player, inp, dt);
+  else stepPlayer(player, inp, dt, m);
   Easy.assist(player, inp, dt);  // direção fácil: volante se endireita
   Easy.autoBrake(player, dt);    // e freio automático
   // batida em outro jogador conta metade (ninguém controla o carro do outro)
@@ -427,13 +493,15 @@ function update(dt) {
         vx: R.f(-60, 60), vy: R.f(-60, 60), life: 0.4, max: 0.4, size: 1, col: '#ffd27a', grow: 0 });
   }
   const moved = Math.hypot(player.x - px, player.y - py);
-  Care.update(dt, player, moved);
+  if (!Garagem.pushing) Care.update(dt, player, moved);
+  else Care.stallT = Math.max(0, Care.stallT - dt);
   traffic.update(dt, player);
   const hits = peds.update(dt, player);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
   World.update(dt, player);
   Signals.update(dt, player); // avançou o sinal vermelho?
   Police.update(dt, player);
+  if (Garagem.enabled) Escolar.tickClass(dt);
   activeJob().update(dt, player);
 
   // marcas de pneu (ficam pintadas no mapa)
@@ -465,12 +533,12 @@ function update(dt) {
     if (f.t > 1.6) floaters.splice(k, 1);
   }
 
-  const pl = city.placeAt(player.x, player.y);
+  const pl = Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
   if (pl && pl === Nav.place) Nav.clear(`Você chegou: ${pl.name}.`);
-  if (pl && pl !== lastPlace && player.speed < 18 && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
+  if (pl && pl !== lastPlace && (player.speed < 18 || Garagem.pushing) && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
 
-  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, !Veh.cur.pedal && S.car.fuel > 0 && S.car.health > 0 && Care.stallT <= 0); // bike não ronca
+  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, !Garagem.pushing && !Veh.cur.electric && !Veh.cur.pedal && !Care.empty() && S.car.health > 0 && Care.stallT <= 0); // bike não ronca
 
   cam.x += (player.x + player.vx * 0.4 - cam.x) * Math.min(1, 4 * dt);
   cam.y += (player.y + player.vy * 0.4 - cam.y) * Math.min(1, 4 * dt);
@@ -501,7 +569,7 @@ function render() {
 
   // áreas de tarifa dinâmica
   ctx.font = '12px VT323, monospace'; ctx.textAlign = 'center';
-  for (const s of Veh.cur.school || Veh.cur.parcels ? [] : Rides.surges) {
+  for (const s of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle ? [] : Rides.surges) {
     const sx = s.x - camX, sy = s.y - camY;
     if (sx + s.r < 0 || sy + s.r < 0 || sx - s.r > vw || sy - s.r > vh) continue;
     const a = clamp(Math.min(s.age / 2, (s.life - s.age) / 2), 0, 1);
@@ -524,6 +592,13 @@ function render() {
     ctx.drawImage(ic, sx - ic.width, sy - ic.height - 4, ic.width * 2, ic.height * 2);
   }
 
+  if (Garagem.enabled) {
+    for (const [p, icon] of [[Garagem.home, ICONS.home], [Garagem.charger, ICONS.charge]]) {
+      const x = p.cx - camX + (p === Garagem.charger ? 12 : 0), y = p.cy - camY;
+      ctx.drawImage(icon, x - 8, y - 18, 16, 16);
+    }
+  }
+
   Signals.draw(ctx, camX, camY, vw, vh);
   World.draw(ctx, camX, camY, vw, vh);
   Delivery.draw(ctx, camX, camY, vw, vh);
@@ -534,6 +609,7 @@ function render() {
   Police.draw();
   Multi.drawCars();
   if (Multi.ghostT > 0) ctx.globalAlpha = Math.floor(time * 8) % 2 ? 0.35 : 0.7; // pisca enquanto é fantasma
+  if (Garagem.pushing) drawPedSprite(ctx, player.x - Math.cos(player.a)*12 - camX, player.y - Math.sin(player.a)*12 - camY, '#78bffa', '#604028', player.speed ? time*5 : 0, false);
   drawCar(SPR.player, player.x, player.y, player.a, player.braking);
   ctx.globalAlpha = 1;
 

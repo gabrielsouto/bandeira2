@@ -22,7 +22,7 @@
 
   <div id="mapbox" class="panel">
     <canvas id="minimap"></canvas>
-    <div class="legend"><span><i class="lg-posto"></i>posto</span><span><i class="lg-ofi"></i>oficina</span><span><i class="lg-lava"></i>lava jato</span><span id="lgrest" class="hidden"><i class="lg-rest"></i>restaurante</span><span id="lghub" class="hidden"><i></i>galpão</span><span id="lgstops" class="hidden"><i></i>paradas</span><span id="lgsurge"><i class="lg-surge"></i>dinâmica</span><span><i class="lg-risk"></i>risco</span></div>
+    <div class="legend"><span><i class="lg-posto"></i>posto</span><span><i class="lg-ofi"></i>oficina</span><span><i class="lg-lava"></i>lava jato</span><span id="lgcasa"><i class="lg-casa"></i>casa</span><span id="lgrecarga"><i class="lg-recarga"></i>recarga</span><span id="lgrest" class="hidden"><i class="lg-rest"></i>restaurante</span><span id="lghub" class="hidden"><i></i>galpão</span><span id="lgstops" class="hidden"><i></i>paradas</span><span id="lgsurge"><i class="lg-surge"></i>dinâmica</span><span><i class="lg-risk"></i>risco</span></div>
   </div>
 
   <div id="dash" class="panel">
@@ -38,11 +38,12 @@
   <div id="phone">
     <div class="appbar"><span id="appname">REBU</span><span id="clock">07:00</span></div>
     <div id="phonebody"></div>
+    <button id="jobbtn" class="ghost">J · Trocar modalidade</button>
   </div>
 
   <div id="roompanel" class="panel hidden"></div>
   <div id="toasts"></div>
-  <div id="help">WASD/setas dirigir · Espaço freio de mão · E aceitar · Q recusar · C cancelar · H buzina · R rádio · X pega (sala) · O oficina · P posto · L lava jato · G guincho · F direção fácil · M som · Esc pausa</div>
+  <div id="help">WASD/setas dirigir · Espaço freio de mão · E aceitar · Q recusar · C cancelar · H buzina · R rádio · J modalidade · B casa · O oficina · P posto · Esc ajuda e serviços</div>
 </div>
 
 <div id="modal" class="hidden"><div id="modalbox" class="panel"></div></div>
@@ -64,7 +65,8 @@
       <span><kbd>E</kbd>/<kbd>Q</kbd> aceitar/recusar</span>
       <span><kbd>H</kbd> buzina</span>
       <span><kbd>R</kbd> rádio</span>
-      <span><kbd>G</kbd> guincho</span>
+      <span><kbd>G</kbd> guincho · <kbd>U</kbd> empurrar</span>
+      <span><kbd>J</kbd> modalidade · <kbd>B</kbd> casa · <kbd>T</kbd> estepe</span>
       <span><kbd>O</kbd>/<kbd>P</kbd>/<kbd>L</kbd> seta p/ oficina, posto, lava jato</span>
       <span><kbd>F</kbd> direção fácil</span>
       <span><kbd>Esc</kbd> pausa</span>
@@ -104,6 +106,9 @@
 <script src="js/semaforo.js"></script>
 <script src="js/delivery.js"></script>
 <script src="js/parcels.js"></script>
+<script src="js/envios.js"></script>
+<script src="js/escolar.js"></script>
+<script src="js/garagem.js"></script>
 <script src="js/autoescola.js"></script>
 <script src="js/police.js"></script>
 <script src="js/hud.js"></script>

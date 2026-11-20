@@ -43,7 +43,7 @@ const HUD = {
 
   update(dt) {
     const c = S.car, e = this.el;
-    const pedal = !!Veh.cur.pedal, f = pedal ? Care.legs : c.fuel; // bike: a barra do tanque vira o fôlego
+    const pedal = !!Veh.cur.pedal, f = pedal ? Care.legs : Care.level(); // bike: a barra do tanque vira o fôlego
     setBar(e.fuel, f, f < (pedal ? LEGS_TIRED : 15) ? '#ff4d4d' : f < 35 ? '#ffb020' : '#39ff88');
     setBar(e.hp, c.health, c.health < 30 ? '#ff4d4d' : c.health < 60 ? '#ffb020' : '#39ff88');
     setBar(e.wear, c.wear, c.wear > 70 ? '#ff4d4d' : c.wear > 40 ? '#ffb020' : '#7fb2ff');
@@ -57,13 +57,15 @@ const HUD = {
     this.t -= dt;
     if (this.t > 0) return;
     this.t = 0.1;
+    if (c.kitGas) $('fuellbl').textContent = Care.usingGas() ? 'GNV' : 'GASOLINA';
 
     e.money.textContent = fmtMoney(S.money);
     e.money.classList.toggle('neg', S.money < 0);
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
     e.rating.textContent = Veh.cur.school ? `Aulas: ${Autoescola.passed()}/${LESSONS.length} · ${Autoescola.totalStars()} ★`
-      : Veh.cur.parcels ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.parcels} pacote${S.parcels === 1 ? '' : 's'}`
+      : Veh.job === 'envios' ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.envios} envio${S.envios === 1 ? '' : 's'}`
+      : Veh.cur.shuttle ? 'Escolar · ' + S.schoolLegs + ' trechos pagos' : Veh.cur.parcels ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.parcels} pacote${S.parcels === 1 ? '' : 's'}`
       : `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} ${Veh.cur.delivery ? 'entrega' : 'corrida'}${S.rides === 1 ? '' : 's'}`;
     e.spd.textContent = Math.round(player.speed * 0.55);
     e.clock.textContent = clockStr();
@@ -74,16 +76,21 @@ const HUD = {
 
     const probs = [];
     if (c.health <= 0) probs.push('QUEBRADO');
-    if (Care.empty()) probs.push('SEM GASOLINA');
+    if (Care.empty()) probs.push(Veh.cur.electric ? 'SEM CARGA' : 'SEM COMBUSTÍVEL');
+    if (Garagem.pushing) probs.push('EMPURRANDO · U para entrar');
+    if (c.problems.flat && Garagem.enabled && !Veh.twoWheel()) probs.push(c.spare ? 'T · montar estepe' : 'SEM ESTEPE');
     if (pedal && Care.legs < LEGS_TIRED) probs.push('PERNA BAMBA');
     if (!pedal && Care.overheated) probs.push('SUPERAQUECIDO');
-    if (!pedal && (c.bad || 0) > 0.25) probs.push('GASOLINA BATIZADA');
+    if (!pedal && Care.badFuel() > 0.25) probs.push('GASOLINA BATIZADA');
     if (Police.wanted) probs.push('POLÍCIA NA COLA');
     for (const k in PROBLEMS) if (c.problems[k]) probs.push(PROBLEMS[k].label);
     const ph = probs.map((p) => `<span class="prob">${p}</span>`).join('');
     if (ph !== this.lastProbs) { e.probs.innerHTML = ph; this.lastProbs = ph; }
 
-    const html = this.phoneHTML();
+    const school = Garagem.enabled && !Veh.cur.shuttle && S.schoolRoute;
+    const reminder = school && ['aula', 'saida'].includes(school.phase) ? '<div class="ph-muted">' +
+      (school.phase === 'aula' ? 'Saída da escola em ' + mmss(school.wait) : 'A turma espera na escola') + '</div>' : '';
+    const html = this.phoneHTML() + reminder;
     if (html !== this.lastPhone) {
       const scroll = e.phone.querySelector('.ph-stops')?.scrollTop || 0;
       e.phone.innerHTML = html; this.lastPhone = html;
@@ -94,10 +101,16 @@ const HUD = {
 
   phoneHTML() {
     const c = S.car, st = Rides.state, r = Veh.cur.parcels ? Parcels.route : Rides.ride;
+    if (Garagem.enabled && (c.health <= 0 || Care.empty())) return '<div class="ph-alert">' +
+      (c.health <= 0 ? 'VEÍCULO QUEBRADO' : Veh.cur.electric ? 'BATERIA ESGOTADA' : 'SEM COMBUSTÍVEL') +
+      '</div><div class="ph-muted">' + (Garagem.pushing ? 'Empurre com WASD ou setas. U para entrar.' : 'U para descer e empurrar de graça.') +
+      ' G chama o guincho (' + fmtMoney(TOW_COST) + ').</div>';
     if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.noun().toUpperCase()} QUEBRAD${Veh.fem() ? 'A' : 'O'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
     if (Care.empty() && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
+    if (Veh.job === 'envios') return Envios.phoneHTML();
     if (Veh.cur.school) return Autoescola.phoneHTML();
+    if (Veh.cur.shuttle) return Escolar.phoneHTML();
     if (Veh.cur.parcels) return Parcels.phoneHTML();
     if (Veh.cur.delivery) return Delivery.phoneHTML();
     if (st === 'idle') {
@@ -151,7 +164,7 @@ const HUD = {
   drawMinimap() {
     const g = this.mmCtx, s = 2 / 16;
     g.drawImage(minimapBase, 0, 0);
-    for (const z of Veh.cur.school || Veh.cur.parcels ? [] : Rides.surges) {
+    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle ? [] : Rides.surges) {
       const a = Math.min(1, z.age / 2, (z.life - z.age) / 2);
       if (a <= 0) continue;
       g.globalAlpha = a;
@@ -164,6 +177,11 @@ const HUD = {
       const x = Math.round(p.cx * s), y = Math.round(p.cy * s);
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
       g.fillStyle = PLACE_COLORS[p.kind]; g.fillRect(x - 3, y - 3, 6, 6);
+    }
+    if (Garagem.enabled) {
+      const home = Garagem.home, charger = Garagem.charger;
+      g.fillStyle = '#ce8cff'; g.fillRect(Math.round(home.cx*s)-3, Math.round(home.cy*s)-3, 6, 6);
+      g.fillStyle = '#5af2ce'; g.fillRect(Math.round(charger.cx*s), Math.round(charger.cy*s)-3, 3, 6);
     }
     if (Nav.place && Math.floor(time * 4) % 2 === 0) { // destino da navegação piscando
       const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);

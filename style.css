@@ -112,7 +112,10 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
 /* menus */
 #modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
-#modalbox { width: min(460px, 92vw); padding: 18px; }
+#jobbtn { margin-top: 12px; font-size: 18px; }
+.lg-casa { background: #ce8cff; }
+.lg-recarga { background: #5af2ce; }
+#modalbox { max-height: 94vh; overflow-y: auto; width: min(460px, 92vw); padding: 18px; }
 .m-title { font-family: 'Press Start 2P', monospace; font-size: 13px; color: var(--gold); line-height: 1.5; }
 .m-sub { color: var(--muted); font-size: 20px; margin-top: 8px; }
 .m-money { font-size: 22px; margin: 10px 0; }

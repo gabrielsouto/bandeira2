@@ -46,7 +46,7 @@ const Care = {
     if (Veh.cur.pedal) { // sem motor: gasolina batizada e radiador não contam; cansado, pedala fraco
       if (this.legs < LEGS_TIRED) { const k = 0.35 + 0.65 * this.legs / LEGS_TIRED; m.power *= k; m.speedMul *= 0.6 + 0.4 * k; }
     } else {
-      m.power *= 1 - 0.3 * (c.bad || 0); // gasolina batizada: motor fraco
+      m.power *= 1 - 0.3 * this.badFuel();
       if (this.overheated) m.power = Math.min(m.power, 0.3);
     }
     if (p.flat) { m.speedMul *= 0.68; m.gripMul *= 0.7; m.steerBias = 0.2 * this.flatSide; }
@@ -58,7 +58,11 @@ const Care = {
   },
 
   // sem gasolina de verdade (a bike nunca fica)
-  empty() { return !Veh.cur.pedal && S.car.fuel <= 0; },
+  usingGas() { return S.car.kitGas && S.car.gas > 0 && !Veh.cur.electric; },
+  level() { return this.usingGas() ? S.car.gas : S.car.fuel; },
+  badFuel() { return this.usingGas() || Veh.cur.electric ? 0 : S.car.bad || 0; },
+  station() { return Veh.cur.electric ? 'recarga' : 'posto'; },
+  empty() { return !Veh.cur.pedal && this.level() <= 0; },
 
   // fôlego do ciclista: gasta pedalando, volta parado ou na banguela
   stepLegs(dt, car) {
@@ -81,21 +85,25 @@ const Care = {
       if (this.stallT > 0) this.stallT -= dt;
       return;
     }
-    if (c.fuel > 0) {
-      c.fuel = Math.max(0, c.fuel - dt * (0.01 + 0.2 * car.throttle) * Veh.cur.fuelUse * (1 + 0.9 * (c.bad || 0)) * (Easy.solo ? 0.6 : 1));
+    if (!this.empty()) {
+      const use = dt * ((Veh.cur.electric ? 0 : 0.01) + 0.2 * car.throttle) * Veh.cur.fuelUse * (1 + 0.9 * this.badFuel()) * (Easy.solo ? 0.6 : 1);
+      if (this.usingGas()) {
+        c.gas = Math.max(0, c.gas - use);
+        if (!c.gas && c.fuel > 0) toast('Cilindro vazio. O motor passou para gasolina.');
+      } else c.fuel = Math.max(0, c.fuel - use);
       if (c.fuel <= 0) c.bad = 0;
-      if (c.fuel <= 0) { toast('Acabou a gasolina! Aperte G para chamar o guincho.', 'bad'); Sfx.sputter(); }
+      if (this.empty()) { toast((Veh.cur.electric ? 'Bateria esgotada!' : 'Acabou o combustível!') + (Garagem.enabled ? ' U para empurrar ou G para guincho.' : ' G para guincho.'), 'bad'); Sfx.sputter(); }
     }
-    if (c.fuel < 15 && c.fuel > 0 && !this.warnedFuel) {
+    if (this.level() < 15 && this.level() > 0 && !this.warnedFuel) {
       this.warnedFuel = true;
-      toast('Tanque na reserva! Procure um posto (quadrado vermelho no mapa).', 'warn');
+      toast(Veh.cur.electric ? 'Bateria fraca! P indica o ponto de recarga.' : 'Na reserva! P indica o posto mais próximo.', 'warn');
     }
-    if (c.fuel > 20) this.warnedFuel = false;
+    if (this.level() > 20) this.warnedFuel = false;
 
     this.stepWear(dt, car, moved);
 
     // gasolina batizada: o motor engasga de vez em quando
-    if ((c.bad || 0) > 0.25 && car.speed > 20 && this.stallT <= 0 && R.chance(dt * 0.05 * c.bad)) {
+    if (this.badFuel() > 0.25 && car.speed > 20 && this.stallT <= 0 && R.chance(dt * 0.05 * c.bad)) {
       this.stallT = 1.2;
       toast('O motor engasgou... essa gasolina tá batizada!', 'warn');
       Sfx.sputter();
@@ -128,7 +136,7 @@ const Care = {
   // desgaste e quebras ao acaso (bike: só pneu e freio)
   stepWear(dt, car, moved) {
     const c = S.car;
-    c.wear = Math.min(100, c.wear + moved * 0.00025 * (1 + 2 * (Veh.cur.pedal ? 0 : c.bad || 0)));
+    c.wear = Math.min(100, c.wear + moved * 0.00025 * (1 + 2 * this.badFuel()));
     if (car.speed > 20 && !Easy.solo) { // na direção fácil o carro não quebra sozinho
       this.failAcc += dt;
       while (this.failAcc >= 1) {
@@ -141,7 +149,7 @@ const Care = {
 
   breakSomething() {
     const p = S.car.problems;
-    const opts = [['flat', 3], ['overheat', 2], ['brakes', 2], ['battery', 1.5]].filter(([k]) => !p[k] && (!Veh.cur.pedal || k === 'flat' || k === 'brakes'));
+    const opts = [['flat', 3], ['overheat', 2], ['brakes', 2], ['battery', 1.5]].filter(([k]) => !p[k] && (!(Veh.cur.pedal || Veh.cur.electric) || k === 'flat' || k === 'brakes'));
     if (!opts.length) return;
     let x = Math.random() * opts.reduce((a, o) => a + o[1], 0);
     for (const [k, w] of opts) { x -= w; if (x <= 0) { this.applyProblem(k); return; } }
@@ -164,7 +172,7 @@ const Care = {
       this.stallT = Math.max(this.stallT, 1.5);
       toast(`Caiu da ${Veh.noun()}! Levanta, sacode a poeira...`, 'bad');
     }
-    if (before > 0 && c.health <= 0) toast(`${Veh.fem() ? 'A' : 'O'} ${Veh.noun()} não aguentou! Aperte G para o guincho levar à oficina.`, 'bad');
+    if (before > 0 && c.health <= 0) toast('Veículo quebrado! ' + (Garagem.enabled ? 'U para empurrar ou G para guincho.' : 'G para guincho.'), 'bad');
     if (imp > 110 && !c.problems.flat && R.chance(0.3)) this.applyProblem('flat');
     return dmg;
   },
