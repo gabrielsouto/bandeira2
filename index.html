@@ -48,46 +48,40 @@
 
 <div id="modal" class="hidden"><div id="modalbox" class="panel"></div></div>
 
-<div id="title">
+<main id="title" aria-labelledby="game-title">
   <div class="tbox panel">
-    <h1>BANDEIRA 2</h1>
-    <p class="sub">motorista de aplicativo · protótipo</p>
-    <ul>
-      <li>Aceite corridas no celular, busque o passageiro e leve até o destino.</li>
-      <li>Áreas <b class="c-surge">laranjas</b> estão com tarifa dinâmica: corridas de lá pagam mais.</li>
-      <li>Bateu? Perde nota e lataria. O carro também quebra sozinho com o desgaste.</li>
-      <li>Entre devagar no pátio de um <b class="c-posto">posto</b>, de uma <b class="c-ofi">oficina</b> ou de um <b class="c-lava">lava jato</b>.</li>
-      <li>Não pare nas áreas de <b class="c-risk">risco</b>. Atropelar bandido dá AURA; atropelar gente chama a polícia.</li>
-    </ul>
-    <div class="keys">
-      <span><kbd>WASD</kbd>/<kbd>setas</kbd> dirigir</span>
-      <span><kbd>Espaço</kbd> freio de mão</span>
-      <span><kbd>E</kbd>/<kbd>Q</kbd> aceitar/recusar</span>
-      <span><kbd>H</kbd> buzina</span>
-      <span><kbd>R</kbd> rádio</span>
-      <span><kbd>G</kbd> guincho · <kbd>U</kbd> empurrar</span>
-      <span><kbd>J</kbd> modalidade · <kbd>B</kbd> casa · <kbd>T</kbd> estepe</span>
-      <span><kbd>O</kbd>/<kbd>P</kbd>/<kbd>L</kbd> seta p/ oficina, posto, lava jato</span>
-      <span><kbd>F</kbd> direção fácil</span>
-      <span><kbd>Esc</kbd> pausa</span>
+    <header class="title-header">
+      <h1 id="game-title">BANDEIRA 2</h1>
+      <p>Corridas, entregas e trânsito pela cidade.</p>
+    </header>
+    <details id="vehpick">
+      <summary>
+        <canvas id="vehpreview" width="44" height="24" aria-hidden="true"></canvas>
+        <span class="vehicle-info">
+          <span class="vehicle-label">Seu veículo</span>
+          <strong id="vehname" aria-live="polite"></strong>
+        </span>
+        <span class="disclosure vehicle-action">Trocar</span>
+      </summary>
+      <div id="vehbtns" role="group" aria-label="Veículos disponíveis"></div>
+    </details>
+    <p id="vehdesc"></p>
+    <button id="startbtn"><span>Começar</span><kbd aria-hidden="true">Enter</kbd></button>
+    <div class="title-tools">
+      <button id="easybtn" class="ghost" aria-pressed="false"><span class="easy-indicator" aria-hidden="true"></span>Direção fácil</button>
+      <a id="helplink" href="ajuda.html" target="_blank" rel="noopener">Controles e regras</a>
     </div>
-    <div id="vehpick">
-      <div class="mb-title">ESCOLHA O VEÍCULO</div>
-      <div id="vehbtns"></div>
-      <div id="vehdesc"></div>
-      <button id="easybtn" class="ghost"></button>
-    </div>
-    <button id="startbtn">ENTER · COMEÇAR</button>
-    <a id="helplink" href="ajuda.html" target="_blank" rel="noopener">AJUDA: TODAS AS REGRAS</a>
-    <div id="multibox" class="hidden">
-      <div class="mb-title">MULTIPLAYER · ATÉ 4 AMIGOS</div>
-      <div class="mb-row"><label for="nick">Apelido</label><input id="nick" maxlength="12" autocomplete="off" spellcheck="false" placeholder="como te chamam"></div>
-      <div class="mb-row" id="coderow"><label for="code">Código</label><input id="code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="K7QF"></div>
-      <div class="mb-btns"><button id="createbtn">CRIAR SALA</button><button id="joinbtn" class="ghost">ENTRAR COM CÓDIGO</button></div>
-      <div id="multimsg"></div>
-    </div>
+    <details id="multibox" class="hidden">
+      <summary class="disclosure">Jogar com amigos</summary>
+      <div id="multiform">
+        <div class="mb-row"><label for="nick">Apelido</label><input id="nick" maxlength="12" autocomplete="off" spellcheck="false"></div>
+        <div class="mb-row" id="coderow"><label for="code">Código da sala</label><input id="code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="K7QF"></div>
+        <div class="mb-btns"><button id="createbtn" class="ghost">Criar sala</button><button id="joinbtn" class="ghost">Entrar com código</button></div>
+      </div>
+      <p id="multimsg" role="status"></p>
+    </details>
   </div>
-</div>
+</main>
 
 <script src="js/util.js"></script>
 <script src="js/audio.js"></script>

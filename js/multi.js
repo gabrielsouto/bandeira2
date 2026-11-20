@@ -58,7 +58,10 @@ const Multi = {
     const rawSala = new URLSearchParams(location.search).get('sala') || '';
     const urlSala = this.normCode(rawSala);
     if (!Net.available()) {
-      if (urlSala) this.say('O multiplayer ainda não está disponível nesta versão. Dá pra jogar sozinho.', true, true);
+      if (rawSala) {
+        $('multiform').classList.add('hidden');
+        this.say('O multiplayer ainda não está disponível nesta versão. Dá pra jogar sozinho.', true);
+      }
       return;
     }
     this.el.box.classList.remove('hidden');
@@ -69,9 +72,12 @@ const Multi = {
       this.el.code.value = urlSala;
       this.el.coderow.classList.add('hidden');
       this.el.create.classList.add('hidden');
-      this.el.join.textContent = 'ENTER · ENTRAR NA SALA ' + urlSala;
+      this.el.box.open = true;
+      this.el.solo.before(this.el.box);
+      this.el.box.classList.add('invite');
+      this.el.join.textContent = 'Entrar na sala ' + urlSala;
       this.el.join.classList.remove('ghost');
-      this.el.solo.textContent = 'JOGAR SOZINHO';
+      this.el.solo.textContent = 'Jogar sozinho';
       this.el.solo.classList.add('ghost');
     }
     this.el.create.addEventListener('click', () => this.join(this.newCode()));
@@ -108,10 +114,11 @@ const Multi = {
     return s;
   },
 
-  say(text, bad, show) {
+  say(text, bad) {
     this.el.msg.textContent = text;
     this.el.msg.classList.toggle('bad', !!bad);
-    if (show) this.el.box.classList.remove('hidden');
+    this.el.box.classList.remove('hidden');
+    this.el.box.open = true;
   },
 
   setBusy(b) {

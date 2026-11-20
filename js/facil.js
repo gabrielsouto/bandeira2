@@ -30,10 +30,7 @@ const Easy = {
   // botão da tela inicial e selo no painel
   refresh() {
     const b = $('easybtn');
-    if (b) {
-      b.classList.toggle('sel', this.on);
-      b.innerHTML = `<kbd>F</kbd> DIREÇÃO FÁCIL: ${this.on ? 'LIGADA' : 'DESLIGADA'}`;
-    }
+    if (b) b.setAttribute('aria-pressed', this.on);
     const tag = $('easytag');
     if (tag) tag.classList.toggle('hidden', !this.on);
   },

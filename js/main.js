@@ -121,15 +121,20 @@ const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', Arr
 function clearInput() { for (const k in input) input[k] = false; }
 // teclas digitadas em campos de texto (apelido, código da sala) não comandam o carro
 const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+const titleActivation = (e) => mode === 'title' && (e.code === 'Enter' || e.code === 'Space') &&
+  e.target.closest?.('button, a, summary');
 window.addEventListener('keydown', (e) => {
-  if (typing(e)) return;
+  if (typing(e) || titleActivation(e)) return;
   if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.repeat) return;
   onKey(e.code);
 });
 window.addEventListener('keyup', (e) => {
   if (typing(e)) return;
-  if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = false; e.preventDefault(); }
+  if (KEYMAP[e.code]) {
+    input[KEYMAP[e.code]] = false;
+    if (!titleActivation(e)) e.preventDefault();
+  }
 });
 window.addEventListener('blur', clearInput);
 
@@ -217,22 +222,41 @@ function pickVehicle(k, resume = false) {
   Veh.set(k);
   resumeJob = resume && S.vehicle === k ? S.job : undefined;
   applyVehicle();
-  for (const b of document.querySelectorAll('#vehbtns button')) b.classList.toggle('sel', b.dataset.veh === Veh.key);
+  const preview = $('vehpreview').getContext('2d');
+  for (const b of document.querySelectorAll('#vehbtns button')) {
+    const selected = b.dataset.veh === Veh.key;
+    b.setAttribute('aria-pressed', selected);
+    if (selected) {
+      preview.clearRect(0, 0, 44, 24);
+      preview.drawImage(b.firstElementChild, 0, 0);
+    }
+  }
+  $('vehname').textContent = Veh.cur.name;
   $('vehdesc').textContent = VEHICLES[resumeJob] && resumeJob !== Veh.job
     ? 'Retomar com ' + Veh.cur.name + ' no app ' + VEHICLES[resumeJob].name + '.' : Veh.cur.desc;
 }
-$('easybtn').addEventListener('click', (e) => { Easy.toggle(true); e.currentTarget.blur(); });
+$('easybtn').addEventListener('click', () => Easy.toggle(true));
 Easy.refresh();
 (function buildVehiclePicker() {
   const box = $('vehbtns');
+  const picker = $('vehpick');
+  const summary = picker.querySelector('summary');
   VEH_ORDER.forEach((k, i) => {
     const v = VEHICLES[k], b = document.createElement('button');
     b.className = 'ghost'; b.dataset.veh = k;
     const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(44, 24);
     g.drawImage(spr.img, Math.round(22 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
     const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N' }[k];
-    b.append(cv, document.createTextNode(`${shortcut} · ${v.name}`));
-    b.addEventListener('click', () => { pickVehicle(k); b.blur(); });
+    cv.setAttribute('aria-hidden', 'true');
+    const key = document.createElement('kbd');
+    key.textContent = shortcut;
+    key.setAttribute('aria-hidden', 'true');
+    b.append(cv, document.createTextNode(v.name), key);
+    b.addEventListener('click', () => {
+      pickVehicle(k);
+      picker.open = false;
+      summary.focus();
+    });
     box.appendChild(b);
   });
   pickVehicle(Veh.key, true);
