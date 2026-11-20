@@ -32,6 +32,15 @@ const VEHICLES = {
     phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
     fare: 1, offerMul: 0.5, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
+  // entregador de bicicleta do 66Comida: os mesmos pedidos do euComida, mas sem motor (js/delivery.js).
+  // pedal: não usa gasolina, gasta fôlego (Care.legs); near: só pega pedido perto e nada de pedido de festa.
+  comida66: {
+    name: '66Comida', app: '66Comida', color: '#ffd21f', art: 'bike', bag: '#ffd21f', delivery: true, soloOnly: true,
+    pedal: true, near: true, timeMul: 1.4,
+    desc: 'Entregas de bike! Não paga gasolina: anda no fôlego. Lenta, só pedido perto, mas chove pedido. (Só no solo.)',
+    phys: { accel: 125, maxSpeed: 150, reverseMax: 35, brake: 300, grip: 11, hbGrip: 1.5, steerRate: 4.3, r: 3, off: 3 },
+    fare: 0.85, offerMul: 0.4, fuelUse: 0, tankMul: 0, dmgMul: 1.3, noExec: true, noDirty: true,
+  },
   // autoescola: aulas com instrutor em vez de corridas (js/autoescola.js). Só no solo; o carro é da escola.
   escola: {
     name: 'Autoescola', app: 'AUTOESCOLA', color: '#f4f4f4', art: 'escola', school: true, soloOnly: true,
@@ -39,7 +48,7 @@ const VEHICLES = {
     phys: {}, fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
   },
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'escola'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola'];
 const VEH_KEY = 'bandeira2-veiculo';
 
 const Veh = {
@@ -55,6 +64,12 @@ const Veh = {
     if (persist) try { localStorage.setItem(VEH_KEY, k); } catch (e) { /* idem */ }
   },
   get cur() { return VEHICLES[this.key]; },
+
+  // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
+  twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },
+  // nome do veículo nos avisos: "carro", "moto" ou "bike" (fem: usa "a")
+  noun(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' ? 'moto' : a === 'bike' ? 'bike' : 'carro'; },
+  fem(k = this.key) { return this.twoWheel(k); },
 
   // física completa do veículo (o que não muda fica igual ao carro padrão)
   phys(k = this.key) { return Object.assign({}, CARP, VEHICLES[k].phys); },

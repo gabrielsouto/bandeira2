@@ -42,10 +42,11 @@ const HUD = {
 
   update(dt) {
     const c = S.car, e = this.el;
-    setBar(e.fuel, c.fuel, c.fuel < 15 ? '#ff4d4d' : c.fuel < 35 ? '#ffb020' : '#39ff88');
+    const pedal = !!Veh.cur.pedal, f = pedal ? Care.legs : c.fuel; // bike: a barra do tanque vira o fôlego
+    setBar(e.fuel, f, f < (pedal ? LEGS_TIRED : 15) ? '#ff4d4d' : f < 35 ? '#ffb020' : '#39ff88');
     setBar(e.hp, c.health, c.health < 30 ? '#ff4d4d' : c.health < 60 ? '#ffb020' : '#39ff88');
     setBar(e.wear, c.wear, c.wear > 70 ? '#ff4d4d' : c.wear > 40 ? '#ffb020' : '#7fb2ff');
-    const showTemp = c.problems.overheat || Care.overheated;
+    const showTemp = !pedal && (c.problems.overheat || Care.overheated);
     e.tempwrap.style.display = showTemp ? '' : 'none';
     if (showTemp) setBar(e.temp, (c.temp - 40) / 70 * 100, Care.overheated ? '#ff4d4d' : '#ffb020');
     const tb = e.phone.querySelector('.ph-timer > div');
@@ -70,9 +71,10 @@ const HUD = {
 
     const probs = [];
     if (c.health <= 0) probs.push('QUEBRADO');
-    if (c.fuel <= 0) probs.push('SEM GASOLINA');
-    if (Care.overheated) probs.push('SUPERAQUECIDO');
-    if ((c.bad || 0) > 0.25) probs.push('GASOLINA BATIZADA');
+    if (Care.empty()) probs.push('SEM GASOLINA');
+    if (pedal && Care.legs < LEGS_TIRED) probs.push('PERNA BAMBA');
+    if (!pedal && Care.overheated) probs.push('SUPERAQUECIDO');
+    if (!pedal && (c.bad || 0) > 0.25) probs.push('GASOLINA BATIZADA');
     if (Police.wanted) probs.push('POLÍCIA NA COLA');
     for (const k in PROBLEMS) if (c.problems[k]) probs.push(PROBLEMS[k].label);
     const ph = probs.map((p) => `<span class="prob">${p}</span>`).join('');
@@ -85,8 +87,8 @@ const HUD = {
 
   phoneHTML() {
     const c = S.car, st = Rides.state, r = Rides.ride;
-    if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.cur.art === 'moto' ? 'MOTO QUEBRADA' : 'CARRO QUEBRADO'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
-    if (c.fuel <= 0 && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
+    if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.noun().toUpperCase()} QUEBRAD${Veh.fem() ? 'A' : 'O'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
+    if (Care.empty() && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (Veh.cur.school) return Autoescola.phoneHTML();
     if (Veh.cur.delivery) return Delivery.phoneHTML();

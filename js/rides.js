@@ -98,7 +98,7 @@ const Rides = {
   },
 
   ratingAvg() { return S.ratings.reduce((a, b) => a + b, 0) / S.ratings.length; },
-  canWork() { return S.car.health > 0 && S.car.fuel > 0; },
+  canWork() { return S.car.health > 0 && !Care.empty(); },
 
   target() {
     const r = this.ride;

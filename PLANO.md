@@ -87,6 +87,9 @@ Regras que valem para todas as etapas:
 - [x] Entregador do euComida (`js/delivery.js`): 5º veículo, moto com bag, pedidos de 8 restaurantes sorteados pela seed
   (sem mudar tiles), espera da cozinha, comida esfriando, tipos de pedido (lanche, pizza, açaí, com refri, festa).
   Só no solo: entrar numa sala com ele troca para Moto Rebu sem mexer na escolha salva. O servidor não mudou.
+- [x] Entregador de bike do 66Comida: 6º veículo (Autoescola virou a tecla 7), mesmos pedidos do euComida, só perto,
+  sem festa e com 40% mais prazo. Sem gasolina: fôlego (`Care.legs`, fora do save) que cai pedalando e volta parado
+  ou com café no posto; perna bamba tira força. Sem radiador, bateria nem gasolina batizada. Só no solo.
 
 - [x] **Direção fácil** (`js/facil.js`, tecla F) e **Autoescola** (`js/autoescola.js`, 6º veículo, só no solo), pedidos para a filha
   de 10 anos que estava com dificuldade. Testado no navegador: aula completa (instrutor → cruzamentos → vaga → estrelas),
@@ -103,7 +106,6 @@ Regras que valem para todas as etapas:
 - Autoescola: dar seta (pisca) antes de virar; baliza; aula com chuva.
 - Semáforo piscando amarelo de madrugada; viatura que vê você avançar o vermelho vem atrás.
 - euComida no multiplayer: pedidos vindos da sala (precisa de regras novas no servidor e protocolo 5).
-- Bike do euComida: sem gasolina, lenta, mas não paga posto.
 - Interpretar de novo "gasolina adulterada... vai durar mesmo": hoje ela rende MENOS. Se a ideia era render mais, é trocar o sinal do consumo em `Care.update`.
 - Viaturas também patrulhando a cidade sem perseguição; blitz à noite.
 - Bandidos e polícia sincronizados no multiplayer.

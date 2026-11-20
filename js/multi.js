@@ -246,7 +246,7 @@ const Multi = {
     GAME.mode = 'multi';
     S = defaultSave(); // estado só desta sessão: o save do solo não é lido nem gravado
     if (Veh.cur.soloOnly) { // euComida e autoescola ainda não existem na sala (a escolha guardada não muda)
-      const was = Veh.cur.name, k = Veh.cur.art === 'moto' ? 'moto' : 'uber';
+      const was = Veh.cur.name, k = Veh.twoWheel() ? 'moto' : 'uber';
       Veh.set(k, false); applyVehicle();
       setTimeout(() => toast(`${was} ainda é só no solo. Na sala você vai de ${VEHICLES[k].name}.`, 'warn'), 1500);
     }

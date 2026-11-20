@@ -1,5 +1,6 @@
 'use strict';
-// Modo entregador do euComida: pedidos de comida em vez de passageiros (só no solo).
+// Modo entregador do euComida (moto) e do 66Comida (bike): pedidos de comida em vez de passageiros (só no solo).
+// A bike (Veh.cur.near) só recebe pedidos perto, nada de pedido de festa, e tem mais tempo para entregar.
 // Os restaurantes são prédios sorteados pela seed, sem mudar os tiles (o hash da sala continua o mesmo).
 // O pedido usa os mesmos estados do Rides: offer → toPickup (ir ao restaurante) → boarding (retirar o pedido)
 // → onTrip (levar até o cliente) → dropping (o cliente desce e pega a bag). Aqui ficam só as partes que mudam;
@@ -35,8 +36,8 @@ const STAFF_SHIRT = '#f4f4f4';  // avental do atendente do restaurante
 function deliveryFare(tripD, pickD, type, surge) {
   return Math.round((4 + (tripD + pickD * 0.4) / 16 * 0.2) * DTYPES[type].fare * surge * 100) / 100;
 }
-// tempo de entrega sem atraso, em segundos (contado a partir da retirada)
-function deliveryAllowed(tripD, type) { return (12 + tripD / 75) * (DTYPES[type].timeMul || 1); }
+// tempo de entrega sem atraso, em segundos (contado a partir da retirada); a bike é mais lenta e ganha mais tempo
+function deliveryAllowed(tripD, type) { return (12 + tripD / 75) * (DTYPES[type].timeMul || 1) * (Veh.cur.timeMul || 1); }
 // nota de 1 a 5. v = { hits, late, cold, spilled }
 function deliveryStars(type, v) {
   const t = DTYPES[type];
@@ -97,16 +98,18 @@ const Delivery = {
   // ---------- pedidos ----------
   makeOffer(px, py) {
     if (!this.rests.length) return null;
-    const near = this.rests.filter((rs) => Math.hypot(rs.door.x - px, rs.door.y - py) / 16 < 35);
+    const bike = !!Veh.cur.near, reach = bike ? 22 : 35, [dMin, dMax] = bike ? [6, 26] : [10, 50];
+    const near = this.rests.filter((rs) => Math.hypot(rs.door.x - px, rs.door.y - py) / 16 < reach);
     const rs = R.pick(near.length ? near : this.rests), pick = rs.door;
     let drop = null;
     for (let t = 0; t < 60 && !drop; t++) {
       const s = R.pick(this.city.curbs);
       const d = (Math.abs(s.x - pick.x) + Math.abs(s.y - pick.y)) / 16;
-      if (d > 10 && d < 50) drop = s;
+      if (d > dMin && d < dMax) drop = s;
     }
     if (!drop) return null;
-    const [item, type] = R.pick(rs.menu);
+    const menu = bike ? rs.menu.filter(([, t]) => t !== 'festa') : rs.menu; // pedidão de festa não cabe na mochila
+    const [item, type] = R.pick(menu.length ? menu : rs.menu);
     const tripD = Math.abs(drop.x - pick.x) + Math.abs(drop.y - pick.y), pickD = Math.hypot(pick.x - px, pick.y - py);
     const surge = Rides.surgeAt(pick.x, pick.y);
     const fare = Math.round(deliveryFare(tripD, pickD, type, surge) * Veh.fareMul(gameMin) * 100) / 100;
@@ -186,7 +189,7 @@ const Delivery = {
     }
     if (st === 'toPickup' || st === 'boarding') {
       const ready = r.prep <= 0;
-      const msg = st === 'boarding' ? (ready ? 'O atendente está trazendo a bag…' : 'Esperando a cozinha… segura a moto.')
+      const msg = st === 'boarding' ? (ready ? 'O atendente está trazendo a bag…' : `Esperando a cozinha… segura a ${Veh.noun()}.`)
         : 'Siga a seta verde e pare na porta do restaurante.';
       return `<div class="ph-title">RETIRAR PEDIDO</div>
         <div class="ph-row">${esc(r.rest.name)}</div>
@@ -238,7 +241,7 @@ const Delivery = {
       drawPedSprite(g, sx, sy, r.shirt, r.hair, time * 4, true); // cliente acenando na calçada
       pxDownArrow(g, sx, sy - 15 + bob, '#ffd23f');
     } else if (st === 'dropping') {
-      // o cliente vem até a moto, pega a bag e volta
+      // o cliente vem até a moto (ou bike), pega a bag e volta
       const k = r.dropT < 0.7 ? r.dropT / 0.7 : Math.max(0, 1 - (r.dropT - 0.7) / 0.7);
       const px = lerp(r.drop.x, r.carX, k) - camX, py = lerp(r.drop.y, r.carY, k) - camY;
       drawPedSprite(g, px, py, r.shirt, r.hair, time * 4, false);
@@ -249,7 +252,7 @@ const Delivery = {
   drawBag(g, x, y) {
     x = Math.round(x); y = Math.round(y);
     g.fillStyle = '#0b0b0b'; g.fillRect(x - 1, y - 1, 5, 5);
-    g.fillStyle = '#e3262e'; g.fillRect(x, y, 3, 3);
+    g.fillStyle = typeof Veh.cur.bag === 'string' ? Veh.cur.bag : '#e3262e'; g.fillRect(x, y, 3, 3);
   },
 
   // nomes dos restaurantes (só para quem está de entregador)

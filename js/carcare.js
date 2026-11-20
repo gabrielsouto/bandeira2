@@ -29,15 +29,26 @@ const SHOP_MAX = {
   revisao: Math.ceil(30 + 100 * 1.5),               // desgaste em 100%
 };
 
+// bike (Veh.cur.pedal): sem gasolina, quem cansa é o ciclista. Fôlego de 0 a 100, não vai para o save.
+const LEGS_USE = 1.1;    // %/s pedalando com tudo
+const LEGS_REST = 9;     // %/s parado
+const LEGS_COAST = 2.5;  // %/s andando sem pedalar
+const LEGS_TIRED = 25;   // abaixo disso as pernas fraquejam
+
 const Care = {
+  legs: 100, tiredWarned: false,
   stallT: 0, nextStall: 25, overheated: false, flatSide: 1, failAcc: 0, warnedFuel: false,
 
   mods(surface) {
     const c = S.car, p = c.problems;
     const m = { power: 1, speedMul: 1, accelMul: 1, brakeMul: 1, gripMul: 1, dragMul: 1, steerBias: 0 };
-    if (c.fuel <= 0 || c.health <= 0 || this.stallT > 0) m.power = 0;
-    m.power *= 1 - 0.3 * (c.bad || 0); // gasolina batizada: motor fraco
-    if (this.overheated) m.power = Math.min(m.power, 0.3);
+    if (this.empty() || c.health <= 0 || this.stallT > 0) m.power = 0;
+    if (Veh.cur.pedal) { // sem motor: gasolina batizada e radiador não contam; cansado, pedala fraco
+      if (this.legs < LEGS_TIRED) { const k = 0.35 + 0.65 * this.legs / LEGS_TIRED; m.power *= k; m.speedMul *= 0.6 + 0.4 * k; }
+    } else {
+      m.power *= 1 - 0.3 * (c.bad || 0); // gasolina batizada: motor fraco
+      if (this.overheated) m.power = Math.min(m.power, 0.3);
+    }
     if (p.flat) { m.speedMul *= 0.68; m.gripMul *= 0.7; m.steerBias = 0.2 * this.flatSide; }
     if (p.brakes) m.brakeMul *= 0.35;
     if (c.health < 25) { m.speedMul *= 0.8; m.accelMul *= 0.75; }
@@ -46,9 +57,30 @@ const Care = {
     return m;
   },
 
+  // sem gasolina de verdade (a bike nunca fica)
+  empty() { return !Veh.cur.pedal && S.car.fuel <= 0; },
+
+  // fôlego do ciclista: gasta pedalando, volta parado ou na banguela
+  stepLegs(dt, car) {
+    const thr = Math.max(0, car.throttle);
+    if (thr > 0.05) this.legs -= dt * LEGS_USE * thr * (Easy.solo ? 0.6 : 1) * (1 + 0.6 * (S.car.problems.flat ? 1 : 0));
+    else this.legs += dt * (car.speed < 10 ? LEGS_REST : LEGS_COAST);
+    this.legs = clamp(this.legs, 0, 100);
+    if (this.legs < LEGS_TIRED && !this.tiredWarned) {
+      this.tiredWarned = true;
+      toast('Perna bamba! Para um pouco pra recuperar o fôlego (ou toma um café no posto).', 'warn');
+    }
+    if (this.legs > 60) this.tiredWarned = false;
+  },
+
   update(dt, car, moved) {
     if (Veh.cur.school) return; // o carro da autoescola é da escola: sempre revisado e abastecido
     const c = S.car;
+    if (Veh.cur.pedal) { // bike: sem tanque, motor nem bateria
+      this.stepLegs(dt, car); this.stepWear(dt, car, moved);
+      if (this.stallT > 0) this.stallT -= dt;
+      return;
+    }
     if (c.fuel > 0) {
       c.fuel = Math.max(0, c.fuel - dt * (0.01 + 0.2 * car.throttle) * Veh.cur.fuelUse * (1 + 0.9 * (c.bad || 0)) * (Easy.solo ? 0.6 : 1));
       if (c.fuel <= 0) c.bad = 0;
@@ -60,7 +92,7 @@ const Care = {
     }
     if (c.fuel > 20) this.warnedFuel = false;
 
-    c.wear = Math.min(100, c.wear + moved * 0.00025 * (1 + 2 * (c.bad || 0)));
+    this.stepWear(dt, car, moved);
 
     // gasolina batizada: o motor engasga de vez em quando
     if ((c.bad || 0) > 0.25 && car.speed > 20 && this.stallT <= 0 && R.chance(dt * 0.05 * c.bad)) {
@@ -91,7 +123,12 @@ const Care = {
         Sfx.sputter();
       }
     }
+  },
 
+  // desgaste e quebras ao acaso (bike: só pneu e freio)
+  stepWear(dt, car, moved) {
+    const c = S.car;
+    c.wear = Math.min(100, c.wear + moved * 0.00025 * (1 + 2 * (Veh.cur.pedal ? 0 : c.bad || 0)));
     if (car.speed > 20 && !Easy.solo) { // na direção fácil o carro não quebra sozinho
       this.failAcc += dt;
       while (this.failAcc >= 1) {
@@ -104,7 +141,7 @@ const Care = {
 
   breakSomething() {
     const p = S.car.problems;
-    const opts = [['flat', 3], ['overheat', 2], ['brakes', 2], ['battery', 1.5]].filter(([k]) => !p[k]);
+    const opts = [['flat', 3], ['overheat', 2], ['brakes', 2], ['battery', 1.5]].filter(([k]) => !p[k] && (!Veh.cur.pedal || k === 'flat' || k === 'brakes'));
     if (!opts.length) return;
     let x = Math.random() * opts.reduce((a, o) => a + o[1], 0);
     for (const [k, w] of opts) { x -= w; if (x <= 0) { this.applyProblem(k); return; } }
@@ -123,11 +160,11 @@ const Care = {
     if (imp < 35 || Veh.cur.school) return 0;
     const c = S.car, dmg = (imp - 35) * 0.1 * Veh.cur.dmgMul * Easy.dmgMul(), before = c.health;
     c.health = Math.max(0, c.health - dmg);
-    if (Veh.cur.art === 'moto' && imp > 120 && c.health > 0) { // tombo: o motor apaga e leva um tempo para levantar a moto
+    if (Veh.twoWheel() && imp > 120 && c.health > 0) { // tombo: o motor apaga e leva um tempo para levantar a moto
       this.stallT = Math.max(this.stallT, 1.5);
-      toast('Caiu da moto! Levanta, sacode a poeira...', 'bad');
+      toast(`Caiu da ${Veh.noun()}! Levanta, sacode a poeira...`, 'bad');
     }
-    if (before > 0 && c.health <= 0) toast('O carro não aguentou! Aperte G para o guincho levar à oficina.', 'bad');
+    if (before > 0 && c.health <= 0) toast(`${Veh.fem() ? 'A' : 'O'} ${Veh.noun()} não aguentou! Aperte G para o guincho levar à oficina.`, 'bad');
     if (imp > 110 && !c.problems.flat && R.chance(0.3)) this.applyProblem('flat');
     return dmg;
   },
@@ -151,7 +188,7 @@ const Care = {
 
   // carro novo (começo de um turno no multiplayer)
   resetState() {
-    Object.assign(this, { stallT: 0, nextStall: 25, overheated: false, failAcc: 0, warnedFuel: false });
+    Object.assign(this, { stallT: 0, nextStall: 25, overheated: false, failAcc: 0, warnedFuel: false, legs: 100, tiredWarned: false });
   },
 };
 

@@ -47,6 +47,8 @@ function applyVehicle() {
   player.p = Veh.phys();
   $('appname').textContent = v.app;
   $('phone').classList.toggle('food', !!v.delivery);
+  $('phone').classList.toggle('food66', !!v.pedal);
+  $('fuellbl').textContent = v.pedal ? 'FÔLEGO' : 'COMBUST.';
   $('phone').classList.toggle('escola', !!v.school);
   $('lgrest').classList.toggle('hidden', !v.delivery);
 }
@@ -109,7 +111,7 @@ function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
-    const d = code.match(/^(Digit|Numpad)([1-6])$/);
+    const d = code.match(/^(Digit|Numpad)([1-7])$/);
     if (d) { pickVehicle(VEH_ORDER[+d[2] - 1]); return; }
     if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
     return;
@@ -149,8 +151,10 @@ function startGame() {
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
   } else if (Veh.cur.delivery) {
-    toast('Você está online no euComida! Os pedidos chegam no celular.', 'good');
+    Care.legs = 100;
+    toast(`Você está online no ${Veh.cur.app}! Os pedidos chegam no celular.`, 'good');
     setTimeout(() => toast('Restaurantes têm toldo listrado. Retire o pedido e leve quentinho!'), 2500);
+    if (Veh.cur.pedal) setTimeout(() => toast('Bike não gasta gasolina, gasta perna: de olho no FÔLEGO. Parado, ele volta.'), 5000);
   } else {
     toast('Você está online! As corridas chegam no celular.', 'good');
     setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
@@ -244,6 +248,11 @@ function garageMenu(place) {
 
 function postoMenu(place) {
   const c = S.car, items = [], reopen = () => postoMenu(place);
+  if (Veh.cur.pedal) { // bike não abastece: o posto vira parada pro café (que devolve o fôlego)
+    items.push(shopItem('Café + pão de queijo (fôlego cheio)', COFFEE_PRICE, () => { Care.legs = 100; toast('Café na veia. Bora pedalar!', 'good'); }, reopen, ['cafe']));
+    showModal(`POSTO · ${place.name}`, `"Gasolina pra bike? Essa é boa!"<br><small>Fôlego: ${Math.round(Care.legs)}%</small>`, items);
+    return;
+  }
   // tanque de moto é menor; o posto preço baixo é mais barato... e batiza a gasolina
   const missing = 100 - c.fuel, price = FUEL_PRICE * Veh.cur.tankMul * (place.cheap ? CHEAP_FUEL : 1), bad = !!place.cheap;
   if (missing > 1) {
@@ -266,7 +275,7 @@ const LAVA_LINES = ['"Vai querer o pretinho no pneu?"', '"Areia de novo? Esse pe
 function lavaMenu(place) {
   const c = S.car, items = [], reopen = () => lavaMenu(place);
   if (c.problems.dirty) items.push(shopItem(PROBLEMS.dirty.fix, PROBLEMS.dirty.cost, () => { c.problems.dirty = false; toast('Carro limpinho e cheiroso!', 'good'); }, reopen, ['dirty']));
-  const sub = items.length ? R.pick(LAVA_LINES) : (Veh.cur.art === 'moto' ? 'Moto não junta areia por dentro. Tá liberado!' : 'Seu carro está limpinho! Nada pra lavar.');
+  const sub = items.length ? R.pick(LAVA_LINES) : (Veh.twoWheel() ? `${Veh.noun()[0].toUpperCase() + Veh.noun().slice(1)} não junta areia por dentro. Tá liberado!` : 'Seu carro está limpinho! Nada pra lavar.');
   showModal(`LAVA JATO · ${place.name}`, sub, items);
 }
 
@@ -324,7 +333,7 @@ function openHelp() { window.open('ajuda.html', '_blank', 'noopener'); }
 
 function callTow() {
   const c = S.car;
-  const kind = c.health <= 0 ? 'oficina' : (c.fuel <= 0 ? 'posto' : null);
+  const kind = c.health <= 0 ? 'oficina' : (Care.empty() ? 'posto' : null);
   if (!kind) { toast('O guincho só vem quando o carro não anda (quebrado ou sem gasolina).', 'warn'); return; }
   // já está no lugar certo: o guincho não tem para onde levar (e não cobra de novo)
   const here = city.placeAt(player.x, player.y);
@@ -448,7 +457,7 @@ function update(dt) {
   if (pl && pl !== lastPlace && player.speed < 18 && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
 
-  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, S.car.fuel > 0 && S.car.health > 0 && Care.stallT <= 0);
+  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, !Veh.cur.pedal && S.car.fuel > 0 && S.car.health > 0 && Care.stallT <= 0); // bike não ronca
 
   cam.x += (player.x + player.vx * 0.4 - cam.x) * Math.min(1, 4 * dt);
   cam.y += (player.y + player.vy * 0.4 - cam.y) * Math.min(1, 4 * dt);
@@ -524,7 +533,7 @@ function render() {
   ctx.globalAlpha = 1;
 
   // noite: escurece tudo e recorta faróis e postes
-  const moto = Veh.cur.art === 'moto';
+  const moto = Veh.twoWheel();
   const lit = [{ x: player.x, y: player.y, a: player.a, front: moto ? 6 : 8, len: 95, spread: moto ? 0.32 : 0.42 }];
   for (const n of traffic.cars) lit.push({ x: n.x, y: n.y, a: n.a, front: 8, len: 50, k: 0.7 });
   Multi.lightCars(lit);

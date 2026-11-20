@@ -323,7 +323,7 @@ const World = {
     const c = S.car;
     c.health = Math.max(10, c.health - 25);
     c.fuel = Math.max(5, c.fuel * 0.5);
-    toast(`LEVARAM O ${Veh.cur.art === 'moto' ? 'A MOTO' : 'CARRO'}! O seguro achou na ${best.name}, mas cobrou ${fmtMoney(INSURANCE_FEE)} de franquia.`, 'bad');
+    toast(`LEVARAM ${Veh.fem() ? 'A' : 'O'} ${Veh.noun().toUpperCase()}! O seguro achou na ${best.name}, mas cobrou ${fmtMoney(INSURANCE_FEE)} de franquia.`, 'bad');
     placeCarAt(best);
     lastPlace = best;
     Multi.onTeleport();

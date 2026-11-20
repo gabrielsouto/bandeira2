@@ -75,7 +75,7 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 | H | buzina |
 | R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
 | X | pega (multiplayer): chamar, entrar ou desistir |
-| 1–6 | na tela inicial: escolher Rebu, 66, Táxi, Moto Rebu, euComida ou Autoescola |
+| 1–7 | na tela inicial: escolher Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida ou Autoescola |
 | O / P / L | seta até a oficina, o posto ou o lava jato mais perto (a mesma tecla cancela) |
 | G | guincho (quando o carro quebra ou fica sem gasolina; não cobra se você já está lá) |
 | F | liga/desliga a direção fácil |
@@ -92,8 +92,9 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Tipos de passageiro: normal, com pressa, enjoa fácil (pode sujar o carro), executivo, voltando da praia (sempre suja o carro).
 - Veículos: Rebu (equilibrado), 66 (tarifa menor, mais chamadas, econômico), Táxi (tarifa maior e bandeira 2 das 20:00 às 06:00) e Moto Rebu (ágil, tanque barato, tarifa 40% menor, sem executivo, tombo dói).
 - Entregador do **euComida** (5º veículo, só no solo): moto com bag que leva pedidos de 8 restaurantes (toldo listrado, rosa no minimapa) até o cliente. A cozinha pode estar preparando, a comida esfria, pizza e pedido de festa não aguentam batida, açaí derrete e o refri vaza com derrapada.
+- Entregador de bike do **66Comida** (6º veículo, só no solo): os mesmos pedidos, mas de bicicleta. Não gasta gasolina: a barra do tanque vira **fôlego**, que cai pedalando e volta parado (ou com um café no posto). Mais lenta, só pedidos perto, sem pedido de festa e com mais prazo.
 - **Direção fácil** (tecla F, botão na tela inicial ou pausa): carro mais lento que quase não derrapa, volante que se endireita sozinho, raspa no muro em vez de quicar e freio automático na frente de pedestres e carros. No solo, também estraga menos, não quebra sozinho e gasta menos gasolina.
-- **Autoescola** (6º veículo, só no solo): busque o instrutor e siga as setas pintadas nos cruzamentos. O instrutor fala o que fazer (voz do navegador), tira pontos por batida, excesso de velocidade, calçada, contramão e PARE furado, e dá de 0 a 3 estrelas. 6 aulas (a última é a prova do DETRAN, que dá a carteira) e depois treino livre. Não mexe no dinheiro nem no save.
+- **Autoescola** (7º veículo, só no solo): busque o instrutor e siga as setas pintadas nos cruzamentos. O instrutor fala o que fazer (voz do navegador), tira pontos por batida, excesso de velocidade, calçada, contramão e PARE furado, e dá de 0 a 3 estrelas. 6 aulas (a última é a prova do DETRAN, que dá a carteira) e depois treino livre. Não mexe no dinheiro nem no save.
 - Dia e noite: o relógio anda 1 minuto por segundo; à noite escurece, com faróis, postes e giroflex.
 - Rádio do carro com estações sintetizadas (funk, sertanejo, pagode) e uma estação de notícias falada pela voz do navegador.
 - Posto Preço Baixo: gasolina 40% mais barata, mas batizada. Rende menos, o motor fica fraco e engasga, e o desgaste sobe. Abastecer em outro posto dilui.
@@ -115,10 +116,10 @@ js/util.js         utilidades (aleatório, cores, pixels)
 js/city.js         geração da cidade
 js/render-city.js  arte gerada por código (mapa, carros, ícones)
 js/car.js          física e colisão do jogador
-js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu, euComida, Autoescola): física, tarifa, consumo
+js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida, Autoescola): física, tarifa, consumo
 js/facil.js        direção fácil (física mais mansa, volante que se endireita, freio automático)
 js/autoescola.js   modo autoescola: instrutor, caminho da aula, faltas, estrelas e carteira
-js/delivery.js     entregador do euComida: restaurantes, pedidos, nota da entrega
+js/delivery.js     entregador do euComida e do 66Comida: restaurantes, pedidos, nota da entrega
 js/light.js        dia e noite (escuridão, faróis, postes)
 js/radio.js        rádio do carro (música sintetizada e notícias faladas)
 js/world.js        áreas de risco com bandidos (e AURA), gatos e cachorros, colégios com trânsito
