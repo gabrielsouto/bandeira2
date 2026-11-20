@@ -68,8 +68,8 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 .ph-type { display: inline-block; font-size: 17px; padding: 0 5px; background: #222a38; color: #cfd6e4; }
 .t-lanche { background: #3a2414; color: #ffcf8a; } .t-pizza { background: #183a1c; color: #9af0a0; } .t-acai { background: #33183f; color: #e0a8ff; }
 .t-refri { background: #1a2a44; color: #9cc8ff; } .t-festa { background: #4a1418; color: #ff9a9a; }
-#lghub i { background: var(--parcel-color); }
-#lgstops i { background: var(--gold); }
+.lg-hub { background: var(--parcel-color); }
+.lg-stops { background: var(--gold); }
 #phone.parcels { max-height: calc(100vh - 64px); overflow-y: auto; box-shadow: 0 0 0 3px var(--parcel-color), 6px 6px 0 3px rgba(0,0,0,.45); }
 #phone.parcels .appbar { color: var(--parcel-color); }
 .ph-stops { max-height: min(25vh, 155px); overflow: auto; }
@@ -83,6 +83,8 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 .t-pressa { background: #4a2a10; color: #ffb36b; } .t-enjoo { background: #183a28; color: #8ef0b0; } .t-exec { background: #2a2346; color: #c6b8ff; } .t-praia { background: #4a4214; color: #ffe58a; }
 .ph-timer { height: 6px; background: #000; border: 1px solid #333; margin: 8px 0; }
 .ph-timer > div { height: 100%; width: 100%; background: var(--warn); }
+#offertime { display: flex; align-items: center; gap: 6px; color: var(--warn); font-size: 15px; }
+#offertime .ph-timer { flex: 1; margin: 0; }
 .ph-comfort { height: 8px; background: #000; border: 1px solid #333; }
 .ph-comfort > div { height: 100%; background: #8ef0b0; }
 .ph-big { font-family: 'Press Start 2P', monospace; font-size: 22px; margin: 6px 0; }
@@ -297,3 +299,107 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 .es-sig { font-size: 18px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
 .es-sig i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #000; display: inline-block; }
 .es-sig i.g { background: #3dff6e; } .es-sig i.y { background: #ffc21a; } .es-sig i.r { background: #ff3030; }
+
+.touch-only, [hidden] { display: none !important; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.touch-ui {
+  --safe-top: max(8px, env(safe-area-inset-top));
+  --safe-right: max(10px, env(safe-area-inset-right));
+  --safe-bottom: max(10px, env(safe-area-inset-bottom));
+  --safe-left: max(10px, env(safe-area-inset-left));
+  --pedal-size: clamp(50px, 14dvh, 88px);
+  --drive-bottom: calc(var(--safe-bottom) + var(--pedal-size) + 10px);
+}
+.touch-ui :is(#title, #modal, #rotation) {
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+.touch-ui :is(#title, #modal, #rotation, #phone, #roompanel, #touchtools) :is(button, input, summary, a) {
+  min-height: 48px;
+}
+.touch-ui :is(kbd, #help, #netinfo, #jobbtn, #mapbox .legend, #dash .bar:not(:has(#fuelbar)), #radio) {
+  display: none;
+}
+.touch-ui #modal { z-index: 4; }
+.touch-ui #modalbox { max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom)); }
+.touch-ui #modalbox .legend { flex-flow: row wrap; }
+#rotation {
+  position: fixed; inset: 0; z-index: 5; background: rgba(5, 7, 13, .94);
+  display: grid; place-items: center; text-align: center; font-size: 22px;
+}
+#rotation .panel { max-width: 360px; padding: 18px; }
+#rotation h2 { font: 14px/1.6 'Press Start 2P', monospace; color: var(--gold); margin: 0; }
+#rotationnote:empty { display: none; }
+#rotationresume { margin-top: 14px; }
+
+@media (orientation: landscape) {
+  .touch-ui #touchtools {
+    display: flex !important; position: fixed; top: var(--safe-top); left: 50%;
+    transform: translateX(-50%); gap: 6px; z-index: 2; white-space: nowrap;
+  }
+  .touch-ui #touchdrive {
+    display: flex !important; position: fixed; left: var(--safe-left); right: var(--safe-right);
+    bottom: var(--safe-bottom); justify-content: space-between; pointer-events: none; z-index: 2;
+  }
+  #touchdrive > div { display: flex; gap: 7px; }
+  #touchdrive button {
+    width: var(--pedal-size); height: var(--pedal-size); padding: 3px; line-height: .9;
+    font-size: clamp(17px, 4.6dvh, 24px); pointer-events: auto; touch-action: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    background: #202a39; box-shadow: 0 0 0 2px #58718c; color: var(--ink);
+  }
+  #touchdrive .steering button { font: 22px system-ui, sans-serif; }
+  #touchdrive [data-drive="up"] { background: #173b2b; box-shadow: 0 0 0 2px #4da675; }
+  #touchdrive button.held { background: var(--accent); color: #000; }
+  .touch-ui #topleft { top: var(--safe-top); left: var(--safe-left); }
+  .touch-ui #money { font-size: clamp(10px, 2.6dvh, 17px); }
+  .touch-ui #rating, .touch-ui #aura { font-size: 15px; margin-top: 2px; }
+  .touch-ui #mapbox {
+    top: calc(var(--safe-top) + 57px); right: auto; left: var(--safe-left); padding: 2px;
+    pointer-events: none;
+  }
+  .touch-ui #minimap { width: clamp(61px, 22dvh, 150px); height: auto; }
+  .touch-ui #dash {
+    left: var(--safe-left); bottom: var(--drive-bottom); width: min(120px, 22vw);
+    padding: 4px; pointer-events: none;
+  }
+  .touch-ui #speed { font-size: clamp(12px, 3.4dvh, 24px); }
+  .touch-ui #speed small { margin-left: 4px; }
+  .touch-ui #easytag { display: none; }
+  .touch-ui #dash .bar { gap: 4px; font-size: 13px; margin-top: 4px; }
+  .touch-ui #dash .bar label { width: auto; }
+  .touch-ui #problems { margin-top: 4px; max-height: 30px; overflow: hidden; }
+  .touch-ui #problems:empty { display: none; }
+  .touch-ui .prob { font-size: 13px; }
+  .touch-ui #phone {
+    display: flex; flex-direction: column;
+    right: var(--safe-right); bottom: var(--drive-bottom); width: clamp(164px, 28vw, 290px);
+    max-height: calc(100dvh - var(--drive-bottom) - var(--safe-top) - 54px);
+    min-height: 0; padding: 4px 6px 6px; border-radius: 10px; overflow: hidden;
+  }
+  .touch-ui #phone.expanded { width: min(400px, 54vw); z-index: 3; }
+  .touch-ui #phone .appbar { align-items: center; gap: 4px; padding: 0 0 3px; font-size: 8px; }
+  .touch-ui #phonemore { display: block !important; padding: 2px 4px; font-size: 15px; }
+  .touch-ui #phonebody {
+    min-height: 0; overflow: auto; overscroll-behavior: contain;
+    font-size: 17px; line-height: 1; padding: 4px 0 0;
+  }
+  .touch-ui #phonebody :is(.ph-muted, .ph-row, .ph-stats) { font-size: inherit; }
+  .touch-ui #phonebody :is(.ph-title, .ph-alert) { font-size: 8px; line-height: 1.35; }
+  .touch-ui #phoneactions .ph-btns { margin-top: 3px; }
+  .touch-ui #phoneactions button { min-width: 48px; font-size: 16px; line-height: .95; padding: 3px; }
+  .touch-ui #toasts { top: calc(var(--safe-top) + 52px); width: min(360px, 44vw); }
+  .touch-ui .toast { font-size: clamp(15px, 4.4dvh, 21px); line-height: 1; }
+  .touch-ui .toast:nth-last-child(n+3) { display: none; }
+  .touch-ui #roompanel {
+    bottom: var(--drive-bottom); width: min(360px, 48vw);
+    max-height: calc(100dvh - var(--drive-bottom) - var(--safe-top) - 54px);
+    overflow: auto; padding: 6px;
+  }
+  .touch-ui #hud:has(#roompanel:not(.hidden)) #phone { visibility: hidden; }
+  .touch-ui #modalbox .legend { display: flex; }
+}
+@media (orientation: landscape) and (min-width: 900px) and (min-height: 550px) {
+  .touch-ui #dash { width: 185px; padding: 8px; }
+  .touch-ui #dash .bar:not(:has(#fuelbar)) { display: flex; }
+  .touch-ui #phonebody { font-size: 21px; }
+}

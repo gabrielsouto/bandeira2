@@ -5,7 +5,10 @@ const Sfx = {
   ac: null, master: null, muted: false, vol: 0.45,
 
   init() {
-    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
+    if (this.ac) {
+      if (this.ac.state === 'suspended' || this.ac.state === 'interrupted') this.ac.resume().catch(() => {});
+      return;
+    }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     try { this.ac = new AC(); } catch (e) { this.ac = null; return; }

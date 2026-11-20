@@ -131,6 +131,7 @@ const Multi = {
     if (code.length !== 4) { this.say('O código da sala tem 4 letras ou números.', true); this.el.code.focus(); return; }
     const apelido = this.el.nick.value.trim();
     if (apelido.length < 2) { this.say('Escolha um apelido com pelo menos 2 letras.', true); this.el.nick.focus(); return; }
+    Sfx.init(); // desbloqueia o áudio no gesto, antes da resposta do WebSocket
     try { localStorage.setItem('bandeira2-apelido', apelido); } catch (e) { /* storage bloqueado */ }
     this.sala = code;
     const u = new URL(location.href);
@@ -603,13 +604,13 @@ const Multi = {
       html = `<div class="rp-title">SALA ${this.sala} · ${n} MOTORISTA${n > 1 ? 'S' : ''}</div>` +
         '<div class="rp-text">Turno das 07:00 às 19:00. Ganha quem tiver mais lucro no fim.<br>Até lá, dá pra dar umas voltas pela cidade.</div>' +
         (owner ? '' : `<div class="rp-text">Esperando ${dono} começar o turno…</div>`) +
-        `<div class="rp-btns">${owner ? '<button data-act="start">ENTER · COMEÇAR O TURNO</button>' : ''}` +
+        `<div class="rp-btns">${owner ? '<button data-act="start"><kbd>ENTER</kbd> COMEÇAR O TURNO</button>' : ''}` +
         '<button data-act="link" class="ghost">COPIAR O LINK</button></div>';
     } else if (f === 'fim') {
       html = '<div class="rp-title">TURNO ENCERRADO</div>' +
         (owner ? '' : `<div class="rp-text">Esperando ${dono} pedir revanche…</div>`) +
-        `<div class="rp-btns">${owner ? '<button data-act="start">ENTER · REVANCHE</button>' : ''}` +
-        '<button data-act="ranking" class="ghost">R · RANKING</button></div>';
+        `<div class="rp-btns">${owner ? '<button data-act="start"><kbd>ENTER</kbd> REVANCHE</button>' : ''}` +
+        '<button data-act="ranking" class="ghost"><kbd>R</kbd> RANKING</button></div>';
     }
     if (html !== this.lastPanel) { this.el.panel.innerHTML = html; this.el.panel.classList.toggle('hidden', !html); this.lastPanel = html; }
   },

@@ -332,7 +332,7 @@ const Parcels = {
         <div class="ph-row">${types}</div>
         <div class="ph-muted">Galpão a ${kmStr(o.hubD)} · parada mais longe a ${kmStr(o.far)}</div>
         <div class="ph-timer"><div></div></div>
-        <div class="ph-btns"><button data-act="accept">E · ACEITAR</button><button data-act="decline" class="ghost">Q · RECUSAR</button></div>`;
+        <div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ACEITAR</button><button data-act="decline" class="ghost"><kbd>Q</kbd> RECUSAR</button></div>`;
     }
     if (st === 'toHub' || st === 'loading') {
       const toLoad = r.stops.filter((s) => s.type !== 'coleta').length;
@@ -342,7 +342,7 @@ const Parcels = {
         <div class="ph-row">Pacotes: ${r.loaded}/${toLoad}</div>
         <div class="ph-comfort"><div style="width:${Math.round(r.loaded / Math.max(1, toLoad) * 100)}%"></div></div>
         <div class="ph-fare small">${fmtMoney(r.total)}</div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · CANCELAR</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> CANCELAR</button></div>`;
     }
     if (st === 'route' || st === 'stopping' || st === 'returning') {
       const left = r.allowed - r.t, pend = r.stops.filter((s) => s.status === 'pending').length;
@@ -355,7 +355,7 @@ const Parcels = {
         <div class="ph-muted">${msg}</div>
         <div class="ph-stops">${r.stops.map((s) => this.stopRow(s)).join('')}</div>
         <div class="ph-row">Ganho: ${fmtMoney(r.earned)} · Batidas: ${r.hits}</div>
-        <div class="ph-btns">${st === 'route' && pend ? '<button data-act="return">V · VOLTAR COM A CARGA</button>' : ''}<button data-act="cancel" class="ghost">C · CANCELAR</button></div>`;
+        <div class="ph-btns">${st === 'route' && pend ? '<button data-act="return"><kbd>V</kbd> VOLTAR COM A CARGA</button>' : ''}<button data-act="cancel" class="ghost"><kbd>C</kbd> CANCELAR</button></div>`;
     }
     if (st === 'closing' && this.lastResult) {
       const res = this.lastResult;

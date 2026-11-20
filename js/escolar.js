@@ -110,7 +110,7 @@ const Escolar = {
     const fares = o.families.map(f => esc(f.name) + ' · ' + fmtMoney(f.fare)).join('<br>');
     if (!r) return '<div class="ph-title">TRANSPORTE ESCOLAR</div><div class="ph-row">' + esc(o.school) +
       '</div><div class="ph-muted">Cada família paga na ida e na volta.</div><div class="ph-row">' + fares +
-      '</div><div class="ph-timer"><div></div></div><div class="ph-btns"><button data-act="accept">E · ACEITAR</button><button data-act="decline" class="ghost">Q · RECUSAR</button></div>';
+      '</div><div class="ph-timer"><div></div></div><div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ACEITAR</button><button data-act="decline" class="ghost"><kbd>Q</kbd> RECUSAR</button></div>';
     const f = r.families[r.index];
     const title = { casas: 'BUSCAR NA CASA', escola: 'LEVAR À ESCOLA', aula: 'TURMA EM AULA', saida: 'BUSCAR NA ESCOLA', volta: 'LEVAR PARA CASA' }[r.phase];
     const message = this.dwell > 0 ? (this.target().kind === 'pick' ? 'Embarcando…' : 'Desembarcando…') + ' Mantenha a van parada.' :
@@ -119,7 +119,7 @@ const Escolar = {
     return '<div class="ph-title">' + title + '</div><div class="ph-row">' + message +
       '</div>' + (r.phase === 'aula' ? '<div class="ph-muted">Ida paga pelas famílias</div><div class="ph-row">' + fares + '</div>' :
         '<div class="ph-muted">Siga a seta e pare para o embarque ou desembarque.</div>') +
-      '<div class="ph-btns"><button data-act="cancel" class="ghost">C · ENCERRAR CONTRATO</button></div>';
+      '<div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> ENCERRAR CONTRATO</button></div>';
   },
   drawWorld(g, cx, cy) {
     const p = this.target();

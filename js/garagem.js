@@ -91,7 +91,7 @@ const Garagem = {
     this.pushing = !this.pushing;
     if (this.pushing) {
       Nav.go(S.car.health > 0 && Care.empty() ? Care.station() : 'oficina');
-      if (this.pushing) toast('Você desceu. Empurre com as setas ou WASD. U para voltar ao volante.');
+      if (this.pushing) toast('Você desceu. Use os controles de direção para empurrar.');
     } else toast('Você voltou ao volante.');
   },
   stepPush(car, inp, dt) {

@@ -32,7 +32,7 @@ const Pega = {
       return;
     }
     if (p.fase !== 'inscricao') { toast('Esse pega já largou. Espere o próximo.', 'warn'); return; }
-    if (Math.hypot(player.x - p.largada.x, player.y - p.largada.y) > 50) { toast('Vá até a bandeira de largada (seta quadriculada) e aperte X.', 'warn'); return; }
+    if (Math.hypot(player.x - p.largada.x, player.y - p.largada.y) > 50) { toast('Vá até a bandeira de largada (seta quadriculada) e use Entrar no pega (X).', 'warn'); return; }
     Net.send({ t: 'pega', acao: 'entrar', x: player.x, y: player.y });
   },
 
@@ -45,7 +45,7 @@ const Pega = {
     if (!prev || prev.id !== p.id) {
       const who = Multi.nameOf(p.dono);
       toast(p.dono === Multi.me ? 'Pega chamado! Espere a galera na largada (20 s).'
-        : `${who} chamou pro PEGA${p.aposta ? ` (inscrição ${fmtMoney(p.aposta)})` : ''}! Vá até a largada e aperte X.`, 'good');
+        : `${who} chamou pro PEGA${p.aposta ? ` (inscrição ${fmtMoney(p.aposta)})` : ''}! Vá até a largada e use Entrar no pega.`, 'good');
       Sfx.horn(0.06);
     } else {
       for (const novo of p.inscritos) {
@@ -135,7 +135,7 @@ const Pega = {
     const p = this.p;
     if (!p) return '';
     const n = p.inscritos.length, pot = p.aposta ? ` · ${p.pote ? 'pote ' + fmtMoney(p.pote) : 'inscrição ' + fmtMoney(p.aposta)}` : '';
-    const txt = p.fase === 'inscricao' ? `PEGA: inscrição ${Math.ceil(this.left())}s · ${n} piloto${n > 1 ? 's' : ''}${pot} · X entra`
+    const txt = p.fase === 'inscricao' ? `PEGA: inscrição ${Math.ceil(this.left())}s · ${n} piloto${n > 1 ? 's' : ''}${pot}`
       : p.fase === 'contagem' ? `PEGA: preparar!${pot}` : `PEGA: correndo · ${p.chegaram.length}/${n} chegaram${pot}`;
     return `<div class="ni-pega">${esc(txt)}</div>`;
   },

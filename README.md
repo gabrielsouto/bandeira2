@@ -66,6 +66,10 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 
 ## Controles
 
+No celular e no tablet, gire o aparelho para a horizontal. Use as setas à esquerda para virar e os pedais à direita para acelerar, frear, dar ré e usar o freio de mão. O cartão da atividade reúne as ações da corrida ou entrega. A Pausa reúne navegação, rádio e opções da partida, e o Painel mostra o estado do veículo e a legenda do mapa.
+
+No teclado:
+
 | Tecla | Ação |
 |---|---|
 | WASD / setas | dirigir |

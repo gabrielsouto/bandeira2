@@ -390,7 +390,7 @@ const Autoescola = {
         <div class="ph-row">${esc(this.instr.name)}</div>
         <div class="ph-row">${this.lessonNum()}: <b>${esc(L.name)}</b></div>
         <div class="ph-muted">${st === 'boarding' ? 'Entrando no carro… segura o freio!' : 'Siga a seta verde e pare do lado do instrutor.'}</div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · OUTRO INSTRUTOR</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> OUTRO INSTRUTOR</button></div>`;
     }
     if (st === 'lesson') {
       const rt = this.route, nd = rt.nodes[rt.k], over = player.speed * KMH > L.limit + 4;
@@ -409,7 +409,7 @@ const Autoescola = {
         <div class="es-next"><div class="es-arrow ${cls}">${icon}</div><div class="es-txt">${text}</div></div>
         <div class="es-info"><div class="es-limit ${over ? 'over' : ''}">${L.limit}</div>
           <div>Pontos: <b>${Math.round(this.score)}</b><br>Cruzamentos: ${Math.min(rt.k, rt.nodes.length)}/${rt.nodes.length}</div></div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · PARAR A AULA</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> PARAR A AULA</button></div>`;
     }
     if (st === 'result') {
       const r = this.result, fl = Object.keys(r.faults).map((k) => `${FAULTS[k].label}: ${r.faults[k]}`).join('<br>');
@@ -419,7 +419,7 @@ const Autoescola = {
         <div class="ph-big">${r.score} pts</div>
         <div class="ph-muted">${fl || 'Nenhuma falta. Perfeito!'}</div>
         ${r.cnh ? '<div class="ph-row ok">GANHOU A CARTEIRA!</div>' : ''}
-        <div class="ph-btns"><button data-act="accept">E · ${r.stars ? 'PRÓXIMA AULA' : 'TENTAR DE NOVO'}</button></div>`;
+        <div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ${r.stars ? 'PRÓXIMA AULA' : 'TENTAR DE NOVO'}</button></div>`;
     }
     return '';
   },

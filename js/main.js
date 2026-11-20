@@ -37,11 +37,17 @@ const SPR = { player: null, npc: NPC_COLORS.map((c) => makeCarSprites(c, false))
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const view = { w: 480, h: 270, scale: 4 };
 let camX = 0, camY = 0;
+const touchScreen = matchMedia('(any-pointer: coarse)');
+const portrait = matchMedia('(orientation: portrait)');
+let usingTouch = touchScreen.matches;
+document.body.classList.toggle('touch-ui', usingTouch);
 function resize() {
-  const sc = Math.max(2, Math.round(window.innerHeight / 290));
+  const width = window.innerWidth, height = window.innerHeight;
+  const sc = Math.max(usingTouch ? 1 : 2, Math.round(height / (usingTouch ? 240 : 290)));
   view.scale = sc;
-  view.w = Math.ceil(window.innerWidth / sc); view.h = Math.ceil(window.innerHeight / sc);
-  canvas.width = view.w; canvas.height = view.h;
+  view.w = Math.ceil(width / sc); view.h = Math.ceil(height / sc);
+  if (canvas.width !== view.w) canvas.width = view.w;
+  if (canvas.height !== view.h) canvas.height = view.h;
   canvas.style.width = (view.w * sc) + 'px'; canvas.style.height = (view.h * sc) + 'px';
   ctx.imageSmoothingEnabled = false;
 }
@@ -114,26 +120,98 @@ function clockStr() {
 function addFloater(x, y, text, col) { floaters.push({ x, y, text, col, t: 0 }); }
 
 // ---------- entrada ----------
-const input = { up: false, down: false, left: false, right: false, hb: false };
-const NO_INPUT = { up: false, down: false, left: false, right: false, hb: false };
-const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left',
-  ArrowRight: 'right', KeyD: 'right', Space: 'hb' };
-function clearInput() { for (const k in input) input[k] = false; }
+const driveButtons = document.querySelectorAll('[data-drive]');
+const driving = createDrivingInput(driveButtons);
+const input = driving.state;
+function clearInput() { driving.clear(); }
+const rotation = $('rotation'), resumeRotation = $('rotationresume');
+let rotationPause = false;
+const canDrive = () => mode === 'play' && !rotationPause && !document.hidden;
+
+function updateRotation() {
+  const mustRotate = usingTouch && portrait.matches && mode !== 'title';
+  const wasPaused = rotationPause;
+  if (mustRotate && !rotationPause) {
+    clearInput();
+    writeSave();
+    if (GAME.mode === 'multi') {
+      player.vx = player.vy = player.vF = player.vR = player.speed = player.throttle = 0;
+    }
+    Police.sirenVol(0);
+    Sfx.engine(0, 0, false);
+    Sfx.screech(0);
+  }
+  rotationPause = mustRotate || (rotationPause && GAME.mode === 'solo' && mode !== 'title');
+  rotation.classList.toggle('hidden', !rotationPause);
+  $('hud').inert = rotationPause || mode === 'menu';
+  $('modal').inert = rotationPause;
+  $('rotationtitle').textContent = mustRotate ? 'Gire o aparelho para dirigir' : 'Pronto para voltar à pista?';
+  $('rotationnote').textContent = mustRotate
+    ? (GAME.mode === 'multi' ? 'O turno continua para os outros jogadores.' : 'A partida está pausada.')
+    : '';
+  resumeRotation.hidden = mustRotate;
+  if (mustRotate && !wasPaused) $('rotationtitle').focus();
+  if (rotationPause && !mustRotate) resumeRotation.focus();
+}
+resumeRotation.addEventListener('click', () => {
+  if (portrait.matches) return;
+  clearInput();
+  rotationPause = false;
+  updateRotation();
+  if (mode === 'menu') $('modalbox').focus();
+  Sfx.init();
+});
+portrait.addEventListener('change', () => { clearInput(); updateRotation(); });
+function enableTouch() {
+  if (usingTouch) return;
+  usingTouch = true;
+  document.body.classList.add('touch-ui');
+  resize();
+  updateRotation();
+}
+touchScreen.addEventListener('change', (e) => { if (e.matches) enableTouch(); });
+window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') enableTouch(); }, true);
+for (const button of driveButtons) {
+  button.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || !canDrive() || Multi.frozen()) return;
+    e.preventDefault();
+    button.setPointerCapture(e.pointerId);
+    driving.grab(e.pointerId, button);
+    if (Sfx.ac?.state === 'suspended' || Sfx.ac?.state === 'interrupted') Sfx.init();
+  });
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    button.addEventListener(event, (e) => driving.release(e.pointerId));
+  }
+}
+$('touchtools').addEventListener('click', (e) => {
+  if (!canDrive()) return;
+  const button = e.target.closest('button');
+  if (button?.dataset.command) onKey(button.dataset.command);
+  else if (button?.id === 'touchstatus') openTouchStatus();
+});
+function suspendInput() { clearInput(); writeSave(); }
+window.addEventListener('pagehide', suspendInput);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) suspendInput();
+  else updateRotation();
+});
 // teclas digitadas em campos de texto (apelido, código da sala) não comandam o carro
 const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-const titleActivation = (e) => mode === 'title' && (e.code === 'Enter' || e.code === 'Space') &&
+const nativeActivation = (e) => mode !== 'play' && (e.code === 'Enter' || e.code === 'Space') &&
   e.target.closest?.('button, a, summary');
 window.addEventListener('keydown', (e) => {
-  if (typing(e) || titleActivation(e)) return;
-  if (KEYMAP[e.code]) { input[KEYMAP[e.code]] = true; e.preventDefault(); }
+  if (typing(e) || nativeActivation(e) || rotationPause) return;
+  if (KEYMAP[e.code] && canDrive()) {
+    if (!e.repeat) driving.key(e.code, true);
+    e.preventDefault();
+  }
   if (e.repeat) return;
   onKey(e.code);
 });
 window.addEventListener('keyup', (e) => {
-  if (typing(e)) return;
   if (KEYMAP[e.code]) {
-    input[KEYMAP[e.code]] = false;
-    if (!titleActivation(e)) e.preventDefault();
+    driving.key(e.code, false);
+    if (canDrive() && !typing(e)) e.preventDefault();
   }
 });
 window.addEventListener('blur', clearInput);
@@ -184,10 +262,12 @@ function startGame() {
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   mode = 'play';
+  clearInput();
+  $('touchpega').hidden = GAME.mode !== 'multi';
   if (Garagem.enabled) {
     if (Escolar.busy) {
       Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
-      toast('Rota escolar retomada. Termine o trecho ou aperte C para encerrar o contrato.');
+      toast('Rota escolar retomada. Termine o trecho ou use Encerrar contrato no celular.');
     } else if (S.shipment) {
       Garagem.takeVehicle(S.vehicle || 'envios', 'envios');
     } else Garagem.takeVehicle(Veh.key, resumeJob);
@@ -212,8 +292,9 @@ function startGame() {
     toast('Você está online! As corridas chegam no celular.', 'good');
     setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
   }
+  updateRotation();
 }
-$('jobbtn').addEventListener('click', () => { if (mode === 'play') Garagem.jobsMenu(); });
+$('jobbtn').addEventListener('click', () => { if (canDrive()) Garagem.jobsMenu(); });
 $('startbtn').addEventListener('click', startGame);
 
 // ---------- escolha do veículo (tela inicial) ----------
@@ -269,7 +350,7 @@ let modalItems = [];
 function showModal(title, sub, items, closeLabel, noMoney) {
   modalItems = items;
   modalBox.innerHTML =
-    `<div class="m-title">${title}</div>` +
+    `<div class="m-title" id="modaltitle">${title}</div>` +
     (sub ? `<div class="m-sub">${sub}</div>` : '') +
     (noMoney ? '' : `<div class="m-money">Saldo: <b class="${S.money < 0 ? 'neg' : ''}">${fmtMoney(S.money)}</b></div>`) +
     `<div class="m-list">${items.map((it, i) =>
@@ -278,11 +359,19 @@ function showModal(title, sub, items, closeLabel, noMoney) {
     `<button class="mbtn ghost" data-close="1"><span><kbd>Esc</kbd> ${closeLabel || 'Sair'}</span></button>`;
   modal.classList.remove('hidden');
   mode = 'menu';
+  $('hud').inert = true;
+  if (!rotationPause) modalBox.focus();
   Police.sirenVol(0);
   Sfx.engine(0, 0, false); Sfx.screech(0);
   clearInput();
 }
-function closeModal() { modal.classList.add('hidden'); mode = 'play'; clearInput(); writeSave(); }
+function closeModal() {
+  modal.classList.add('hidden');
+  mode = 'play';
+  $('hud').inert = rotationPause;
+  clearInput();
+  writeSave();
+}
 modal.addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
@@ -384,13 +473,38 @@ function openPlaceMenu(pl) {
   else postoMenu(pl);
 }
 
+function openTouchStatus() {
+  const c = S.car;
+  const level = Veh.cur.pedal ? Care.legs : Care.level();
+  const vehicle = `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
+    ($('tempwrap').style.display === 'none' ? '' : `<p>Temperatura: ${Math.round(c.temp)} °C</p>`) +
+    $('problems').innerHTML + ($('radio').textContent ? `<p>${esc($('radio').textContent)}</p>` : '');
+  const room = GAME.mode === 'multi' ? `<div>${$('netinfo').innerHTML}</div>` : '';
+  const legend = $('mapbox').querySelector('.legend').cloneNode(true);
+  for (const item of legend.querySelectorAll('[id]')) item.removeAttribute('id');
+  showModal('PAINEL', vehicle + room + `<p>Legenda do mapa</p>${legend.outerHTML}`,
+    [], 'Voltar', true);
+}
+
+function touchPauseItems() {
+  if (!usingTouch) return [];
+  const run = (code) => () => { closeModal(); onKey(code); };
+  return [
+    { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },
+    { label: 'Navegar até a oficina', run: run('KeyO') },
+    { label: Veh.cur.electric ? 'Navegar até a recarga' : 'Navegar até o posto', run: run('KeyP') },
+    { label: 'Navegar até o lava jato', run: run('KeyL') },
+  ];
+}
+
 function openPause(confirmReset) {
   if (GAME.mode === 'multi') {
     showModal(`PAUSA · SALA ${Multi.sala}`, 'O jogo continua para os outros: seu carro fica parado onde está.', [
       { label: 'Continuar', run: closeModal },
       ...Multi.pauseItems(),
+      ...touchPauseItems(),
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
-      { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
+      { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
       { label: 'Copiar o link da sala', run: () => {
         navigator.clipboard.writeText(location.href).then(() => toast('Link copiado!', 'good'),
@@ -405,6 +519,7 @@ function openPause(confirmReset) {
       (Autoescola.prog.cnh ? ' · Carteira: ✓' : ''), [
       { label: 'Continuar', run: closeModal },
       { label: 'Escolher a aula', run: () => Autoescola.lessonMenu() },
+      ...touchPauseItems(),
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
       { label: Sfx.muted ? 'Ligar o som (e a voz do instrutor)' : 'Desligar o som (e a voz do instrutor)', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
@@ -413,10 +528,11 @@ function openPause(confirmReset) {
   }
   showModal('PAUSA', `${Veh.job === 'envios' ? 'Envios' : Veh.cur.shuttle ? 'Trechos escolares' : Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.job === 'envios' ? S.envios : Veh.cur.shuttle ? S.schoolLegs : Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
-    { label: 'Trocar modalidade · J', run: () => Garagem.jobsMenu() },
-    { label: 'Minha casa · B', run: () => { if (Garagem.atHome()) Garagem.menu(); else { closeModal(); Nav.go('casa'); } } },
+    { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
+    { label: 'Minha casa', run: () => { if (Garagem.atHome()) Garagem.menu(); else { closeModal(); Nav.go('casa'); } } },
+    ...touchPauseItems(),
     ...(!Veh.twoWheel() && S.car.problems.flat ? [{ label: S.car.spare ? 'Montar estepe · grátis' : 'Estepe usado · reponha na oficina', disabled: !S.car.spare || player.speed >= 8, run: () => { closeModal(); Garagem.spare(); } }] : []),
-    ...(!Rides.canWork() || Garagem.pushing ? [{ label: Garagem.pushing ? 'Voltar ao volante · U' : 'Descer e empurrar · U', run: () => { closeModal(); Garagem.push(); } }] : []),
+    ...(!Rides.canWork() || Garagem.pushing ? [{ label: Garagem.pushing ? 'Voltar ao volante' : 'Descer e empurrar', run: () => { closeModal(); Garagem.push(); } }] : []),
     { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
     { label: 'Ajuda: todas as regras', run: openHelp },
@@ -585,6 +701,10 @@ function drawCar(spr, x, y, a, braking) {
 function render() {
   const vw = view.w, vh = view.h;
   let cx = cam.x - vw / 2, cy = cam.y - vh / 2;
+  if (usingTouch && mode !== 'title') {
+    cx += Math.cos(player.a) * 22;
+    cy += Math.sin(player.a) * 22;
+  }
   if (shake > 0) { cx += R.f(-shake, shake); cy += R.f(-shake, shake); }
   camX = Math.round(clamp(cx, 0, Math.max(0, mapCanvas.width - vw)));
   camY = Math.round(clamp(cy, 0, Math.max(0, mapCanvas.height - vh)));
@@ -685,9 +805,9 @@ const STEP = 1 / 60;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (mode === 'play') {
+  if (canDrive()) {
     acc += dt;
-    while (acc >= STEP && mode === 'play') { update(STEP); acc -= STEP; }
+    while (acc >= STEP && canDrive()) { update(STEP); acc -= STEP; }
   } else {
     acc = 0;
     if (mode === 'title') { time += dt; traffic.update(dt, player); peds.update(dt, player); }

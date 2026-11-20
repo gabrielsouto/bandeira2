@@ -231,7 +231,7 @@ const RidesNet = {
       const msg = f === 'espera' ? 'O turno ainda não começou. As chamadas aparecem às 07:00.'
         : f === 'contagem' ? 'Preparar… o turno já vai começar!'
         : f === 'prorrogacao' ? 'Deu 19:00! Esperando quem ainda está com passageiro.'
-        : 'Turno encerrado. Aperte <b>R</b> para ver o ranking.';
+        : 'Turno encerrado. Use <b>Ranking</b> para ver o resultado.';
       return `<div class="ph-title">${f === 'fim' || f === 'prorrogacao' ? 'FIM DO TURNO' : 'SALA ' + esc(Multi.sala)}</div>` +
         `<div class="ph-muted">${msg}</div>` +
         (f !== 'espera' ? `<div class="ph-stats">Corridas: ${Multi.myCorridas}<br>Lucro: ${fmtMoney(S.money - TURN_START_MONEY)}</div>` : '');
@@ -244,7 +244,7 @@ const RidesNet = {
       return `<div class="ph-title">CHAMADAS NA CIDADE (${this.calls.length})</div>` +
         (rows || '<div class="ph-muted">Nenhuma chamada agora…</div>') +
         (sel ? `<div class="ph-muted">${PTYPES[sel.type].label} · viagem de ${kmStr(sel.tripD)}</div>` : '') +
-        `<div class="ph-btns"><button data-act="accept">E · BUSCAR</button><button data-act="decline" class="ghost">Q · PRÓXIMA</button></div>`;
+        `<div class="ph-btns"><button data-act="accept"><kbd>E</kbd> BUSCAR</button><button data-act="decline" class="ghost"><kbd>Q</kbd> PRÓXIMA</button></div>`;
     }
     if (st === 'toPickup' || st === 'boarding') {
       const c = this.calls.find((x) => x.id === r.id);
@@ -255,7 +255,7 @@ const RidesNet = {
         <div class="ph-muted">${msg}</div>
         ${!r.confirmed && c ? `<div class="ph-row">Expira em ${mmss(c.expires)}</div>` : ''}
         <div class="ph-fare small">${fmtMoney(r.fare)}</div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">${r.confirmed ? 'C · CANCELAR (R$ 5)' : 'C · DESISTIR'}</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost">${r.confirmed ? '<kbd>C</kbd> CANCELAR (R$ 5)' : '<kbd>C</kbd> DESISTIR'}</button></div>`;
     }
     if (st === 'dropping' && r && !r.paid) {
       return '<div class="ph-title">CORRIDA CONCLUÍDA</div><div class="ph-muted">Recebendo o pagamento da sala…</div>';

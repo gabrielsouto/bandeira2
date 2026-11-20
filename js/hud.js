@@ -26,18 +26,28 @@ const HUD = {
   init() {
     this.el = {
       money: $('money'), rating: $('rating'), spd: $('spd'), fuel: $('fuelbar'), hp: $('hpbar'), wear: $('wearbar'),
-      temp: $('tempbar'), tempwrap: $('tempwrap'), probs: $('problems'), phone: $('phonebody'), clock: $('clock'), mm: $('minimap'),
+      temp: $('tempbar'), tempwrap: $('tempwrap'), probs: $('problems'), phone: $('phonebody'), actions: $('phoneactions'),
+      offerTime: $('offertime'), offerBar: $('offertime').querySelector('.ph-timer > div'), offerLeft: $('offerleft'),
+      clock: $('clock'), mm: $('minimap'),
     };
     this.el.mm.width = city.W * 2; this.el.mm.height = city.H * 2;
     this.mmCtx = this.el.mm.getContext('2d');
     this.mmCtx.imageSmoothingEnabled = false;
-    this.el.phone.addEventListener('click', (e) => {
+    const phone = $('phone'), more = $('phonemore');
+    more.addEventListener('click', () => {
+      const expanded = phone.classList.toggle('expanded');
+      more.setAttribute('aria-expanded', expanded);
+      more.textContent = expanded ? 'Recolher' : 'Detalhes';
+    });
+    phone.addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]');
-      if (!b || mode !== 'play') return;
+      if (!b || !canDrive()) return;
       const a = b.dataset.act;
       const tgt = activeJob();
       if (a === 'accept') tgt.accept(); else if (a === 'decline') tgt.decline?.(); else if (a === 'cancel') tgt.cancel();
       else if (a === 'return' && tgt === Parcels && tgt.state === 'route') tgt.startReturn();
+      else if (a === 'tow') onKey('KeyG');
+      else if (a === 'push') onKey('KeyU');
     });
   },
 
@@ -50,9 +60,13 @@ const HUD = {
     const showTemp = !pedal && (c.problems.overheat || Care.overheated);
     e.tempwrap.style.display = showTemp ? '' : 'none';
     if (showTemp) setBar(e.temp, (c.temp - 40) / 70 * 100, Care.overheated ? '#ff4d4d' : '#ffb020');
-    const tb = e.phone.querySelector('.ph-timer > div');
     const offer = activeJob().offer;
-    if (tb && offer) tb.style.width = (offer.expires / offer.expMax * 100) + '%';
+    e.offerTime.hidden = !offer || !this.showOfferTime;
+    if (!e.offerTime.hidden) {
+      e.offerBar.style.width = clamp(100 * offer.expires / offer.expMax, 0, 100) + '%';
+      const remaining = `${Math.max(0, Math.ceil(offer.expires))} s`;
+      if (e.offerLeft.textContent !== remaining) e.offerLeft.textContent = remaining;
+    }
 
     this.t -= dt;
     if (this.t > 0) return;
@@ -77,8 +91,8 @@ const HUD = {
     const probs = [];
     if (c.health <= 0) probs.push('QUEBRADO');
     if (Care.empty()) probs.push(Veh.cur.electric ? 'SEM CARGA' : 'SEM COMBUSTÍVEL');
-    if (Garagem.pushing) probs.push('EMPURRANDO · U para entrar');
-    if (c.problems.flat && Garagem.enabled && !Veh.twoWheel()) probs.push(c.spare ? 'T · montar estepe' : 'SEM ESTEPE');
+    if (Garagem.pushing) probs.push('EMPURRANDO');
+    if (c.problems.flat && Garagem.enabled && !Veh.twoWheel()) probs.push(c.spare ? 'PNEU FURADO' : 'SEM ESTEPE');
     if (pedal && Care.legs < LEGS_TIRED) probs.push('PERNA BAMBA');
     if (!pedal && Care.overheated) probs.push('SUPERAQUECIDO');
     if (!pedal && Care.badFuel() > 0.25) probs.push('GASOLINA BATIZADA');
@@ -92,21 +106,43 @@ const HUD = {
       (school.phase === 'aula' ? 'Saída da escola em ' + mmss(school.wait) : 'A turma espera na escola') + '</div>' : '';
     const html = this.phoneHTML() + reminder;
     if (html !== this.lastPhone) {
-      const scroll = e.phone.querySelector('.ph-stops')?.scrollTop || 0;
-      e.phone.innerHTML = html; this.lastPhone = html;
-      if (scroll && e.phone.querySelector('.ph-stops')) e.phone.querySelector('.ph-stops').scrollTop = scroll;
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      const timer = template.content.querySelector('.ph-timer');
+      this.showOfferTime = !!timer;
+      timer?.remove();
+      const actions = template.content.querySelector('.ph-btns');
+      const actionHTML = actions?.outerHTML || '';
+      actions?.remove();
+      if (actionHTML !== this.lastActions) {
+        e.actions.replaceChildren(...(actions ? [actions] : []));
+        this.lastActions = actionHTML;
+      }
+      const scroll = e.phone.scrollTop;
+      const stops = e.phone.querySelector('.ph-stops')?.scrollTop || 0;
+      e.phone.replaceChildren(template.content);
+      e.phone.scrollTop = scroll;
+      const stopList = e.phone.querySelector('.ph-stops');
+      if (stopList) stopList.scrollTop = stops;
+      this.lastPhone = html;
+    }
+    const pega = $('touchpega');
+    if (Multi.active) {
+      const label = Pega.mine() ? 'Sair do pega' : Pega.p ? 'Entrar no pega' : 'Chamar pega';
+      if (pega.textContent !== label) pega.textContent = label;
+      pega.disabled = !!Pega.p && (Pega.mine() ? Pega.p.chegaram.includes(Multi.me) : Pega.p.fase !== 'inscricao');
     }
     this.drawMinimap();
   },
 
   phoneHTML() {
     const c = S.car, st = Rides.state, r = Veh.cur.parcels ? Parcels.route : Rides.ride;
-    if (Garagem.enabled && (c.health <= 0 || Care.empty())) return '<div class="ph-alert">' +
-      (c.health <= 0 ? 'VEÍCULO QUEBRADO' : Veh.cur.electric ? 'BATERIA ESGOTADA' : 'SEM COMBUSTÍVEL') +
-      '</div><div class="ph-muted">' + (Garagem.pushing ? 'Empurre com WASD ou setas. U para entrar.' : 'U para descer e empurrar de graça.') +
-      ' G chama o guincho (' + fmtMoney(TOW_COST) + ').</div>';
-    if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.noun().toUpperCase()} QUEBRAD${Veh.fem() ? 'A' : 'O'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
-    if (Care.empty() && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
+    if ((Garagem.enabled || !r) && (c.health <= 0 || Care.empty())) {
+      const alert = c.health <= 0 ? 'VEÍCULO QUEBRADO' : Veh.cur.electric ? 'BATERIA ESGOTADA' : 'SEM COMBUSTÍVEL';
+      return `<div class="ph-alert">${alert}</div><div class="ph-muted">Guincho: ${fmtMoney(TOW_COST)}</div>` +
+        '<div class="ph-btns"><button data-act="tow"><kbd>G</kbd> Guincho</button>' +
+        (Garagem.enabled ? `<button data-act="push" class="ghost"><kbd>U</kbd> ${Garagem.pushing ? 'Voltar ao volante' : 'Empurrar'}</button>` : '') + '</div>';
+    }
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (Veh.job === 'envios') return Envios.phoneHTML();
     if (Veh.cur.school) return Autoescola.phoneHTML();
@@ -130,7 +166,7 @@ const HUD = {
         ${pt.desc ? `<div class="ph-muted">${pt.desc}</div>` : ''}
         <div class="ph-muted">Buscar a ${kmStr(o.pickD)} · viagem de ${kmStr(o.tripD)}</div>
         <div class="ph-timer"><div></div></div>
-        <div class="ph-btns"><button data-act="accept">E · ACEITAR</button><button data-act="decline" class="ghost">Q · RECUSAR</button></div>`;
+        <div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ACEITAR</button><button data-act="decline" class="ghost"><kbd>Q</kbd> RECUSAR</button></div>`;
     }
     if (st === 'toPickup' || st === 'boarding') {
       return `<div class="ph-title">BUSCANDO PASSAGEIRO</div>
@@ -138,7 +174,7 @@ const HUD = {
         <div class="ph-muted">${st === 'boarding' ? 'Embarcando… segura o carro!' : 'Siga a seta verde e pare do lado do passageiro.'}</div>
         <div class="ph-row">Espera máx.: ${mmss(r.maxWait - r.waitT)}</div>
         <div class="ph-fare small">${fmtMoney(r.fare)}</div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · CANCELAR</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> CANCELAR</button></div>`;
     }
     if (st === 'onTrip') {
       const left = r.allowed - r.t;
@@ -148,7 +184,7 @@ const HUD = {
         <div class="ph-big ${left < 0 ? 'late' : ''}">${mmss(left)}</div>
         <div class="ph-row">Valor: ${fmtMoney(r.fare)} · Batidas: ${r.hits}</div>
         ${r.type === 'enjoo' ? `<div class="ph-row">Estômago</div><div class="ph-comfort"><div style="width:${Math.max(0, Math.round(r.comfort / 5) * 5)}%"></div></div>` : ''}
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · LARGAR PASSAGEIRO</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> LARGAR PASSAGEIRO</button></div>`;
     }
     if (st === 'dropping' && Rides.lastResult) {
       const res = Rides.lastResult;

@@ -185,7 +185,7 @@ const Delivery = {
         ${dt.desc ? `<div class="ph-muted">${dt.desc}</div>` : ''}
         <div class="ph-muted">Retirar a ${kmStr(o.pickD)} · entregar a ${kmStr(o.tripD)}</div>
         <div class="ph-timer"><div></div></div>
-        <div class="ph-btns"><button data-act="accept">E · ACEITAR</button><button data-act="decline" class="ghost">Q · RECUSAR</button></div>`;
+        <div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ACEITAR</button><button data-act="decline" class="ghost"><kbd>Q</kbd> RECUSAR</button></div>`;
     }
     if (st === 'toPickup' || st === 'boarding') {
       const ready = r.prep <= 0;
@@ -198,7 +198,7 @@ const Delivery = {
         <div class="ph-muted">${msg}</div>
         ${st === 'toPickup' ? `<div class="ph-row">Espera máx.: ${mmss(r.maxWait - r.waitT)}</div>` : ''}
         <div class="ph-fare small">${fmtMoney(r.fare)}</div>
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · CANCELAR</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> CANCELAR</button></div>`;
     }
     if (st === 'onTrip') {
       const left = r.allowed - r.t, heat = this.heatLabel(r);
@@ -210,7 +210,7 @@ const Delivery = {
         <div class="ph-row">Valor: ${fmtMoney(r.fare)} · Batidas: ${r.hits}</div>
         ${DTYPES[r.type].slosh ? (r.spilled ? '<div class="ph-row late">Refri vazou!</div>'
           : `<div class="ph-row">Refri</div><div class="ph-comfort"><div style="width:${Math.max(0, Math.round(r.comfort / 5) * 5)}%"></div></div>`) : ''}
-        <div class="ph-btns"><button data-act="cancel" class="ghost">C · DESISTIR DO PEDIDO</button></div>`;
+        <div class="ph-btns"><button data-act="cancel" class="ghost"><kbd>C</kbd> DESISTIR DO PEDIDO</button></div>`;
     }
     if (st === 'dropping' && Rides.lastResult) {
       const res = Rides.lastResult;

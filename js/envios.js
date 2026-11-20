@@ -115,8 +115,8 @@ const Envios = {
     const title = offer ? 'NOVO ENVIO' : pickup ? 'RETIRAR PACOTE' : 'ENTREGAR PACOTE';
     const details = offer ? `Coleta a ${kmStr(r.pickD)} · trajeto de ${kmStr(r.tripD)}` :
       pickup ? 'Pare na seta verde para receber o pacote.' : 'Pare na seta amarela para entregar em mãos.';
-    const buttons = offer ? '<button data-act="accept">E · ACEITAR</button><button class="ghost" data-act="decline">Q · RECUSAR</button>' :
-      (atRecipient && r.pin ? '<button data-act="accept">E · CONFERIR PIN</button>' : '') + '<button class="ghost" data-act="cancel">C · CANCELAR</button>';
+    const buttons = offer ? '<button data-act="accept"><kbd>E</kbd> ACEITAR</button><button class="ghost" data-act="decline"><kbd>Q</kbd> RECUSAR</button>' :
+      (atRecipient && r.pin ? '<button data-act="accept"><kbd>E</kbd> CONFERIR PIN</button>' : '') + '<button class="ghost" data-act="cancel"><kbd>C</kbd> CANCELAR</button>';
     return `<div class="ph-title">${title}</div><div class="ph-fare">${fmtMoney(r.fare)}</div>
       <div class="ph-row">${esc(r.item)}</div><div class="ph-muted">De ${esc(r.sender)} para ${esc(r.recipient)}</div>
       <div class="ph-row">${details}</div>${r.pin ? '<div class="ph-badge">ENTREGA COM PIN</div>' : ''}
