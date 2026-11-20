@@ -3,6 +3,11 @@
 // A escolha fica guardada no navegador e vale para o solo e para o multiplayer.
 
 // As chaves (uber, n99, taxi, moto) vão pela rede para a sala: mudar o nome mostrado é só em "name" e "app".
+const PARCEL_VAN = {
+  art: 'van', soloOnly: true, cap: 12,
+  phys: { accel: 120, maxSpeed: 185, reverseMax: 50, brake: 285, steerRate: 2.55, off: 6 },
+  fare: 1, offerMul: 1, fuelUse: 1.2, tankMul: 1.15, dmgMul: 0.9,
+};
 const VEHICLES = {
   uber: {
     name: 'Rebu', app: 'REBU', color: '#26282e', art: 'car',
@@ -47,8 +52,22 @@ const VEHICLES = {
     desc: 'Aprenda a dirigir! Busque o instrutor e siga as setas. 6 aulas e a prova do DETRAN. (Só no solo.)',
     phys: {}, fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
   },
+  leve: {
+    ...PARCEL_VAN, name: 'Mercado Leve', app: 'Mercado Leve', color: '#ffe600', parcels: 'leve',
+    desc: 'Van de encomendas. Carregue até 12 pacotes no galpão e escolha a ordem das paradas. Só no solo.',
+  },
+  amazoom: {
+    ...PARCEL_VAN, name: 'Amazoom', app: 'Amazoom', color: '#ff9900', parcels: 'amazoom',
+    desc: 'Van de encomendas. Faça até 12 paradas e volte ao galpão para fechar a rota. Só no solo.',
+  },
+  xopi: {
+    name: 'Xopi', app: 'Xopi', color: '#ee4d2d', art: 'moto', bag: '#ee4d2d', parcels: 'xopi', soloOnly: true, cap: 5,
+    desc: 'Moto com baú. Até 5 pacotes por rota, com endereços próximos ao galpão. Só no solo.',
+    phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
+    fare: 1, offerMul: 0.7, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
+  },
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi'];
 const VEH_KEY = 'bandeira2-veiculo';
 
 const Veh = {
@@ -68,8 +87,8 @@ const Veh = {
   // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
   twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },
   // nome do veículo nos avisos: "carro", "moto" ou "bike" (fem: usa "a")
-  noun(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' ? 'moto' : a === 'bike' ? 'bike' : 'carro'; },
-  fem(k = this.key) { return this.twoWheel(k); },
+  noun(k = this.key) { const a = VEHICLES[k].art; return ['moto', 'bike', 'van'].includes(a) ? a : 'carro'; },
+  fem(k = this.key) { return this.noun(k) !== 'carro'; },
 
   // física completa do veículo (o que não muda fica igual ao carro padrão)
   phys(k = this.key) { return Object.assign({}, CARP, VEHICLES[k].phys); },

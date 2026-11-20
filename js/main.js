@@ -3,11 +3,11 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, earned: 0, aura: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, earned: 0, aura: 0,
     car: { fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
-  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return s; } catch (e) { /* sem save */ }
+  try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.v === 1) return { parcels: 0, ...s }; } catch (e) { /* sem save */ }
   return null;
 }
 // Modo de jogo. Só o solo lê e grava o save local; o multiplayer terá um estado próprio que nunca toca no save.
@@ -40,7 +40,11 @@ window.addEventListener('resize', resize);
 resize();
 
 const player = makePlayer(0, 0, 0);
-// veículo escolhido na tela inicial: sprite, física e nome do app no celular
+function activeJob() {
+  if (Veh.cur.parcels) return Parcels;
+  return Veh.cur.school ? Autoescola : Rides;
+}
+// Veículo escolhido na tela inicial: sprite, física e nome do app no celular.
 function applyVehicle() {
   const v = Veh.cur;
   SPR.player = makeCarSprites(v.color, true, v.art, v.bag);
@@ -50,6 +54,11 @@ function applyVehicle() {
   $('phone').classList.toggle('food66', !!v.pedal);
   $('fuellbl').textContent = v.pedal ? 'FÔLEGO' : 'COMBUST.';
   $('phone').classList.toggle('escola', !!v.school);
+  $('phone').classList.toggle('parcels', !!v.parcels);
+  document.documentElement.style.setProperty('--parcel-color', v.color);
+  $('lghub').classList.toggle('hidden', !v.parcels);
+  $('lgstops').classList.toggle('hidden', !v.parcels);
+  $('lgsurge').classList.toggle('hidden', !!v.parcels || !!v.school);
   $('lgrest').classList.toggle('hidden', !v.delivery);
 }
 applyVehicle();
@@ -71,6 +80,7 @@ Rides.init(city);
 Light.init(city);
 World.init(city, mapCtx);
 Delivery.init(city, mapCtx); // restaurantes do euComida (depois do World: não pega colégio nem área de risco)
+Parcels.init(city, mapCtx);
 Autoescola.init(city);
 traffic.capFn = (x, y) => World.trafficCap(x, y);
 Signals.init(city);
@@ -111,8 +121,8 @@ function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
-    const d = code.match(/^(Digit|Numpad)([1-7])$/);
-    if (d) { pickVehicle(VEH_ORDER[+d[2] - 1]); return; }
+    const d = code.match(/^(Digit|Numpad)(\d)$/);
+    if (d) { pickVehicle(VEH_ORDER[(+d[2] || 10) - 1]); return; }
     if ((code === 'Enter' || code === 'Space') && !$('startbtn').disabled) startGame();
     return;
   }
@@ -123,9 +133,10 @@ function onKey(code) {
   }
   if (Multi.roomKey(code)) return;
   switch (code) {
-    case 'KeyE': if (Veh.cur.school) Autoescola.accept(); else Rides.accept(); break;
-    case 'KeyQ': Rides.decline(); break;
-    case 'KeyC': if (Veh.cur.school) Autoescola.cancel(); else Rides.cancel(); break;
+    case 'KeyE': activeJob().accept(); break;
+    case 'KeyQ': activeJob().decline?.(); break;
+    case 'KeyC': activeJob().cancel(); break;
+    case 'KeyV': if (Veh.cur.parcels && Parcels.state === 'route') Parcels.startReturn(); break;
     case 'KeyF': Easy.toggle(); break;
     case 'KeyH': Sfx.horn(0.09); peds.scare(player.x, player.y); break;
     case 'KeyG': callTow(); break;
@@ -150,6 +161,8 @@ function startGame() {
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.cur.parcels) {
+    toast(`Você está online no ${Veh.cur.app}! Aceite uma rota no celular e carregue no galpão.`, 'good');
   } else if (Veh.cur.delivery) {
     Care.legs = 100;
     toast(`Você está online no ${Veh.cur.app}! Os pedidos chegam no celular.`, 'good');
@@ -176,9 +189,9 @@ Easy.refresh();
   VEH_ORDER.forEach((k, i) => {
     const v = VEHICLES[k], b = document.createElement('button');
     b.className = 'ghost'; b.dataset.veh = k;
-    const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(40, 24);
-    g.drawImage(spr.img, Math.round(20 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
-    b.append(cv, document.createTextNode(`${i + 1} · ${v.name}`));
+    const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(44, 24);
+    g.drawImage(spr.img, Math.round(22 - spr.img.width), Math.round(12 - spr.img.height), spr.img.width * 2, spr.img.height * 2);
+    b.append(cv, document.createTextNode(`${(i + 1) % 10} · ${v.name}`));
     b.addEventListener('click', () => { pickVehicle(k); b.blur(); });
     box.appendChild(b);
   });
@@ -316,7 +329,7 @@ function openPause(confirmReset) {
     ], 'Voltar', true);
     return;
   }
-  showModal('PAUSA', `${Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
+  showModal('PAUSA', `${Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
     { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
     { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
@@ -342,7 +355,8 @@ function callTow() {
     openPlaceMenu(here);
     return;
   }
-  if (Rides.ride) Rides.cancel(true);
+  if (Veh.cur.parcels) Parcels.cancel(true);
+  else if (Rides.ride) Rides.cancel(true);
   let best = null, bd = Infinity;
   for (const p of city.places) {
     if (p.kind !== kind) continue;
@@ -387,7 +401,7 @@ function onPedHit(who) {
   if (Veh.cur.school) { Autoescola.onPedHit(); player.vx *= 0.85; player.vy *= 0.85; return; }
   Care.charge(RUN_OVER_FINE, 'multa');
   toast(`Você atropelou ${who === 'criança' ? 'uma criança' : 'um pedestre'}! Multa de ${fmtMoney(RUN_OVER_FINE)}.`, 'bad');
-  Sfx.bad(); Rides.onImpact(80);
+  Sfx.bad(); activeJob().onImpact(80);
   player.vx *= 0.85; player.vy *= 0.85;
   Police.alert('atropelamento');
 }
@@ -405,8 +419,7 @@ function update(dt) {
   const pushed = Math.max(Multi.collide(player) * 0.5, Police.collide(player));
   const imp = Math.max(collidePlayer(player, city, traffic.cars, m.wallSlide), pushed);
   if (imp > 35) {
-    Care.onImpact(imp); Rides.onImpact(imp);
-    if (Veh.cur.school) Autoescola.onImpact(imp);
+    Care.onImpact(imp); activeJob().onImpact(imp);
     Sfx.crash(clamp(imp / 220, 0.15, 1));
     shake = Math.min(5, imp / 40);
     if (imp > 60) for (let k = 0; k < 8; k++)
@@ -421,7 +434,7 @@ function update(dt) {
   World.update(dt, player);
   Signals.update(dt, player); // avançou o sinal vermelho?
   Police.update(dt, player);
-  if (Veh.cur.school) Autoescola.update(dt, player); else Rides.update(dt, player);
+  activeJob().update(dt, player);
 
   // marcas de pneu (ficam pintadas no mapa)
   const fx = Math.cos(player.a), fy = Math.sin(player.a), rx = -fy, ry = fx;
@@ -488,7 +501,7 @@ function render() {
 
   // áreas de tarifa dinâmica
   ctx.font = '12px VT323, monospace'; ctx.textAlign = 'center';
-  for (const s of Veh.cur.school ? [] : Rides.surges) {
+  for (const s of Veh.cur.school || Veh.cur.parcels ? [] : Rides.surges) {
     const sx = s.x - camX, sy = s.y - camY;
     if (sx + s.r < 0 || sy + s.r < 0 || sx - s.r > vw || sy - s.r > vh) continue;
     const a = clamp(Math.min(s.age / 2, (s.life - s.age) / 2), 0, 1);
@@ -514,9 +527,9 @@ function render() {
   Signals.draw(ctx, camX, camY, vw, vh);
   World.draw(ctx, camX, camY, vw, vh);
   Delivery.draw(ctx, camX, camY, vw, vh);
+  Parcels.draw(ctx, camX, camY, vw, vh);
   peds.draw(ctx, camX, camY, vw, vh);
-  Rides.drawWorld(ctx, camX, camY);
-  Autoescola.drawWorld(ctx, camX, camY);
+  activeJob().drawWorld(ctx, camX, camY);
   for (const n of traffic.cars) drawCar(SPR.npc[n.ci], n.x, n.y, n.a, n.speed < 5);
   Police.draw();
   Multi.drawCars();
@@ -539,13 +552,13 @@ function render() {
   Multi.lightCars(lit);
   Police.lightCars(lit);
   Light.render(ctx, vw, vh, camX, camY, lit, (L) => {
-    World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); Autoescola.drawLights(L, camX, camY); Signals.drawLights(L, camX, camY);
+    World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); Parcels.drawLights(L, camX, camY); Autoescola.drawLights(L, camX, camY); Signals.drawLights(L, camX, camY);
   });
   Police.drawGlow();
   Multi.drawTags();
 
   // seta orbitando o carro apontando o objetivo
-  const tg = Nav.target() || (GAME.mode === 'multi' && Pega.target()) || (Veh.cur.school ? Autoescola.target() : Rides.target());
+  const tg = Nav.target() || (GAME.mode === 'multi' && Pega.target()) || activeJob().target();
   if (tg && mode !== 'title') {
     const d = Math.hypot(tg.x - player.x, tg.y - player.y);
     if (d > 40) {

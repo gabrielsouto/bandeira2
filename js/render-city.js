@@ -26,6 +26,20 @@ const CAR_ART = [
   'obbbbdbbbbbbdbbbbo',
   '.oooooooooooooooo.',
 ];
+// Furgão voltado para a direita. A faixa na caixa de carga leva a cor do app.
+const VAN_ART = [
+  '.oooooooooooooooooo..',
+  'obbbbbbbbbbbbdwwwbbo.',
+  'tlllllllllllldwwwwbbh',
+  'olddllllllllddwwwwbbo',
+  'olddbbzzbbblldwwwwbbo',
+  'olddbbbzzbblldwwwwbbo',
+  'olddbbzzbbblldwwwwbbo',
+  'olddllllllllddwwwwbbo',
+  'tlllllllllllldwwwwbbh',
+  'obbbbbbbbbbbbdwwwbbo.',
+  '.oooooooooooooooooo..',
+];
 // moto vista de cima, de frente para a direita: pneus (k), lanterna (t), piloto (p) e capacete (q)
 const MOTO_ART = [
   '....pp........',
@@ -128,16 +142,18 @@ function artToCanvas(rows, pal) {
 // bag = entregador com a caixa térmica (true = vermelha do euComida, ou a cor da bag)
 function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
   let rows = art === 'bike' ? BIKE_ART : art === 'moto' ? (bag ? MOTO_BAG_ART : MOTO_ART) : CAR_ART;
+  if (art === 'van') rows = VAN_ART;
   const bagCol = typeof bag === 'string' ? bag : '#e3262e';
   if (art === 'taxi') rows = rows.map((row, y) => (y >= 3 && y <= 6) ? row.slice(0, 7) + 'sss' + row.slice(10) : row);
   // autoescola: faixa vermelha dos lados e placa no teto
   if (art === 'escola') rows = rows.map((row, y) => (y === 1 || y === 8) ? row.slice(0, 3) + 'y'.repeat(12) + row.slice(15)
     : (y >= 3 && y <= 6) ? row.slice(0, 7) + 'yyy' + row.slice(10) : row);
-  if (isPlayer && art !== 'moto' && art !== 'bike') rows = rows.map((row, y) => (y === 4 || y === 5) ? row.slice(0, 10) + 'g' + row.slice(11) : row);
+  if (isPlayer && ['car', 'taxi', 'escola'].includes(art)) rows = rows.map((row, y) => (y === 4 || y === 5) ? row.slice(0, 10) + 'g' + row.slice(11) : row);
   const pal = { o: shade(body, -0.6), b: body, d: shade(body, -0.22), l: shade(body, 0.2),
     w: '#24323f', h: '#fff3b0', t: '#7a1c1c', g: '#39ff88', s: '#ff9a1f', k: '#151515', p: bag ? '#3a3a3a' : '#2c3e66', q: isPlayer ? '#39ff88' : '#e8e8e8',
     x: shade(bagCol, -0.55), y: bagCol, z: typeof bag === 'string' ? '#151515' : '#f4f4f4' };
   if (art === 'bike') { pal.b = '#2a2a2a'; pal.h = '#e8f4ff'; } // quadro preto, farolete branco
+  if (art === 'van') { pal.l = '#d9dcdd'; pal.z = '#232f3e'; }
   const shadowPal = {};
   for (const k in pal) shadowPal[k] = 'rgba(0,0,0,0.35)';
   return {

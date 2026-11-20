@@ -68,6 +68,13 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 .ph-type { display: inline-block; font-size: 17px; padding: 0 5px; background: #222a38; color: #cfd6e4; }
 .t-lanche { background: #3a2414; color: #ffcf8a; } .t-pizza { background: #183a1c; color: #9af0a0; } .t-acai { background: #33183f; color: #e0a8ff; }
 .t-refri { background: #1a2a44; color: #9cc8ff; } .t-festa { background: #4a1418; color: #ff9a9a; }
+#lghub i { background: var(--parcel-color); }
+#lgstops i { background: var(--gold); }
+#phone.parcels { max-height: calc(100vh - 64px); overflow-y: auto; box-shadow: 0 0 0 3px var(--parcel-color), 6px 6px 0 3px rgba(0,0,0,.45); }
+#phone.parcels .appbar { color: var(--parcel-color); }
+.ph-stops { max-height: min(25vh, 155px); overflow: auto; }
+.ph-stop { padding: 2px 0; border-bottom: 1px solid var(--border); }
+.ph-stop b { color: var(--gold); }
 #phone.food { box-shadow: 0 0 0 3px #7d0f14, 6px 6px 0 3px rgba(0,0,0,.45); }
 #phone.food .appbar { color: #ff5a5f; }
 #phone.food66 { box-shadow: 0 0 0 3px #8a6f00, 6px 6px 0 3px rgba(0,0,0,.45); }
@@ -193,7 +200,7 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 #vehpick { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
 #vehbtns { display: flex; gap: 8px; flex-wrap: wrap; }
 #vehbtns button { display: flex; align-items: center; gap: 6px; font-size: 19px; padding: 2px 8px; }
-#vehbtns button canvas { width: 40px; height: 24px; image-rendering: pixelated; }
+#vehbtns button canvas { width: 44px; height: 24px; image-rendering: pixelated; }
 #vehbtns button.sel { background: #0f1d16; box-shadow: 0 0 0 2px var(--accent); color: var(--accent); }
 #vehdesc { color: var(--muted); font-size: 19px; min-height: 1.2em; }
 .ph-badge.b2 { background: var(--gold); margin-left: 4px; }

@@ -75,7 +75,9 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 | H | buzina |
 | R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
 | X | pega (multiplayer): chamar, entrar ou desistir |
-| 1–7 | na tela inicial: escolher Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida ou Autoescola |
+| 1–7 | escolher Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida ou Autoescola |
+| 8 / 9 / 0 | escolher Mercado Leve, Amazoom ou Xopi |
+| V | voltar ao galpão com a carga restante durante uma rota de encomendas |
 | O / P / L | seta até a oficina, o posto ou o lava jato mais perto (a mesma tecla cancela) |
 | G | guincho (quando o carro quebra ou fica sem gasolina; não cobra se você já está lá) |
 | F | liga/desliga a direção fácil |
@@ -94,6 +96,7 @@ Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano g
 - Entregador do **euComida** (5º veículo, só no solo): moto com bag que leva pedidos de 8 restaurantes (toldo listrado, rosa no minimapa) até o cliente. A cozinha pode estar preparando, a comida esfria, pizza e pedido de festa não aguentam batida, açaí derrete e o refri vaza com derrapada.
 - Entregador de bike do **66Comida** (6º veículo, só no solo): os mesmos pedidos, mas de bicicleta. Não gasta gasolina: a barra do tanque vira **fôlego**, que cai pedalando e volta parado (ou com um café no posto). Mais lenta, só pedidos perto, sem pedido de festa e com mais prazo.
 - **Direção fácil** (tecla F, botão na tela inicial ou pausa): carro mais lento que quase não derrapa, volante que se endireita sozinho, raspa no muro em vez de quicar e freio automático na frente de pedestres e carros. No solo, também estraga menos, não quebra sozinho e gasta menos gasolina.
+- No solo, as vans do **Mercado Leve** e da **Amazoom** fazem rotas de até 12 pacotes. A **Xopi** oferece rotas curtas de até 5 pacotes na moto. Carregue no galpão, escolha as paradas no minimapa e volte à doca para receber pelas coletas e pelo bônus de rota perfeita.
 - **Autoescola** (7º veículo, só no solo): busque o instrutor e siga as setas pintadas nos cruzamentos. O instrutor fala o que fazer (voz do navegador), tira pontos por batida, excesso de velocidade, calçada, contramão e PARE furado, e dá de 0 a 3 estrelas. 6 aulas (a última é a prova do DETRAN, que dá a carteira) e depois treino livre. Não mexe no dinheiro nem no save.
 - Dia e noite: o relógio anda 1 minuto por segundo; à noite escurece, com faróis, postes e giroflex.
 - Rádio do carro com estações sintetizadas (funk, sertanejo, pagode) e uma estação de notícias falada pela voz do navegador.
@@ -116,9 +119,10 @@ js/util.js         utilidades (aleatório, cores, pixels)
 js/city.js         geração da cidade
 js/render-city.js  arte gerada por código (mapa, carros, ícones)
 js/car.js          física e colisão do jogador
-js/vehicles.js     veículos (Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida, Autoescola): física, tarifa, consumo
+js/vehicles.js     veículos, capacidades, física, tarifa e consumo
 js/facil.js        direção fácil (física mais mansa, volante que se endireita, freio automático)
 js/autoescola.js   modo autoescola: instrutor, caminho da aula, faltas, estrelas e carteira
+js/parcels.js      rotas de encomendas, galpões, paradas e devoluções
 js/delivery.js     entregador do euComida e do 66Comida: restaurantes, pedidos, nota da entrega
 js/light.js        dia e noite (escuridão, faróis, postes)
 js/radio.js        rádio do carro (música sintetizada e notícias faladas)

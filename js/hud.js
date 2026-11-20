@@ -35,8 +35,9 @@ const HUD = {
       const b = e.target.closest('[data-act]');
       if (!b || mode !== 'play') return;
       const a = b.dataset.act;
-      const tgt = Veh.cur.school ? Autoescola : Rides;
-      if (a === 'accept') tgt.accept(); else if (a === 'decline') Rides.decline(); else if (a === 'cancel') tgt.cancel();
+      const tgt = activeJob();
+      if (a === 'accept') tgt.accept(); else if (a === 'decline') tgt.decline?.(); else if (a === 'cancel') tgt.cancel();
+      else if (a === 'return' && tgt === Parcels && tgt.state === 'route') tgt.startReturn();
     });
   },
 
@@ -50,7 +51,8 @@ const HUD = {
     e.tempwrap.style.display = showTemp ? '' : 'none';
     if (showTemp) setBar(e.temp, (c.temp - 40) / 70 * 100, Care.overheated ? '#ff4d4d' : '#ffb020');
     const tb = e.phone.querySelector('.ph-timer > div');
-    if (tb && Rides.offer) tb.style.width = (Rides.offer.expires / Rides.offer.expMax * 100) + '%';
+    const offer = activeJob().offer;
+    if (tb && offer) tb.style.width = (offer.expires / offer.expMax * 100) + '%';
 
     this.t -= dt;
     if (this.t > 0) return;
@@ -61,6 +63,7 @@ const HUD = {
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
     e.rating.textContent = Veh.cur.school ? `Aulas: ${Autoescola.passed()}/${LESSONS.length} · ${Autoescola.totalStars()} ★`
+      : Veh.cur.parcels ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.parcels} pacote${S.parcels === 1 ? '' : 's'}`
       : `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} ${Veh.cur.delivery ? 'entrega' : 'corrida'}${S.rides === 1 ? '' : 's'}`;
     e.spd.textContent = Math.round(player.speed * 0.55);
     e.clock.textContent = clockStr();
@@ -81,16 +84,21 @@ const HUD = {
     if (ph !== this.lastProbs) { e.probs.innerHTML = ph; this.lastProbs = ph; }
 
     const html = this.phoneHTML();
-    if (html !== this.lastPhone) { e.phone.innerHTML = html; this.lastPhone = html; }
+    if (html !== this.lastPhone) {
+      const scroll = e.phone.querySelector('.ph-stops')?.scrollTop || 0;
+      e.phone.innerHTML = html; this.lastPhone = html;
+      if (scroll && e.phone.querySelector('.ph-stops')) e.phone.querySelector('.ph-stops').scrollTop = scroll;
+    }
     this.drawMinimap();
   },
 
   phoneHTML() {
-    const c = S.car, st = Rides.state, r = Rides.ride;
+    const c = S.car, st = Rides.state, r = Veh.cur.parcels ? Parcels.route : Rides.ride;
     if (c.health <= 0 && !r) return `<div class="ph-alert">${Veh.noun().toUpperCase()} QUEBRAD${Veh.fem() ? 'A' : 'O'}</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até a oficina (${fmtMoney(TOW_COST)}).</div>`;
     if (Care.empty() && !r) return `<div class="ph-alert">SEM GASOLINA</div><div class="ph-muted">Aperte <b>G</b> para o guincho levar até um posto (${fmtMoney(TOW_COST)}).</div>`;
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (Veh.cur.school) return Autoescola.phoneHTML();
+    if (Veh.cur.parcels) return Parcels.phoneHTML();
     if (Veh.cur.delivery) return Delivery.phoneHTML();
     if (st === 'idle') {
       const ns = Rides.nearestSurge(player.x, player.y);
@@ -143,7 +151,7 @@ const HUD = {
   drawMinimap() {
     const g = this.mmCtx, s = 2 / 16;
     g.drawImage(minimapBase, 0, 0);
-    for (const z of Veh.cur.school ? [] : Rides.surges) {
+    for (const z of Veh.cur.school || Veh.cur.parcels ? [] : Rides.surges) {
       const a = Math.min(1, z.age / 2, (z.life - z.age) / 2);
       if (a <= 0) continue;
       g.globalAlpha = a;
@@ -161,7 +169,7 @@ const HUD = {
       const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);
       g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x - 5.5, y - 5.5, 11, 11);
     }
-    const tg = Veh.cur.school ? Autoescola.target() : Rides.target();
+    const tg = activeJob().target();
     if (tg && Math.floor(time * 4) % 2 === 0) {
       const x = Math.round(tg.x * s), y = Math.round(tg.y * s);
       g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 8, 8);
@@ -169,6 +177,7 @@ const HUD = {
     }
     World.drawMinimap(g, s);
     Delivery.drawMinimap(g, s);
+    Parcels.drawMinimap(g, s);
     Autoescola.drawMinimap(g, s);
     Police.drawMinimap(g, s);
     Multi.drawMinimap(g, s);
