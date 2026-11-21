@@ -31,6 +31,7 @@ const Gincana = {
   announce() { Radio.stopTalk(); Radio.say(this.message()); writeSave(); },
   accept(id = 0) {
     if (S.gincana || !RADIO_MISSIONS[id]) return;
+    this.lastStop = null;
     S.gincana = { id, step: 0, helped: false, reveal: false, dwell: 0 };
     this.announce();
   },
@@ -48,17 +49,31 @@ const Gincana = {
   onImpact(force) {
     if (S.gincana?.id === 1 && S.gincana.step === 2 && force > 10) this.end('O disco quebrou na batida. Tente de novo!', 'bad');
   },
+  lastStop: null,
   update(dt, car) {
+    const stop = Object.keys(RADIO_CLUES).find(key => {
+      const p = this.point(key);
+      return Math.hypot(car.x - p.x, car.y - p.y) <= 24;
+    });
+    if (!stop) this.lastStop = null;
     const r = S.gincana;
+    if (stop && car.speed <= 4 && this.lastStop !== stop) {
+      this.lastStop = stop;
+      const name = this.point(stop).name;
+      if (!r) toast(name + ' · Escolha uma missão no celular ou aperte E para começar.');
+      else if (stop !== RADIO_MISSIONS[r.id].route[r.step]) {
+        toast(name + ' · Esta parada não corresponde à etapa atual. Confira a pista no celular.', 'warn');
+      }
+    }
     if (!r) return;
     if (r.step === 2 && r.id === 0 && (r.seconds -= dt) <= 0) {
       this.end('A barca já partiu. Tente de novo!', 'warn'); return;
     }
-    const p = this.point();
-    if (Math.hypot(car.x - p.x, car.y - p.y) > 24 || car.speed > 4) { r.dwell = 0; return; }
+    if (stop !== RADIO_MISSIONS[r.id].route[r.step] || car.speed > 4) { r.dwell = 0; return; }
     if (r.step < 2) {
       r.step++; r.reveal = false;
       if (r.step === 2 && r.id === 0) r.seconds = 90;
+      toast('Pista resolvida! ' + this.message(), 'good');
       this.announce(); return;
     }
     if (r.id === 2 && (r.dwell += dt) < 5) return;
@@ -87,7 +102,7 @@ const Gincana = {
     if (!r) return '<div class="ph-title">Escolha sua missão</div>' + RADIO_MISSIONS.map((m, i) =>
       '<button data-act="mission" data-mission="' + i + '">' + m.name + '</button>').join('');
     const status = r.step < 2 ? 'Pista ' + (r.step + 1) + '/2' : 'Desafio final';
-    const timer = r.step === 2 && r.id === 0 ? ' · ' + Math.ceil(r.seconds) + ' s' : '';
+    const timer = r.step === 2 && r.id === 2 && r.dwell > 0 ? ' · No ar: ' + Math.floor(r.dwell) + '/5 s' : r.step === 2 && r.id === 0 ? ' · ' + Math.ceil(r.seconds) + ' s' : '';
     return '<div class="ph-title">' + RADIO_MISSIONS[r.id].name + '</div><div class="ph-muted">' + status + timer +
       '</div><div class="ph-row">' + this.message() + '</div><div class="ph-btns">' +
       (r.step < 2 && !r.reveal ? '<button data-act="decline">Q · Dica extra (perde bônus)</button>' : '') +

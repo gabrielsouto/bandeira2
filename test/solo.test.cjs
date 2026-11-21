@@ -732,3 +732,19 @@ test('gincana leva a paradas acessíveis e paga cada desafio uma única vez', ()
   assert.equal(run('Gincana.state'), 'idle');
   assert.equal(context.S.money, 320);
 });
+
+test('gincana explica a parada sem missão e a pista incorreta, sem consumir bônus', () => {
+  const { run, context } = game(['util', 'city', 'vlt', 'barcas', 'gincana']);
+  const messages = [];
+  context.toast = message => messages.push(message);
+  context.Radio = { stopTalk() {}, say() {} };
+  run("const city = generateCity(20261118); VLT.init(city); Barcas.init(city); Object.assign(player, Gincana.point('west')); Gincana.update(1, player)");
+  assert.match(messages.pop(), /Escolha uma missão/);
+  run("Gincana.accept(); Object.assign(player, Gincana.point('east')); Gincana.update(1, player)");
+  assert.match(messages.pop(), /Pista resolvida/);
+  run("Object.assign(player, Gincana.point('west')); Gincana.update(1, player); Gincana.update(1, player)");
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /Cais Poente.*etapa atual/);
+  assert.equal(context.S.gincana.step, 1);
+  assert.equal(context.S.gincana.helped, false);
+});
