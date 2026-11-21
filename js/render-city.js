@@ -174,7 +174,6 @@ const ICONS = {
   arrowGo: makeIconCanvas(ARROW_ART, { x: '#39ff88' }),
   arrowDrop: makeIconCanvas(ARROW_ART, { x: '#ffd23f' }),
   arrowPega: makeIconCanvas(ARROW_ART, { x: '#ff4fd8' }),
-  home: makeIconCanvas(['...hh...', '..hhhh..', '.hhhhhh.', 'hhhhhhhh', '.hwwwwh.', '.hw..wh.', '.hw..wh.'], { h: '#ce8cff', w: '#f1dfff' }),
   charge: makeIconCanvas(['....cc.', '...cc..', '..cc...', '.ccccc.', '...cc..', '..cc...', '.cc....'], { c: '#5af2ce' }),
   arrow_casa: makeIconCanvas(ARROW_ART, { x: '#ce8cff' }),
   arrow_recarga: makeIconCanvas(ARROW_ART, { x: '#5af2ce' }),
@@ -283,6 +282,45 @@ function drawTree(g, px, py, r) {
   pxCircle(g, cx, cy, 5, PAL.tree);
   pxCircle(g, cx - 1, cy - 1, 3, PAL.tree2);
   speckle(g, cx - 5, cy - 5, 10, 10, r, [PAL.tree3, PAL.tree2], 6);
+}
+
+function drawHome(g, p) {
+  g.save();
+  g.transform(p.a.dx, p.a.dy, p.b.dx, p.b.dy, p.x, p.y);
+  const rect = (color, x, y, w, h) => { g.fillStyle = color; g.fillRect(x, y, w, h); };
+  // Jardim, caminho de pedestres e entrada da garagem.
+  rect('#557841', 0, 0, 96, 48);
+  rect('#698d4e', 1, 1, 94, 46);
+  rect('#b5a68c', 22, 0, 8, 23);
+  for (let y = 3; y < 21; y += 4) rect('#cec1a7', 23, y, 6, 2);
+  rect('#888891', 48, 0, 32, 48);
+  rect('#666775', 48, 4, 2, 44); rect('#666775', 78, 4, 2, 44);
+  rect('#a3a2a9', 50, 0, 28, 3);
+  // Marcações da vaga.
+  rect('#e7ddc0', 54, 10, 1, 27); rect('#e7ddc0', 73, 10, 1, 27);
+  rect('#e7ddc0', 54, 37, 20, 1);
+  // Fachada, telhado de duas águas e chaminé.
+  rect('#494945', 2, 18, 46, 30);
+  rect('#e6c8a4', 2, 16, 44, 31);
+  rect('#6a443d', 0, 22, 48, 26);
+  rect('#b46a54', 1, 23, 46, 12);
+  rect('#8b4d43', 1, 35, 46, 12);
+  for (let y = 25; y < 47; y += 3) rect('#9e5949', 2, y, 44, 1);
+  rect('#d59370', 1, 34, 46, 2);
+  rect('#694440', 35, 35, 7, 8); rect('#c59680', 35, 35, 7, 3);
+  rect('#725744', 22, 16, 8, 6); rect('#aa805c', 24, 17, 4, 4);
+  for (const x of [6, 35]) {
+    rect('#826c57', x, 17, 7, 5); rect('#80abac', x + 1, 18, 5, 3);
+  }
+  // Cerca baixa e canteiros deixam as duas entradas abertas.
+  for (const x of [1, 31, 81]) rect('#d6c6a6', x, 5, x === 1 ? 19 : 14, 2);
+  for (const x of [2, 9, 17, 32, 39, 45, 82, 89, 94]) rect('#e9dbc0', x, 3, 1, 6);
+  for (const y of [18, 33, 42]) {
+    pxCircle(g, 87, y, 4, '#3d623d');
+    pxCircle(g, 86, y - 1, 2, '#6a944b');
+    rect('#e1a492', 86, y, 2, 1);
+  }
+  g.restore();
 }
 
 function drawPlace(g, p, r) {
@@ -442,14 +480,18 @@ function prerenderCity(city) {
 }
 
 function prerenderMinimap(city) {
+  const [c, g] = makeCanvas(city.W * 2, city.H * 2);
+  drawMinimapTiles(city, g);
+  return c;
+}
+
+function drawMinimapTiles(city, g, x0 = 0, y0 = 0, x1 = city.W, y1 = city.H) {
   const col = {
     [T.GRASS]: '#2c4a28', [T.ROAD]: '#c9ccd2', [T.SIDEWALK]: '#5d6068', [T.BUILDING]: '#353844',
     [T.WATER]: '#1b3a5c', [T.TREE]: '#21401f', [T.LOT]: '#6a6d75', [T.PLAZA]: '#6a655a',
   };
-  const [c, g] = makeCanvas(city.W * 2, city.H * 2);
-  for (let y = 0; y < city.H; y++) for (let x = 0; x < city.W; x++) {
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
     g.fillStyle = col[city.get(x, y)];
     g.fillRect(x * 2, y * 2, 2, 2);
   }
-  return c;
 }

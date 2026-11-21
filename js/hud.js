@@ -18,7 +18,7 @@ function mmss(s) { const neg = s < 0; s = Math.abs(Math.ceil(s)); return (neg ? 
 function multStr(m) { return 'x' + m.toFixed(1).replace('.', ','); }
 function setBar(el, v, col) { el.style.width = clamp(v, 0, 100) + '%'; el.style.background = col; }
 
-const PLACE_COLORS = { posto: '#e74c3c', oficina: '#f1c40f', lavajato: '#3fb6ff' };
+const PLACE_COLORS = { posto: '#e74c3c', oficina: '#f1c40f', lavajato: '#3fb6ff', casa: '#ce8cff' };
 
 const HUD = {
   t: 0, lastPhone: '', lastProbs: '',
@@ -220,8 +220,7 @@ const HUD = {
       g.fillStyle = PLACE_COLORS[p.kind]; g.fillRect(x - 3, y - 3, 6, 6);
     }
     if (Garagem.enabled) {
-      const home = Garagem.home, charger = Garagem.charger;
-      g.fillStyle = '#ce8cff'; g.fillRect(Math.round(home.cx*s)-3, Math.round(home.cy*s)-3, 6, 6);
+      const charger = Garagem.charger;
       const x = Math.round(charger.cx * s), y = Math.round(charger.cy * s);
       g.fillStyle = '#000'; g.fillRect(x + 4, y - 4, 5, 8);
       g.fillStyle = '#5af2ce'; g.fillRect(x + 5, y - 3, 3, 6);

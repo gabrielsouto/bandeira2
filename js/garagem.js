@@ -4,18 +4,56 @@ const Garagem = {
   home: null, charger: null, pushing: false,
   get enabled() { return GAME.mode === 'solo' && !Veh.cur.school; },
   init() {
-    const spawn = city.places.find(p => p.kind === 'posto');
-    this.charger = spawn;
-    // Uma entrada residencial junto à rua, perto do ponto inicial.
-    const businesses = [...Delivery.rests, ...Object.values(Parcels.hubs)];
-    const doors = Parcels.doors.filter(p => !World.inRisk(p.x, p.y) &&
-      !city.places.some(q => Math.hypot(q.cx - p.x, q.cy - p.y) < 70) &&
-      !businesses.some(q => Math.hypot(q.door.x - p.x, q.door.y - p.y) < 50));
-    const nearSpawn = p => Math.hypot(p.x - spawn.cx, p.y - spawn.cy);
-    const p = doors.sort((a, b) => nearSpawn(a) - nearSpawn(b))[0] || city.curbs[0];
-    this.home = { kind: 'casa', name: 'Sua casa', cx: p.x, cy: p.y };
+    this.charger = city.places.find(p => p.kind === 'posto');
+    this.home = this.findHome();
   },
-  atHome() { return this.enabled && Math.hypot(this.home.cx - player.x, this.home.cy - player.y) < 22; },
+  findHome() {
+    const candidates = [];
+    const add = (tx, ty, span, d) => {
+      const a = DIRS[d], b = DIRS[(d + 1) % 4];
+      const offset = Math.floor((span - 6) / 2);
+      const x = (tx + a.dx * offset) * TILE, y = (ty + a.dy * offset) * TILE;
+      const tile = (u, v) => ({ x: Math.floor(x / TILE + a.dx * (u + 0.5) + b.dx * (v + 0.5)),
+        y: Math.floor(y / TILE + a.dy * (u + 0.5) + b.dy * (v + 0.5)) });
+      const first = tile(3, 0), last = tile(4, 2);
+      candidates.push({ kind: 'casa', name: 'Sua casa', side: ['top', 'right', 'bottom', 'left'][d],
+        x, y, a, b, tile, cx: x + (4 * a.dx + 1.5 * b.dx) * TILE, cy: y + (4 * a.dy + 1.5 * b.dy) * TILE,
+        x0: Math.min(first.x, last.x), x1: Math.max(first.x, last.x),
+        y0: Math.min(first.y, last.y), y1: Math.max(first.y, last.y) });
+    };
+    for (const { i, j, x0, y0, x1, y1, park } of city.blocks) {
+      if (!park) continue;
+      if (city.hSeg[j][i]) add(x0 + 1, y0 + 1, x1 - x0 - 1, 0);
+      if (city.vSeg[i + 1][j]) add(x1, y0 + 1, y1 - y0 - 1, 1);
+      if (city.hSeg[j + 1][i]) add(x1, y1, x1 - x0 - 1, 2);
+      if (city.vSeg[i][j]) add(x0 + 1, y1, y1 - y0 - 1, 3);
+    }
+    // A margem externa também tem espaço para uma casa quando a cidade não tem praças disponíveis.
+    if (!candidates.length) {
+      const row = city.hSeg[0];
+      row.forEach((road, i) => {
+        if (road) add(city.xs[i + 1], city.ys[0] - 1, city.xs[i + 1] - city.xs[i] - city.wx[i], 2);
+      });
+    }
+    const distance = p => Math.hypot(p.cx - this.charger.cx, p.cy - this.charger.cy);
+    return candidates.reduce((best, p) => !best || distance(p) < distance(best) ? p : best, null);
+  },
+  buildHome() {
+    const p = this.home;
+    if (!p || city.places.includes(p)) return;
+    // O lote só entra na cidade ao iniciar o solo, depois da escolha de jogar em sala.
+    for (let v = 0; v < 3; v++) for (let u = 0; u < 6; u++) {
+      const pos = p.tile(u, v);
+      city.tiles[pos.y * city.W + pos.x] = u === 3 || u === 4 ? T.LOT : u < 3 && v > 0 ? T.BUILDING : T.GRASS;
+    }
+    city.places.push(p);
+    drawHome(mapCtx, p);
+    const g = minimapBase.getContext('2d');
+    const start = p.tile(0, 0), end = p.tile(5, 2);
+    drawMinimapTiles(city, g, Math.min(start.x, end.x), Math.min(start.y, end.y), Math.max(start.x, end.x) + 1, Math.max(start.y, end.y) + 1);
+    Light.lamps.push({ x: p.cx, y: p.cy, r: 52 });
+  },
+  atHome() { return this.enabled && this.home === city.placeAt(player.x, player.y); },
   takeVehicle(key, job) {
     if (S.carSlot) S.garage[S.carSlot] = S.car;
     if (Veh.cur.guided && key !== Veh.key) activeJob().leave(player, city);

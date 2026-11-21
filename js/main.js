@@ -228,6 +228,7 @@ function startGame() {
   mode = 'play';
   clearInput();
   if (Garagem.enabled) {
+    Garagem.buildHome();
     Garagem.takeVehicle(Veh.key, resumeJob);
   } else applyVehicle();
   if (Veh.cur.school) {
@@ -656,7 +657,7 @@ function update(dt) {
     if (f.t > 1.6) floaters.splice(k, 1);
   }
 
-  const pl = airborne || walking ? null : Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
+  const pl = airborne || walking ? null : city.placeAt(player.x, player.y);
   if (pl && pl === Nav.place) Nav.clear(`Você chegou: ${pl.name}.`);
   if (pl && pl !== lastPlace && (player.speed < 18 || Garagem.pushing) && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
@@ -713,6 +714,7 @@ function render() {
 
   // ícones flutuando sobre postos e oficinas
   for (const p of city.places) {
+    if (p.kind === 'casa') continue;
     const sx = Math.round(p.cx - camX), sy = Math.round(p.cy - camY + Math.sin(time * 3 + p.cx) * 2);
     if (sx < -20 || sy < -20 || sx > vw + 20 || sy > vh + 20) continue;
     const ic = p.kind === 'posto' ? ICONS.fuel : p.kind === 'lavajato' ? ICONS.drop : ICONS.wrench;
@@ -720,11 +722,6 @@ function render() {
     const left = sx - ic.width - (hasCharger ? 10 : 0);
     ctx.drawImage(ic, left, sy - ic.height - 4, ic.width * 2, ic.height * 2);
     if (hasCharger) ctx.drawImage(ICONS.charge, left + ic.width * 2 + 4, sy - 12, 16, 16);
-  }
-
-  if (Garagem.enabled) {
-    const { cx, cy } = Garagem.home;
-    ctx.drawImage(ICONS.home, cx - camX - 8, cy - camY - 18, 16, 16);
   }
 
   Signals.draw(ctx, camX, camY, vw, vh);

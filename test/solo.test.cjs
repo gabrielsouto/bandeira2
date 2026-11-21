@@ -20,6 +20,29 @@ function game(files) {
   return { context, run };
 }
 
+test('a garagem da casa tem acesso pela rua e a construção bloqueia passagem', () => {
+  for (const removeParks of [false, true]) {
+    const { run, context } = game(['util', 'city', 'vehicles', 'garagem']);
+    Object.assign(context, {
+      removeParks, GAME: { mode: 'solo' }, mapCtx: {}, minimapBase: { getContext: () => ({}) },
+      drawHome() {}, drawMinimapTiles() {}, Light: { lamps: [] },
+    });
+    const { city, home } = run(`const city = generateCity(20261118);
+      if (removeParks) city.blocks.forEach(b => { b.park = false; });
+      Garagem.init();
+      ({ city, home: Garagem.home })`);
+    assert.equal(city.placeAt(home.cx, home.cy), null);
+    const entrance = home.tile(3, 0), door = home.tile(2, 1);
+    assert.equal(city.get(entrance.x - 2 * home.b.dx, entrance.y - 2 * home.b.dy), run('T.ROAD'));
+    run('Garagem.buildHome(); Garagem.buildHome()');
+    assert.equal(city.places.filter(p => p.kind === 'casa').length, 1);
+    assert.equal(city.get(entrance.x, entrance.y), run('T.LOT'));
+    assert.equal(city.solid(door.x, door.y), true);
+    assert.equal(city.placeAt(home.cx, home.cy), home);
+    assert.equal(city.placeAt(door.x * 16 + 8, door.y * 16 + 8), null);
+  }
+});
+
 test('o menu troca o veículo e recupera a mecânica individual mesmo entre duas vans', () => {
   const { run, context } = game(['vehicles', 'garagem']);
   const idle = { state: 'idle' };
