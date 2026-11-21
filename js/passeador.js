@@ -106,7 +106,10 @@ const Passeador = {
   },
   phoneHTML() {
     const w = S.dogWalk;
-    if (!w) return '<div class="ph-title">Passeio pelo bairro</div><div class="ph-row">Quantos cachorros você vai levar?</div><div class="ph-btns"><button data-act="walk" data-count="1">1 cachorro</button><button data-act="walk" data-count="2">2 cachorros</button><button data-act="accept"><kbd>E</kbd> 3 cachorros</button></div>';
+    if (!w) return '<div class="ph-title">Passeio pelo bairro</div><div class="ph-row">Quantos cachorros você vai levar?</div>' +
+      '<div class="ph-btns"><button data-act="walk" data-count="1" aria-label="1 cachorro">1</button>' +
+      '<button data-act="walk" data-count="2" aria-label="2 cachorros">2</button>' +
+      '<button data-act="accept" aria-label="3 cachorros" aria-keyshortcuts="E"><kbd>E</kbd> 3</button></div>';
     const dog = w.dogs[w.index];
     const task = w.phase === 'walk' ? 'Passeio · parada ' + (w.index + 1) + ' de ' + w.stops.length
       : (w.phase === 'pickup' ? 'Busque ' : 'Devolva ') + esc(dog.name);
