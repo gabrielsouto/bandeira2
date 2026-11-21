@@ -4,7 +4,7 @@
 
 **[▶ Jogar no navegador](https://gabrielsouto.github.io/bandeira2/)** · [Controles e regras](https://gabrielsouto.github.io/bandeira2/ajuda.html) · [Jogar com amigos](#jogar-com-amigos) · [Rodar localmente](#rodar-localmente)
 
-Às oito da noite, o táxi começa a cobrar bandeira 2. Até lá, dá tempo de levar a turma à escola, entregar um açaí antes que derreta ou assumir a cabine do VLT. Neste arcade de direção com vista de cima, você escolhe como ganhar a vida na cidade. Ruas, veículos e pedestres são desenhados por código, e o rádio do carro alterna entre funk, sertanejo e pagode sintetizados, notícias do jogo e seis emissoras brasileiras ao vivo.
+Às oito da noite, o táxi começa a cobrar bandeira 2. Até lá, dá tempo de levar a turma à escola, entregar um açaí antes que derreta ou assumir a cabine do VLT. Neste arcade de direção com vista de cima, você escolhe como ganhar a vida na cidade. Ruas, veículos e pedestres são desenhados por código. Enquanto dirige, você pode ouvir rádio ao vivo.
 
 | Táxi · uma chamada com pressa | VLT · próxima parada, Mercado | Barcas · rumo ao Cais Nascente |
 | :---: | :---: | :---: |
@@ -44,6 +44,10 @@ Abra **Jogar com amigos**, escolha um apelido e clique em **Criar sala**. Compar
 Todos largam com **R$ 150** às 7h e têm **12 minutos reais** até as 19h. As chamadas aparecem para todos. **Q** destaca a próxima e **E** indica o caminho, mas leva a corrida quem parar primeiro ao lado do passageiro. Quer disputar na pista? **X** chama um pega. Durante o turno, a inscrição custa R$ 20 por piloto e o vencedor leva o pote.
 
 Quem já embarcou um passageiro às 19h tem mais 30 segundos para entregá-lo. Vence quem fizer mais lucro, com desempate pela nota média. O dinheiro da sala fica separado do progresso solo.
+
+## Rádio do carro
+
+Aperte **R** para ligar o rádio e avançar uma estação por vez. Depois das quatro estações do jogo, você ouve seis emissoras ao vivo nesta ordem. São elas **FM O Dia**, **Super Rádio Tupi**, **Rádio Cidade**, **JB FM**, **Antena 1** e **Rádio Globo do Rio**. Mais um toque em **R** desliga só o rádio. **M** silencia ou reativa todo o som do jogo. [Guia do rádio](https://gabrielsouto.github.io/bandeira2/ajuda.html#radio)
 
 ## Controles rápidos
 
