@@ -5,7 +5,9 @@ const T = { GRASS: 0, ROAD: 1, SIDEWALK: 2, BUILDING: 3, WATER: 4, TREE: 5, LOT:
 // 0 = leste, 1 = sul, 2 = oeste, 3 = norte
 const DIRS = [{ dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 0, dy: -1 }];
 // Distâncias medidas para fora, a partir da borda do cruzamento (em pixels).
-const CROSSWALK_OUTER = 13;
+const CROSSWALK_INNER = 14, CROSSWALK_WIDTH = 10;
+const SIGNAL_SETBACK = CROSSWALK_INNER / 2; // foco entre a travessia e a borda do cruzamento
+const CROSSWALK_OUTER = CROSSWALK_INNER + CROSSWALK_WIDTH;
 const STOP_LINE_OUTER = CROSSWALK_OUTER + 5;
 const ROOF_COUNT = 12;
 const OFICINA_NAMES = ['Mecânica do Zé', 'Auto Center Rapidão', 'Oficina Dois Irmãos', 'Mecânica Boa Vista'];

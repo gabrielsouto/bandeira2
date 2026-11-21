@@ -404,26 +404,26 @@ function prerenderCity(city) {
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX - 1; i++) {
     if (!hSeg[j][i]) continue;
     const x0 = (xs[i] + wx[i]) * 16, x1 = xs[i + 1] * 16, yy = ys[j] * 16, h = wy[j] * 16, kind = rowKind[j];
-    for (let x = x0 + 20; x < x1 - 24; x += 12) {
+    for (let x = x0 + STOP_LINE_OUTER + 2; x + 6 <= x1 - STOP_LINE_OUTER - 2; x += 12) {
       if (kind === 'dupla') { g.fillStyle = PAL.line; g.fillRect(x, yy + 15, 6, 2); }
       else if (kind === 'unica') { g.fillStyle = PAL.white; g.fillRect(x, yy + 15, 6, 2); }
       else { g.fillStyle = PAL.white; g.fillRect(x, yy + 15, 6, 2); g.fillRect(x, yy + h - 17, 6, 2); }
     }
-    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(x0 + 6, yy + h / 2 - 2, x1 - x0 - 12, 1); g.fillRect(x0 + 6, yy + h / 2 + 1, x1 - x0 - 12, 1); }
+    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(x0 + CROSSWALK_OUTER, yy + h / 2 - 2, x1 - x0 - 2 * CROSSWALK_OUTER, 1); g.fillRect(x0 + CROSSWALK_OUTER, yy + h / 2 + 1, x1 - x0 - 2 * CROSSWALK_OUTER, 1); }
     g.fillStyle = PAL.white;
-    for (let k = 0; k < h / 4; k++) { g.fillRect(x0 + 3, yy + 1 + k * 4, CROSSWALK_OUTER - 3, 2); g.fillRect(x1 - CROSSWALK_OUTER, yy + 1 + k * 4, CROSSWALK_OUTER - 3, 2); }
+    for (let k = 0; k < h / 4; k++) { g.fillRect(x0 + CROSSWALK_INNER, yy + 1 + k * 4, CROSSWALK_WIDTH, 2); g.fillRect(x1 - CROSSWALK_OUTER, yy + 1 + k * 4, CROSSWALK_WIDTH, 2); }
   }
   for (let i = 0; i < NX; i++) for (let j = 0; j < NY - 1; j++) {
     if (!vSeg[i][j]) continue;
     const y0 = (ys[j] + wy[j]) * 16, y1 = ys[j + 1] * 16, xx = xs[i] * 16, w = wx[i] * 16, kind = colKind[i];
-    for (let y = y0 + 20; y < y1 - 24; y += 12) {
+    for (let y = y0 + STOP_LINE_OUTER + 2; y + 6 <= y1 - STOP_LINE_OUTER - 2; y += 12) {
       if (kind === 'dupla') { g.fillStyle = PAL.line; g.fillRect(xx + 15, y, 2, 6); }
       else if (kind === 'unica') { g.fillStyle = PAL.white; g.fillRect(xx + 15, y, 2, 6); }
       else { g.fillStyle = PAL.white; g.fillRect(xx + 15, y, 2, 6); g.fillRect(xx + w - 17, y, 2, 6); }
     }
-    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(xx + w / 2 - 2, y0 + 6, 1, y1 - y0 - 12); g.fillRect(xx + w / 2 + 1, y0 + 6, 1, y1 - y0 - 12); }
+    if (kind === 'larga') { g.fillStyle = PAL.line; g.fillRect(xx + w / 2 - 2, y0 + CROSSWALK_OUTER, 1, y1 - y0 - 2 * CROSSWALK_OUTER); g.fillRect(xx + w / 2 + 1, y0 + CROSSWALK_OUTER, 1, y1 - y0 - 2 * CROSSWALK_OUTER); }
     g.fillStyle = PAL.white;
-    for (let k = 0; k < w / 4; k++) { g.fillRect(xx + 1 + k * 4, y0 + 3, 2, CROSSWALK_OUTER - 3); g.fillRect(xx + 1 + k * 4, y1 - CROSSWALK_OUTER, 2, CROSSWALK_OUTER - 3); }
+    for (let k = 0; k < w / 4; k++) { g.fillRect(xx + 1 + k * 4, y0 + CROSSWALK_INNER, 2, CROSSWALK_WIDTH); g.fillRect(xx + 1 + k * 4, y1 - CROSSWALK_OUTER, 2, CROSSWALK_WIDTH); }
   }
 
   for (const p of city.places) drawPlace(g, p, r);

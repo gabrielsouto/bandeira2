@@ -101,7 +101,7 @@ const Signals = {
       const a = DIRS[d], lanes = this.city.laneCount(s.i, s.j, d);
       const outer = this.city.entryPoint(s.i, s.j, d);
       const inner = this.city.entryPoint(s.i, s.j, d, lanes - 1);
-      const hx = (outer.x + inner.x) / 2 + a.dx * 5, hy = (outer.y + inner.y) / 2 + a.dy * 5;
+      const hx = (outer.x + inner.x) / 2 - a.dx * SIGNAL_SETBACK, hy = (outer.y + inner.y) / 2 - a.dy * SIGNAL_SETBACK;
       return { d, a, lanes, hx, hy };
     });
   },
@@ -110,14 +110,15 @@ const Signals = {
     const colors = { r: '#ff5454', y: '#ffd147', g: '#53ef89' };
     for (const s of this.list) {
       const cx = this.city.xs[s.i] * 16 + this.city.wx[s.i] * 8 - camX, cy = this.city.ys[s.j] * 16 + this.city.wy[s.j] * 8 - camY;
-      if (cx < -60 || cy < -60 || cx > vw + 60 || cy > vh + 60) continue;
+      const margin = Math.max(this.city.wx[s.i], this.city.wy[s.j]) * TILE / 2 + STOP_LINE_OUTER;
+      if (cx < -margin || cy < -margin || cx > vw + margin || cy > vh + margin) continue;
       for (const h of this.heads(s)) {
         const light = this.light(s, h.d), halfWidth = h.lanes * 8;
         // Coordenadas locais: x aponta para o cruzamento, y para a direita do motorista.
         g.save();
         g.transform(h.a.dx, h.a.dy, -h.a.dy, h.a.dx, Math.round(h.hx - camX), Math.round(h.hy - camY));
         g.fillStyle = '#f5f3e9';
-        g.fillRect(-5 - STOP_LINE_OUTER, -halfWidth + 1, 2, halfWidth * 2 - 2);
+        g.fillRect(SIGNAL_SETBACK - STOP_LINE_OUTER, -halfWidth + 1, 2, halfWidth * 2 - 2);
         g.fillStyle = '#181d24'; g.fillRect(-4, -8, 8, 16);
         for (const [index, phase] of ['r', 'y', 'g'].entries()) {
           g.fillStyle = light === phase ? colors[phase] : '#404752';

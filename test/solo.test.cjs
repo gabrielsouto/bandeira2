@@ -352,6 +352,7 @@ test('trânsito para antes da travessia, mantém a fila no vermelho e volta a an
   run(readFileSync(join(__dirname, '..', 'js', 'semaforo.js'), 'utf8'));
   const city = run('const city = generateCity(42); Signals.init(city); city');
   const signals = run('Signals'), dirs = run('DIRS');
+  const stopLine = run('STOP_LINE_OUTER'), crosswalkInner = run('CROSSWALK_INNER');
   for (const [d, { dx, dy }] of dirs.entries()) {
     const s = signals.list.find(s => s.entries.includes(d));
     const traffic = run('new Traffic(city, 0)');
@@ -359,6 +360,9 @@ test('trânsito para antes da travessia, mantém a fila no vermelho e volta a an
     signals.light = () => 'r';
     const entry = city.entryPoint(s.i, s.j, d);
     const distance = car => (entry.x - car.x) * dx + (entry.y - car.y) * dy;
+    const head = signals.heads(s).find(h => h.d === d);
+    const setback = distance({ x: head.hx, y: head.hy });
+    assert.ok(setback - 4 > 0 && setback + 4 < crosswalkInner);
     const exit = city.exitPoint(s.i - dx, s.j - dy, d);
     const length = distance(exit);
     run('R.i = min => min'); // Mesma faixa para os três carros.
@@ -370,11 +374,11 @@ test('trânsito para antes da travessia, mantém a fila no vermelho e volta a an
     traffic.cars.reverse(); // O último da fila atualiza antes do primeiro.
     for (let frame = 0; frame < 240; frame++) {
       traffic.update(0.05, context.player);
-      assert.ok(distance(cars[0]) - 9 >= 18);
+      assert.ok(distance(cars[0]) - 9 >= stopLine);
       for (let k = 1; k < cars.length; k++) assert.ok(distance(cars[k]) - distance(cars[k - 1]) >= 26 - 1e-6);
     }
     for (const [k, car] of cars.entries()) {
-      assert.ok(Math.abs(distance(car) - (29 + k * 26)) < 0.01);
+      assert.ok(Math.abs(distance(car) - (stopLine + 9 + 2 + k * 26)) < 0.01);
       assert.equal(car.speed, 0);
     }
     signals.light = () => 'g';
