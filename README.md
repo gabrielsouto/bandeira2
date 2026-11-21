@@ -1,6 +1,6 @@
 # Bandeira 2
 
-[![Bandeira 2 em pixel art, com uma viatura no encalço do motorista durante uma corrida noturna. Clique para jogar.](divulgacao/twitter.png)](https://gabrielsouto.github.io/bandeira2/)
+[![BBandeira 2 ao meio-dia, com o carro no cruzamento e uma chamada no celular. Clique para jogar.](docs/imagens/capa-dia.png)](https://gabrielsouto.github.io/bandeira2/)
 
 **[▶ Jogar no navegador](https://gabrielsouto.github.io/bandeira2/)** · [Controles e regras](https://gabrielsouto.github.io/bandeira2/ajuda.html) · [Jogar com amigos](#jogar-com-amigos) · [Rodar localmente](#rodar-localmente)
 
@@ -32,6 +32,8 @@ O solo tem **20 opções**. Cada trabalho muda o que você precisa observar no t
 | Autoescola | Carro de aula | Siga as instruções de voz, respeite as placas de PARE e estacione na vaga. A sexta aula é a prova do DETRAN. |
 
 Entre um serviço e outro, o trânsito para no sinal, crianças atravessam na porta da escola e os postes acendem ao anoitecer. Cuide da lataria, do combustível e dos pneus. Em casa, dá para lavar o veículo e instalar um kit GNV no carro ou na van.
+
+[![Bandeira 2 em pixel art, com uma viatura no encalço do motorista durante uma corrida noturna. Clique para jogar.](divulgacao/twitter.png)](https://gabrielsouto.github.io/bandeira2/)
 
 ## Jogar com amigos
 
