@@ -105,6 +105,15 @@ const Garagem = {
       label: c.problems.dirty ? 'Lavar à mão · grátis' : 'Veículo limpo', disabled: !c.problems.dirty,
       run: () => { c.problems.dirty = false; writeSave(); toast('Lavagem feita em casa!', 'good'); this.menu(); },
     }];
+    if (!Veh.twoWheel() && !Veh.cur.guided) {
+      let label = 'Trocar pneu com o estepe · grátis';
+      if (!c.spare) label = 'Sem estepe · reponha na oficina';
+      else if (!c.problems.flat) label = 'Pneus em bom estado · estepe disponível';
+      items.push({
+        label, disabled: !c.spare || !c.problems.flat || player.speed >= 8,
+        run: () => { this.spare(); this.menu(); },
+      });
+    }
     if (!Veh.twoWheel() && !Veh.cur.electric && !c.kitGas) items.push({
       label: 'Instalar kit GNV · grátis',
       run: () => {

@@ -761,3 +761,26 @@ test('gincana só mostra e ativa a parada da etapa atual', () => {
     assert.deepEqual(visible(), []);
   }
 });
+
+test('menu da casa permite montar o estepe no carro da gincana', () => {
+  const { run, context } = game(['vehicles', 'garagem']);
+  let items;
+  context.showModal = (title, sub, options) => { items = options; };
+  context.GAME = { mode: 'solo' };
+  context.activeJob = () => ({ state: 'idle' });
+  context.S.car = { problems: { flat: false }, spare: true };
+  const spare = () => items.find(item => /estepe/i.test(item.label));
+  run("Veh.set('gincana', false); Garagem.menu()");
+  assert.equal(spare().disabled, true);
+  context.S.car.problems.flat = true;
+  run('Garagem.menu()');
+  assert.equal(spare().disabled, false);
+  spare().run();
+  assert.equal(context.S.car.problems.flat, false);
+  assert.equal(context.S.car.spare, false);
+  assert.equal(context.S.money, 0);
+  assert.equal(spare().disabled, true);
+  assert.match(spare().label, /reponha na oficina/);
+  run("Veh.set('moto', false); Garagem.menu()");
+  assert.equal(spare(), undefined);
+});
