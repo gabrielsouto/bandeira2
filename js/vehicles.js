@@ -92,7 +92,7 @@ const VEHICLES = {
   },
   passeador: {
     name: 'Passeador de cachorros', app: 'PASSEIOS', color: '#59cca3', art: 'passeador', guided: true, soloOnly: true,
-    desc: 'Trabalhe a pé. Busque um cachorro com o tutor, passeie pelo quarteirão e receba na volta. Só no solo.',
+    desc: 'Trabalhe a pé. Busque até três cachorros, passeie com o grupo pelo quarteirão e receba de cada tutor na volta. Só no solo.',
     phys: { maxSpeed: 42 }, fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
   },
   policia: {

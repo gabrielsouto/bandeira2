@@ -214,42 +214,75 @@ test('a multa segue a entrada sinalizada mesmo quando o carro já começou a vir
   }
 });
 
-test('passeador percorre o quarteirão, retoma a guia e só recebe ao devolver o cachorro', () => {
-  const { run, context } = game(['util', 'city', 'world', 'vehicles', 'passeador']);
-  const person = context.player, s = context.S;
-  s.dogWalks = 0;
-  const job = run("const city = generateCity(42); Veh.set('passeador', false); player.p = Veh.cur.phys; Passeador.enter(player); Passeador");
-  job.accept();
-  const fare = s.dogWalk.fare;
-  Object.assign(person, job.target());
-  job.update(1, person);
-  assert.equal(s.dogWalk.stage, 1);
-  for (let stage = 1; stage <= 4; stage++) {
-    const p = job.target();
-    for (let frame = 0; frame < 600 && Math.hypot(p.x - person.x, p.y - person.y) > 1; frame++) {
-      job.drive(person, { right: p.x - person.x > 0.7, left: person.x - p.x > 0.7,
-        up: person.y - p.y > 0.7, down: p.y - person.y > 0.7 }, 1 / 60);
-      job.update(1 / 60, person);
-    }
-    assert.equal(s.dogWalk.stage, stage);
-    assert.ok(Math.hypot(person.x - p.x, person.y - p.y) <= 1);
-    if (stage === 2) {
-      s.dogWalk = JSON.parse(JSON.stringify(s.dogWalk));
-      person.x = 0; job.enter(person);
-      assert.equal(person.x, s.dogWalk.x);
-      assert.ok(s.dogWalk.trail.length > 1);
-    }
-    job.drive(person, {}, 1 / 60);
-    assert.equal(s.money, 0);
+test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro devolvido', () => {
+  for (const count of [1, 2, 3]) {
+    const { run, context } = game(['util', 'city', 'world', 'vehicles', 'passeador']);
+    const person = context.player, s = context.S;
+    s.dogWalks = 0;
+    const job = run("const city = generateCity(42); Veh.set('passeador', false); player.p = Veh.cur.phys; Passeador.enter(player); Passeador");
+    job.accept(count);
+    const { dogs, stops } = s.dogWalk;
+    assert.equal(dogs.length, count);
+    assert.equal(new Set(dogs.map(d => d.name)).size, count);
+    assert.equal(new Set(dogs.map(d => d.x + ',' + d.y)).size, count);
+    Object.assign(person, job.target());
+    let paid = 0;
+    const visit = (point, phase, index, leashed) => {
+      const w = s.dogWalk;
+      assert.equal(w.phase, phase);
+      assert.equal(w.index, index);
+      assert.equal(dogs.filter((d, i) => job.onLeash(w, i)).length, leashed);
+      assert.equal(job.target().x, point.x);
+      assert.equal(job.target().y, point.y);
+      for (let frame = 0; frame < 600 && Math.hypot(point.x - person.x, point.y - person.y) > 1; frame++) {
+        job.drive(person, { right: point.x - person.x > 0.7, left: person.x - point.x > 0.7,
+          up: person.y - point.y > 0.7, down: point.y - person.y > 0.7 }, 1 / 60);
+        job.update(1 / 60, person);
+      }
+      assert.ok(Math.hypot(point.x - person.x, point.y - person.y) <= 1);
+      assert.equal(s.money, paid);
+      job.drive(person, {}, 1 / 60);
+      job.update(1, person);
+      if (phase === 'return') paid += point.fare;
+      assert.equal(s.money, paid);
+      assert.equal(s.earned, paid);
+      if (s.dogWalk) {
+        s.dogWalk = job.restore(JSON.parse(JSON.stringify(s.dogWalk)));
+        person.x = 0; job.enter(person);
+        assert.equal(person.x, s.dogWalk.x);
+      }
+    };
+    dogs.forEach((dog, i) => visit(dog, 'pickup', i, i));
+    stops.forEach((stop, i) => visit(stop, 'walk', i, count));
+    assert.ok(s.dogWalk.trail.length >= 5);
+    dogs.forEach((dog, i) => visit(dog, 'return', i, count - i));
     job.update(1, person);
+    assert.equal(s.dogWalks, 1);
+    assert.equal(s.dogWalk, null);
+    assert.equal(s.money, paid);
+    job.accept(); assert.equal(s.dogWalk.dogs.length, 3);
+    job.cancel(); assert.equal(s.dogWalk, null);
+    assert.equal(s.money, paid);
   }
-  job.update(1, person);
-  assert.equal(s.dogWalks, 1);
-  assert.equal(s.money, fare);
-  assert.equal(s.earned, fare);
-  job.accept(); job.cancel();
-  assert.equal(s.dogWalk, null);
-  assert.equal(s.money, fare);
+});
+
+test('passeio individual antigo conserva a parada, a posição e o valor contratado', () => {
+  const { run } = game(['passeador']);
+  const job = run('Passeador');
+  const stops = [{ x: 5, y: 5 }, { x: 85, y: 5 }, { x: 85, y: 95 }, { x: 5, y: 95 }];
+  for (let stage = 0; stage <= 4; stage++) {
+    const old = { name: 'Mel', color: '#abc', fare: 28, x: 50, y: 5, trail: [{ x: 40, y: 5 }], stops, stage };
+    const walk = job.restore(old);
+    assert.equal(walk.dogs[0].name, old.name);
+    assert.equal(walk.dogs[0].fare, old.fare);
+    assert.equal(walk.x, old.x);
+    assert.equal(walk.trail, old.trail);
+    assert.equal(walk.phase, stage === 0 ? 'pickup' : stage === 4 ? 'return' : 'walk');
+    const target = walk.phase === 'walk' ? walk.stops[walk.index] : walk.dogs[walk.index];
+    assert.equal(target.x, stops[stage % 4].x);
+    assert.equal(target.y, stops[stage % 4].y);
+    assert.equal(job.restore(walk), walk);
+  }
 });
 
 test('viatura fica isenta da multa de sinal vermelho apenas com a sirene ligada', () => {

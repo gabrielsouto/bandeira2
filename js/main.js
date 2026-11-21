@@ -14,7 +14,7 @@ function loadSave() {
       const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
       const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
       const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
-      return { parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, dogWalks: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
+      return { parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, dogWalks: 0, schoolLegs: 0, ...s, dogWalk: Passeador.restore(s.dogWalk), garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;
