@@ -216,7 +216,7 @@ test('a multa segue a entrada sinalizada mesmo quando o carro já começou a vir
 
 test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro devolvido', () => {
   for (const count of [1, 2, 3]) {
-    const { run, context } = game(['util', 'city', 'world', 'vehicles', 'passeador']);
+    const { run, context } = game(['util', 'city', 'world', 'vehicles', 'traffic', 'passeador']);
     const person = context.player, s = context.S;
     s.dogWalks = 0;
     const job = run("const city = generateCity(42); Veh.set('passeador', false); player.p = Veh.cur.phys; Passeador.enter(player); Passeador");
@@ -270,6 +270,45 @@ test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro d
     job.cancel(); assert.equal(s.dogWalk, null);
     assert.equal(s.money, paid);
   }
+});
+
+test('passeador para na carroceria, contorna o carro e pode sair de uma sobreposição ao retomar', () => {
+  const { run, context } = game(['util', 'traffic', 'passeador']);
+  const person = context.player, car = { x: 100, y: 100, a: 0 };
+  context.city = { solid: () => false };
+  person.p = { maxSpeed: 42 };
+  const job = run('Passeador');
+  const walk = (keys, frames) => {
+    for (let i = 0; i < frames; i++) job.drive(person, keys, 1 / 60, [car]);
+  };
+  for (const [angle, limit] of [[0, 88], [Math.PI / 2, 92], [Math.PI / 4, 100 - 8 * Math.SQRT2]]) {
+    car.a = angle;
+    Object.assign(person, { x: 70, y: 100 });
+    walk({ right: true }, 90);
+    assert.ok(person.x <= limit && person.x > limit - 1);
+    assert.equal(person.speed, 0);
+    walk({ down: true }, 40);
+    walk({ right: true }, 80);
+    assert.ok(person.x > 120);
+  }
+  Object.assign(person, { x: 100, y: 100 });
+  walk({ up: true }, 40);
+  assert.ok(person.y < 80);
+});
+
+test('carro em curva cede ao passeador ao lado e retoma o trajeto depois', () => {
+  const { run, context } = game(['util', 'traffic']);
+  const traffic = run('new Traffic({}, 0)');
+  const car = { x: 100, y: 100, a: 0, ma: 0, speed: 36, cruise: 36,
+    hitT: 0, ghost: 0, honkT: 0, stuck: 0, wps: [{ x: 100, y: 180, turn: true }] };
+  traffic.cars.push(car);
+  Object.assign(context.player, { x: 101, y: 108.1 });
+  for (let i = 0; i < 60; i++) traffic.update(1 / 60, context.player, false, true);
+  assert.equal(car.speed, 0);
+  assert.ok(car.y < 101);
+  context.player.x += 50;
+  for (let i = 0; i < 60; i++) traffic.update(1 / 60, context.player, false, true);
+  assert.ok(car.y > 120);
 });
 
 test('passeio individual antigo conserva a parada, a posição e o valor contratado', () => {

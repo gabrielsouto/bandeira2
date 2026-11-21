@@ -5,6 +5,15 @@ const NPC_COLORS = ['#c0392b', '#2e6fb0', '#27ae60', '#8e44ad', '#d35400', '#7f8
   '#f1c40f', '#16a085', '#bdc3c7', '#1c1c1c', '#a0522d', '#e8e8e8', '#f1c40f'];
 const NPC_HALF_LENGTH = 9, NPC_QUEUE_GAP = 8;
 const NPC_HEADWAY = 2 * NPC_HALF_LENGTH + NPC_QUEUE_GAP;
+const WALKER_RADIUS = 3;
+
+// Folga entre o pedestre e a carroceria de 18 × 10 px, nos eixos do veículo.
+function walkerCarGap(dx, dy, angle) {
+  if (Math.abs(dx) > 16 || Math.abs(dy) > 16) return Infinity;
+  const fx = Math.cos(angle), fy = Math.sin(angle);
+  return Math.max(Math.abs(dx * fx + dy * fy) - NPC_HALF_LENGTH,
+    Math.abs(dy * fx - dx * fy) - 5) - WALKER_RADIUS;
+}
 
 class Traffic {
   constructor(city, n) {
@@ -69,7 +78,7 @@ class Traffic {
     car.ti = ni; car.tj = nj; car.dir = d; car.lane = lane;
   }
 
-  update(dt, pl, airborne = false) {
+  update(dt, pl, airborne = false, walking = false) {
     // carros extras (fila do colégio) somem quando ninguém está vendo
     this.cars = this.cars.filter((o) => !o.leave || Math.hypot(o.x - pl.x, o.y - pl.y) < 320);
     const cars = this.cars;
@@ -128,15 +137,24 @@ class Traffic {
 
       let step = Math.min(car.speed * dt, clearance), guard = 0;
       if (step === clearance) car.speed = 0;
+      const turnFactor = Math.min(1, 10 * dt);
       while (step > 1e-4 && guard++ < 8) {
         if (!car.wps.length) this.plan(car);
         const w = car.wps[0];
         const dx = w.x - car.x, dy = w.y - car.y, d = Math.hypot(dx, dy);
-        if (d > 0.001) car.ma = Math.atan2(dy, dx);
-        if (d <= step) { car.x = w.x; car.y = w.y; step -= d; car.wps.shift(); }
-        else { car.x += dx / d * step; car.y += dy / d * step; step = 0; }
+        const heading = d > 0.001 ? Math.atan2(dy, dx) : car.ma;
+        const x = d <= step ? w.x : car.x + dx / d * step;
+        const y = d <= step ? w.y : car.y + dy / d * step;
+        if (walking && walkerCarGap(pl.x - x, pl.y - y, car.a + angDiff(car.a, heading) * turnFactor) < 0) {
+          car.speed = 0;
+          break;
+        }
+        car.x = x; car.y = y; car.ma = heading;
+        if (d <= step) car.wps.shift();
+        step -= d;
       }
-      car.a += angDiff(car.a, car.ma) * Math.min(1, 10 * dt);
+      const angle = car.a + angDiff(car.a, car.ma) * turnFactor;
+      if (!walking || walkerCarGap(pl.x - car.x, pl.y - car.y, angle) >= 0) car.a = angle;
     }
   }
 }

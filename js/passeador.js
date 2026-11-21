@@ -85,13 +85,20 @@ const Passeador = {
     const p = walk.phase === 'walk' ? walk.stops[walk.index] : walk.dogs[walk.index];
     return { x: p.x, y: p.y, kind: walk.phase === 'pickup' ? 'pick' : 'drop' };
   },
-  drive(person, input, dt) {
+  drive(person, input, dt, cars = []) {
     const dx = Number(!!input.right) - Number(!!input.left), dy = Number(!!input.down) - Number(!!input.up);
     const step = person.p.maxSpeed * dt / (Math.hypot(dx, dy) || 1);
     const x = person.x, y = person.y;
-    const clear = (x, y) => !city.solid(Math.floor(x / TILE), Math.floor(y / TILE));
-    if (dx && clear(x + dx * (step + 3), y)) person.x += dx * step;
-    if (dy && clear(person.x, y + dy * (step + 3))) person.y += dy * step;
+    const clear = (nx, ny, mx, my) => {
+      if (city.solid(Math.floor((nx + mx * WALKER_RADIUS) / TILE), Math.floor((ny + my * WALKER_RADIUS) / TILE))) return false;
+      return cars.every(car => {
+        const gap = walkerCarGap(nx - car.x, ny - car.y, car.a);
+        // Se o save reabrir sobre um carro, permita sair pelo lado mais próximo.
+        return gap >= 0 || gap >= walkerCarGap(person.x - car.x, person.y - car.y, car.a);
+      });
+    };
+    if (dx && clear(x + dx * step, y, dx, 0)) person.x += dx * step;
+    if (dy && clear(person.x, y + dy * step, 0, dy)) person.y += dy * step;
     person.vx = dt ? (person.x - x) / dt : 0; person.vy = dt ? (person.y - y) / dt : 0;
     person.speed = Math.hypot(person.vx, person.vy);
     if (person.speed) person.a = Math.atan2(person.vy, person.vx);

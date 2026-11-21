@@ -608,14 +608,15 @@ function update(dt) {
   const surface = city.tileAtPx(player.x, player.y);
   const px = player.x, py = player.y, inp = Multi.frozen() ? NO_INPUT : input; // na contagem 3-2-1 o carro espera
   const guided = Veh.cur.guided;
-  if (guided) activeJob().drive(player, inp, dt);
+  const walking = Veh.job === 'passeador';
+  if (walking) Passeador.drive(player, inp, dt, traffic.cars.concat(Police.cops));
+  else if (guided) activeJob().drive(player, inp, dt);
   else driveRoad(inp, dt, Easy.mods(Care.mods(surface)));
   const moved = Math.hypot(player.x - px, player.y - py);
   if (!guided && !Garagem.pushing) Care.update(dt, player, moved);
   else Care.stallT = Math.max(0, Care.stallT - dt);
   const airborne = Veh.job === 'aereo';
-  traffic.update(dt, player, airborne);
-  const walking = Veh.job === 'passeador';
+  traffic.update(dt, player, airborne, walking);
   const hits = peds.update(dt, player, airborne || walking);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
   if (!guided) {
