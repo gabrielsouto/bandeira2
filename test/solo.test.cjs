@@ -222,6 +222,12 @@ test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro d
     const job = run("const city = generateCity(42); Veh.set('passeador', false); player.p = Veh.cur.phys; Passeador.enter(player); Passeador");
     job.accept(count);
     const { dogs, stops } = s.dogWalk;
+    const blocks = run('city.blocks');
+    const visitedBlocks = new Set([dogs[0], ...stops].map(p => blocks.find(b =>
+      p.x >= b.x0 * 16 && p.x < (b.x1 + 1) * 16 && p.y >= b.y0 * 16 && p.y < (b.y1 + 1) * 16)));
+    assert.equal(stops.length, 5);
+    assert.equal(visitedBlocks.has(undefined), false);
+    assert.equal(visitedBlocks.size, 3);
     assert.equal(dogs.length, count);
     assert.equal(new Set(dogs.map(d => d.name)).size, count);
     assert.equal(new Set(dogs.map(d => d.x + ',' + d.y)).size, count);

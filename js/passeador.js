@@ -28,19 +28,40 @@ const Passeador = {
     const road = city.roadTiles.reduce((a, b) => distance(a) < distance(b) ? a : b);
     person.x = (road.x + 0.5) * TILE; person.y = (road.y + 0.5) * TILE;
   },
+  neighborhoodLoop() {
+    const routes = [];
+    // Contorna três quadras alinhadas, com uma parada em cada calçada da quadra central.
+    // Nas duas pontas, o primeiro trecho fica todo na mesma calçada para buscar os cachorros.
+    const addLoop = (near, middle, far, sideA, sideB, vertical) => {
+      const points = [[near, sideA], [near, sideB], [middle, sideB],
+        [far, sideB], [far, sideA], [middle, sideA]].map(([along, across]) => ({
+          x: ((vertical ? across : along) + 0.5) * TILE,
+          y: ((vertical ? along : across) + 0.5) * TILE,
+        }));
+      routes.push(points, points.slice(3).concat(points.slice(0, 3)));
+    };
+    for (const b of city.blocks) {
+      if (b.i + 3 < city.NX) {
+        const middle = (city.xs[b.i + 1] + city.wx[b.i + 1] + city.xs[b.i + 2] - 1) / 2;
+        addLoop(b.x0, middle, city.xs[b.i + 3] - 1, b.y0, b.y1, false);
+      }
+      if (b.j + 3 < city.NY) {
+        const middle = (city.ys[b.j + 1] + city.wy[b.j + 1] + city.ys[b.j + 2] - 1) / 2;
+        addLoop(b.y0, middle, city.ys[b.j + 3] - 1, b.x0, b.x1, true);
+      }
+    }
+    const distance = ([home]) => Math.hypot(player.x - home.x, player.y - home.y);
+    routes.sort((a, b) => distance(a) - distance(b));
+    return R.pick(routes.slice(0, 3));
+  },
   accept(count = 3) {
     if (S.dogWalk || ![1, 2, 3].includes(count)) return;
-    // As quatro esquinas de cada quarteirão são ligadas por calçadas transitáveis.
-    const distance = p => Math.hypot(player.x - p.x, player.y - p.y);
-    const routes = city.blocks.map(b => {
-      const corners = [[b.x0, b.y0], [b.x1, b.y0], [b.x1, b.y1], [b.x0, b.y1]]
-        .map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE }));
-      const first = corners.reduce((a, p, i) => distance(p) < distance(corners[a]) ? i : a, 0);
-      return corners.slice(first).concat(corners.slice(0, first));
-    }).sort((a, b) => distance(a[0]) - distance(b[0]));
-    const [home, ...stops] = R.pick(routes.slice(0, 3));
-    if (R.chance(0.5)) stops.reverse();
-    const perimeter = 2 * (Math.abs(home.x - stops[1].x) + Math.abs(home.y - stops[1].y));
+    const route = this.neighborhoodLoop();
+    const [home, ...stops] = route;
+    const perimeter = route.reduce((sum, p, i) => {
+      const next = route[(i + 1) % route.length];
+      return sum + Math.hypot(next.x - p.x, next.y - p.y);
+    }, 0);
     const fare = 12 + Math.round(perimeter / 40);
     const names = ['Paçoca', 'Mel', 'Fubá', 'Pipoca', 'Nina'], colors = [...DOG_COLORS];
     const dogs = [];
