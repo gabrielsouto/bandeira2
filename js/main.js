@@ -3,7 +3,7 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, dogWalks: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
     car: { spare: true, fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
@@ -14,7 +14,7 @@ function loadSave() {
       const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
       const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
       const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
-      return { parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
+      return { parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, dogWalks: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;
@@ -52,6 +52,7 @@ resize();
 
 const player = makePlayer(0, 0, 0);
 function activeJob() {
+  if (Veh.job === 'passeador') return Passeador;
   if (Veh.job === 'aereo') return TaxiAereo;
   if (Veh.job === 'barcas') return Barcas;
   if (Veh.job === 'vlt') return VLT;
@@ -68,11 +69,12 @@ const roadHelp = $('help').textContent;
 function applyVehicle() {
   const v = Veh.cur;
   if (Veh.job !== 'policia') Patrulha.setSiren(false);
-  SPR.player = makeCarSprites(v.color, true, v.art, v.bag);
+  SPR.player = v.art === 'passeador' ? null : makeCarSprites(v.color, true, v.art, v.bag);
   player.p = Veh.phys();
   const guided = !!v.guided;
   document.body.classList.toggle('guided-cab', guided);
-  $('help').textContent = Veh.job === 'aereo' ? 'W/↑ acelerar · A/D ou ←/→ girar · S/↓ recuar · Espaço frear · E embarcar · C cancelar · J modalidade' : guided ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
+  document.body.classList.toggle('on-foot', v.art === 'passeador');
+  $('help').textContent = Veh.job === 'passeador' ? 'WASD ou setas para caminhar · E aceitar passeio · C cancelar · J modalidade · Esc pausa' : Veh.job === 'aereo' ? 'W/↑ acelerar · A/D ou ←/→ girar · S/↓ recuar · Espaço frear · E embarcar · C cancelar · J modalidade' : guided ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
   $('appname').textContent = v.app;
   $('phone').classList.toggle('food', !!v.delivery);
   $('phone').classList.toggle('food66', Veh.job === 'comida66');
@@ -170,6 +172,7 @@ function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
+    if (code === 'KeyC') { pickVehicle('passeador'); return; }
     if (code === 'KeyD') { pickVehicle('farmacia'); return; }
     if (code === 'KeyH') { pickVehicle('aereo'); return; }
     if (code === 'KeyB') { pickVehicle('barcas'); return; }
@@ -201,7 +204,7 @@ function onKey(code) {
     case 'KeyC': activeJob().cancel(); break;
     case 'KeyV': if (Veh.cur.parcels && Parcels.state === 'route') Parcels.startReturn(); break;
     case 'KeyF': Easy.toggle(); break;
-    case 'KeyH': if (Veh.job === 'aereo') break; Sfx.horn(0.09); peds.scare(player.x, player.y); break;
+    case 'KeyH': if (Veh.job === 'aereo' || Veh.job === 'passeador') break; Sfx.horn(0.09); peds.scare(player.x, player.y); break;
     case 'KeyG': callTow(); break;
     case 'KeyM': Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
     case 'KeyR': Radio.next(); break;
@@ -232,6 +235,8 @@ function startGame() {
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.job === 'passeador') {
+    toast(S.dogWalk ? 'Passeio retomado. Confira a parada no celular.' : 'Aperte E para aceitar um passeio.', 'good');
   } else if (Veh.job === 'aereo') {
     toast(S.flight ? 'Voo retomado. Confira o destino no painel.' : 'Helicóptero pronto. Aperte E para aceitar um voo.', 'good');
   } else if (Veh.job === 'barcas') {
@@ -293,11 +298,19 @@ Easy.refresh();
   VEH_ORDER.forEach((k, i) => {
     const v = VEHICLES[k], b = document.createElement('button');
     b.className = 'ghost'; b.dataset.veh = k;
-    const spr = makeCarSprites(v.color, true, v.art, v.bag), [cv, g] = makeCanvas(44, 24);
-    const thumbScale = Math.min(2, cv.width / spr.img.width);
-    const w = Math.round(spr.img.width * thumbScale), h = Math.round(spr.img.height * thumbScale);
-    g.drawImage(spr.img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
-    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', policia: 'P', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D' }[k];
+    const [cv, g] = makeCanvas(44, 24);
+    if (k === 'passeador') {
+      g.scale(2, 2);
+      g.fillStyle = '#ebbc78'; g.fillRect(6, 6, 9, 1);
+      drawPedSprite(g, 5, 6, v.color, '#573826', 0, false);
+      World.drawPet(g, { dog: true, col: '#d9b26a', anim: 0 }, 15, 7);
+    } else {
+      const { img } = makeCarSprites(v.color, true, v.art, v.bag);
+      const thumbScale = Math.min(2, cv.width / img.width);
+      const w = Math.round(img.width * thumbScale), h = Math.round(img.height * thumbScale);
+      g.drawImage(img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
+    }
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', policia: 'P', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D', passeador: 'C' }[k];
     cv.setAttribute('aria-hidden', 'true');
     const key = document.createElement('kbd');
     key.textContent = shortcut;
@@ -462,7 +475,8 @@ function openPause(confirmReset) {
   }
   if (Veh.cur.guided) {
     const trips = { aereo: S.airTrips, barcas: S.ferryTrips, vlt: S.vltTrips };
-    showModal('PAUSA · ' + Veh.cur.app, 'Viagens concluídas: ' + trips[Veh.job], [
+    const summary = Veh.job === 'passeador' ? 'Passeios concluídos: ' + S.dogWalks : 'Viagens concluídas: ' + trips[Veh.job];
+    showModal('PAUSA · ' + Veh.cur.app, summary, [
       { label: 'Continuar', run: closeModal },
       { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
       { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },
@@ -601,7 +615,8 @@ function update(dt) {
   else Care.stallT = Math.max(0, Care.stallT - dt);
   const airborne = Veh.job === 'aereo';
   traffic.update(dt, player, airborne);
-  const hits = peds.update(dt, player, airborne);
+  const walking = Veh.job === 'passeador';
+  const hits = peds.update(dt, player, airborne || walking);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
   if (!guided) {
     World.update(dt, player);
@@ -640,12 +655,12 @@ function update(dt) {
     if (f.t > 1.6) floaters.splice(k, 1);
   }
 
-  const pl = airborne ? null : Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
+  const pl = airborne || walking ? null : Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
   if (pl && pl === Nav.place) Nav.clear(`Você chegou: ${pl.name}.`);
   if (pl && pl !== lastPlace && (player.speed < 18 || Garagem.pushing) && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
 
-  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, !Garagem.pushing && !Veh.cur.electric && !Veh.cur.pedal && !Care.empty() && S.car.health > 0 && Care.stallT <= 0); // bike não ronca
+  Sfx.engine(clamp(player.speed / 230, 0, 1), player.throttle, !walking && !Garagem.pushing && !Veh.cur.electric && !Veh.cur.pedal && !Care.empty() && S.car.health > 0 && Care.stallT <= 0); // bike não ronca
 
   cam.x += (player.x + player.vx * 0.4 - cam.x) * Math.min(1, 4 * dt);
   cam.y += (player.y + player.vy * 0.4 - cam.y) * Math.min(1, 4 * dt);
@@ -721,7 +736,8 @@ function render() {
   Multi.drawCars();
   if (Multi.ghostT > 0) ctx.globalAlpha = Math.floor(time * 8) % 2 ? 0.35 : 0.7; // pisca enquanto é fantasma
   if (Garagem.pushing) drawPedSprite(ctx, player.x - Math.cos(player.a)*12 - camX, player.y - Math.sin(player.a)*12 - camY, '#78bffa', '#604028', player.speed ? time*5 : 0, false);
-  drawCar(SPR.player, player.x, player.y, player.a, player.braking);
+  if (Veh.job === 'passeador') drawPedSprite(ctx, player.x - camX, player.y - camY, Veh.cur.color, '#573826', player.speed ? time * 8 : 0, false);
+  else drawCar(SPR.player, player.x, player.y, player.a, player.braking);
   if (Veh.job === 'aereo' && S.flight?.boarded) {
     ctx.save();
     ctx.translate(Math.round(player.x - camX), Math.round(player.y - camY));
@@ -744,7 +760,7 @@ function render() {
 
   // noite: escurece tudo e recorta faróis e postes
   const moto = Veh.twoWheel();
-  const lit = [{ x: player.x, y: player.y, a: player.a, front: moto ? 6 : 8, len: 95, spread: moto ? 0.32 : 0.42 }];
+  const lit = Veh.job === 'passeador' ? [] : [{ x: player.x, y: player.y, a: player.a, front: moto ? 6 : 8, len: 95, spread: moto ? 0.32 : 0.42 }];
   for (const n of traffic.cars) lit.push({ x: n.x, y: n.y, a: n.a, front: 8, len: 50, k: 0.7 });
   Multi.lightCars(lit);
   Police.lightCars(lit);

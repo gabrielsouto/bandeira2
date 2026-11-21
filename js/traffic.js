@@ -3,6 +3,8 @@
 
 const NPC_COLORS = ['#c0392b', '#2e6fb0', '#27ae60', '#8e44ad', '#d35400', '#7f8c8d', '#2c3e50',
   '#f1c40f', '#16a085', '#bdc3c7', '#1c1c1c', '#a0522d', '#e8e8e8', '#f1c40f'];
+const NPC_HALF_LENGTH = 9, NPC_QUEUE_GAP = 8;
+const NPC_HEADWAY = 2 * NPC_HALF_LENGTH + NPC_QUEUE_GAP;
 
 class Traffic {
   constructor(city, n) {
@@ -32,7 +34,8 @@ class Traffic {
     const ni = i + DIRS[d].dx, nj = j + DIRS[d].dy;
     const b = c.entryPoint(ni, nj, d, lane);
     const x = lerp(a.x, b.x, t), y = lerp(a.y, b.y, t);
-    if (this.cars.some((o) => Math.hypot(o.x - x, o.y - y) < 20)) return null;
+    if (this.cars.some(o => Math.hypot(o.x - x, o.y - y) < 20 ||
+      (o.ti === ni && o.tj === nj && o.dir === d && o.lane === lane && Math.hypot(o.x - x, o.y - y) < NPC_HEADWAY))) return null;
     const ang = Math.atan2(DIRS[d].dy, DIRS[d].dx);
     const car = { x, y, a: ang, ma: ang, speed: 0, cruise: R.f(55, 85),
       wps: [{ x: b.x, y: b.y, turn: false }], ti: ni, tj: nj, dir: d,
@@ -73,32 +76,43 @@ class Traffic {
     for (const car of cars) {
       car.hitT -= dt; car.ghost -= dt; car.honkT -= dt;
       const fx = Math.cos(car.a), fy = Math.sin(car.a);
-      const ahead = (ox, oy) => {
+      const distanceAhead = (ox, oy) => {
         const dx = ox - car.x, dy = oy - car.y;
         const ah = dx * fx + dy * fy;
-        if (ah <= 3 || ah > 28) return false;
-        return Math.abs(-dx * fy + dy * fx) < 10;
+        return ah > 3 && Math.abs(-dx * fy + dy * fx) < 10 ? ah : Infinity;
       };
-      let blocked = false, byPlayer = false, queued = false;
-      if (!airborne && ahead(pl.x, pl.y)) { blocked = true; byPlayer = true; }
-      else if (car.ghost <= 0) {
-        for (const o of cars) if (o !== car && ahead(o.x, o.y)) { blocked = true; queued = o.atLight || o.queued; break; }
+      const playerDistance = airborne ? Infinity : distanceAhead(pl.x, pl.y);
+      const byPlayer = playerDistance <= 28;
+      let blocked = byPlayer || car.hitT > 0, queued = false;
+      let clearance = byPlayer ? Math.max(0, playerDistance - NPC_HEADWAY) : Infinity;
+      for (const o of cars) {
+        if (o === car) continue;
+        const distance = distanceAhead(o.x, o.y);
+        if (distance > 65) continue;
+        const sameLane = car.dir === o.dir && car.ti === o.ti && car.tj === o.tj && car.lane === o.lane;
+        if (sameLane || o.atLight || o.queued) {
+          clearance = Math.min(clearance, Math.max(0, distance - NPC_HEADWAY));
+          if (distance <= NPC_HEADWAY + 1 && (o.atLight || o.queued)) queued = true;
+        } else if (distance <= 28 && car.ghost <= 0) {
+          blocked = true;
+        }
       }
-      if (car.hitT > 0) blocked = true;
-      car.queued = blocked && queued; // fila do sinal: espera sem "atravessar" o carro da frente
+      car.queued = queued;
 
       const wp = car.wps[0];
       const cap = this.capFn ? this.capFn(car.x, car.y) : Infinity; // engarrafamento (colégios)
       let target = blocked ? 0 : Math.min(cap, wp && wp.turn ? 36 : car.cruise);
-      // chegando no cruzamento (o próximo ponto é a faixa de entrada): sinal fechado, para na faixa
+      // O ponto de entrada está depois da faixa. Quem já começou a atravessar libera a passagem.
       car.atLight = false;
       if (this.stopFn && car.wps.length === 1 && !wp.turn) {
         const dd = Math.hypot(wp.x - car.x, wp.y - car.y);
-        if (dd < 70 && this.stopFn(car.ti, car.tj, car.dir, dd)) {
-          target = Math.min(target, Math.max(0, (dd - 4) * 2.2));
-          car.atLight = dd < 30;
+        if (dd < 70 && dd >= CROSSWALK_OUTER + NPC_HALF_LENGTH && this.stopFn(car.ti, car.tj, car.dir, dd)) {
+          const room = Math.max(0, dd - STOP_LINE_OUTER - NPC_HALF_LENGTH - 2);
+          clearance = Math.min(clearance, room);
+          car.atLight = room < 1;
         }
       }
+      target = Math.min(target, Math.sqrt(2 * 240 * clearance));
       if (car.speed < target) car.speed = Math.min(target, car.speed + 60 * dt);
       else car.speed = Math.max(target, car.speed - 240 * dt);
 
@@ -112,7 +126,8 @@ class Traffic {
         if (this.onHonk && Math.hypot(car.x - pl.x, car.y - pl.y) < 200) this.onHonk(car);
       }
 
-      let step = car.speed * dt, guard = 0;
+      let step = Math.min(car.speed * dt, clearance), guard = 0;
+      if (step === clearance) car.speed = 0;
       while (step > 1e-4 && guard++ < 8) {
         if (!car.wps.length) this.plan(car);
         const w = car.wps[0];

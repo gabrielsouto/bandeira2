@@ -11,7 +11,7 @@ const KMH = 0.55; // px/s → km/h do velocímetro
 
 // nodes = cruzamentos da aula · stops = quantos têm placa de PARE · lane = conta a contramão · turns = chance de virar
 const LESSONS = [
-  { name: 'Primeira aula', tip: 'Vá devagar e siga a seta amarela no chão.', nodes: 3, limit: 40, stops: 0, lane: false, turns: 0.35 },
+  { name: 'Primeira aula', tip: 'Vá devagar e siga as indicações no celular.', nodes: 3, limit: 40, stops: 0, lane: false, turns: 0.35 },
   { name: 'Virando a esquina', tip: 'Diminua a velocidade antes de virar.', nodes: 5, limit: 40, stops: 0, lane: false, turns: 0.75 },
   { name: 'Placa de PARE', tip: 'Na placa de PARE, o carro tem que parar de vez antes do cruzamento.', nodes: 5, limit: 40, stops: 2, lane: false, turns: 0.5 },
   { name: 'Mão direita', tip: 'Ande sempre na faixa da direita da rua.', nodes: 6, limit: 50, stops: 1, lane: true, turns: 0.6 },
@@ -435,50 +435,25 @@ const Autoescola = {
       if (st === 'toPickup') pxDownArrow(g, sx, sy - 15 + bob, '#39ff88');
     } else if (st === 'lesson') {
       const rt = this.route;
-      for (let k = Math.min(rt.nodes.length, rt.k + 2) - 1; k >= rt.k; k--) this.drawNode(g, rt.nodes[k], camX, camY, k === rt.k);
+      for (let k = Math.min(rt.nodes.length, rt.k + 2) - 1; k >= rt.k; k--) this.drawStop(g, rt.nodes[k], camX, camY);
       if (rt.k >= rt.nodes.length - 1) this.drawPark(g, rt.park, camX, camY, rt.k >= rt.nodes.length);
     } else if (st === 'result' && this.resT < 3) {
       drawPedSprite(g, this.paxX - camX, this.paxY - camY, INSTR_SHIRT, this.instr.hair, time * 4, this.resT > 0.9);
     }
   },
 
-  // seta pintada no cruzamento (e a placa de PARE com a faixa branca antes dele)
-  drawNode(g, nd, camX, camY, cur) {
-    const p = this.center(nd), cx = Math.round(p.x - camX), cy = Math.round(p.y - camY);
-    if (cx < -60 || cy < -60 || cx > view.w + 60 || cy > view.h + 60) return;
-    const a = DIRS[nd.din], b = DIRS[nd.dout];
-    if (nd.stop) {
-      const e = this.city.entryPoint(nd.i, nd.j, nd.din), rx = -a.dy, ry = a.dx;
-      const lx = Math.round(e.x - a.dx * 2 - camX), ly = Math.round(e.y - a.dy * 2 - camY);
-      g.fillStyle = nd.stopped ? 'rgba(255,255,255,0.5)' : '#fff';
-      if (a.dx) g.fillRect(lx - 1, ly - 7, 2, 14); else g.fillRect(lx - 7, ly - 1, 14, 2);
-      const sx = Math.round(e.x - a.dx * 8 + rx * 15 - camX), sy = Math.round(e.y - a.dy * 8 + ry * 15 - camY);
-      g.fillStyle = '#555'; g.fillRect(sx, sy, 1, 6);
-      pxCircle(g, sx, sy - 2, 5, '#fff');
-      pxCircle(g, sx, sy - 2, 4, '#d4161c');
-      g.fillStyle = '#fff'; g.fillRect(sx - 2, sy - 2, 5, 1);
-    }
-    g.save();
-    g.globalAlpha = cur ? 0.8 + 0.2 * Math.sin(time * 6) : 0.4;
-    const pts = nd.din === nd.dout ? [[cx - a.dx * 13, cy - a.dy * 13], [cx + a.dx * 8, cy + a.dy * 8]]
-      : [[cx - a.dx * 13, cy - a.dy * 13], [cx, cy], [cx + b.dx * 8, cy + b.dy * 8]];
-    const end = pts[pts.length - 1], tip = [end[0] + b.dx * 7, end[1] + b.dy * 7], px = -b.dy, py = b.dx;
-    const head = (k) => {
-      g.beginPath();
-      g.moveTo(tip[0] + b.dx * k, tip[1] + b.dy * k);
-      g.lineTo(end[0] + px * (6 + k) - b.dx * k, end[1] + py * (6 + k) - b.dy * k);
-      g.lineTo(end[0] - px * (6 + k) - b.dx * k, end[1] - py * (6 + k) - b.dy * k);
-      g.closePath(); g.fill();
-    };
-    g.lineJoin = 'miter'; g.lineCap = 'butt';
-    for (const [w, col] of [[7, '#0b0b0b'], [4, cur ? '#ffd23f' : '#fff3b0']]) {
-      g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w;
-      g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
-      for (let k = 1; k < pts.length; k++) g.lineTo(pts[k][0], pts[k][1]);
-      g.stroke();
-      head(w === 7 ? 1.5 : 0);
-    }
-    g.restore();
+  drawStop(g, nd, camX, camY) {
+    if (!nd.stop) return;
+    const a = DIRS[nd.din];
+    const e = this.city.entryPoint(nd.i, nd.j, nd.din), rx = -a.dy, ry = a.dx;
+    const lx = Math.round(e.x - a.dx * 2 - camX), ly = Math.round(e.y - a.dy * 2 - camY);
+    g.fillStyle = nd.stopped ? 'rgba(255,255,255,0.5)' : '#fff';
+    if (a.dx) g.fillRect(lx - 1, ly - 7, 2, 14); else g.fillRect(lx - 7, ly - 1, 14, 2);
+    const sx = Math.round(e.x - a.dx * 8 + rx * 15 - camX), sy = Math.round(e.y - a.dy * 8 + ry * 15 - camY);
+    g.fillStyle = '#555'; g.fillRect(sx, sy, 1, 6);
+    pxCircle(g, sx, sy - 2, 5, '#fff');
+    pxCircle(g, sx, sy - 2, 4, '#d4161c');
+    g.fillStyle = '#fff'; g.fillRect(sx - 2, sy - 2, 5, 1);
   },
 
   // vaga do fim da aula
@@ -498,7 +473,7 @@ const Autoescola = {
     g.restore();
   },
 
-  // de noite, as setas e o instrutor ficam iluminados
+  // de noite, o trajeto e o instrutor ficam iluminados
   drawLights(L, camX, camY) {
     if (!this.on) return;
     if (this.state === 'toPickup' || this.state === 'boarding') L.hole(this.pick.x - camX, this.pick.y - camY, 24, 0.6);

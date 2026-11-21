@@ -305,4 +305,4 @@ table.rank i { display: inline-block; width: 8px; height: 8px; border: 1px solid
 
 [hidden] { display: none !important; }
 button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
-.guided-cab #easytag { display: none; }
+.guided-cab #easytag, .on-foot #dash { display: none; }

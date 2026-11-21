@@ -10,24 +10,54 @@ const VLT = {
     const right = (city.xs.at(-1) + city.wx.at(-1) + 2) * TILE;
     const bottom = (city.ys.at(-1) + city.wy.at(-1) + 2) * TILE;
     const w = right - left, h = bottom - top;
-    this.length = 2 * (w + h);
-    this.edges = [
-      { x: left, y: top, start: 0, size: w, dx: 1, dy: 0 },
-      { x: right, y: top, start: w, size: h, dx: 0, dy: 1 },
-      { x: right, y: bottom, start: w + h, size: w, dx: -1, dy: 0 },
-      { x: left, y: bottom, start: 2 * w + h, size: h, dx: 0, dy: -1 },
-    ];
+    const radius = 1.5 * TILE;
+    this.track = { left, top, w, h, radius };
+    this.bendLength = radius * Math.PI / 2;
+    this.length = 0;
+    this.sides = [
+      [left + radius, top, 1, 0, w], [right, top + radius, 0, 1, h],
+      [right - radius, bottom, -1, 0, w], [left, bottom - radius, 0, -1, h],
+    ].map(([x, y, dx, dy, span]) => {
+      const straight = span - 2 * radius, start = this.length;
+      this.length += straight + this.bendLength;
+      return { x, y, dx, dy, straight, start, end: this.length };
+    });
     this.stations = [
       ['Terminal Poente', (city.xs[0] + city.wx[0] / 2) * TILE - left],
       ['Mercado', w / 2], ['Nascente', w + h / 2],
       ['Jardim Sul', w + h + w / 2], ['Oeste', 2 * w + h + h / 2],
-    ].map(([name, position]) => ({ name, position, ...this.point(position) }));
+    ].map(([name, perimeter]) => {
+      const position = this.fromPerimeter(perimeter);
+      return { name, position, ...this.point(position) };
+    });
+  },
+  // Converte a distância no retângulo original, usada nas estações e nos saves antigos.
+  fromPerimeter(position) {
+    const { w, h, radius } = this.track, perimeter = 2 * (w + h);
+    const laps = Math.floor((position - radius) / perimeter);
+    let along = position - radius - laps * perimeter;
+    for (const side of this.sides) {
+      const span = side.straight + 2 * radius;
+      if (along < span) {
+        const bend = Math.max(0, along - side.straight) * Math.PI / 4;
+        return laps * this.length + side.start + Math.min(along, side.straight) + bend;
+      }
+      along -= span;
+    }
+    return (laps + 1) * this.length;
   },
   point(position) {
-    const d = ((position % this.length) + this.length) % this.length;
-    const e = this.edges.find(edge => d < edge.start + edge.size);
-    return { x: e.x + e.dx * (d - e.start), y: e.y + e.dy * (d - e.start),
-      a: Math.atan2(e.dy, e.dx) };
+    const remainder = position % this.length;
+    const d = remainder < 0 ? (remainder + this.length) % this.length : remainder;
+    const side = this.sides.find(s => d < s.end);
+    const along = d - side.start, a = Math.atan2(side.dy, side.dx);
+    if (along <= side.straight) {
+      return { x: side.x + side.dx * along, y: side.y + side.dy * along, a };
+    }
+    const radius = this.track.radius, turn = (along - side.straight) / radius;
+    const forward = side.straight + radius * Math.sin(turn), inward = radius * (1 - Math.cos(turn));
+    return { x: side.x + side.dx * forward - side.dy * inward,
+      y: side.y + side.dy * forward + side.dx * inward, a: a + turn };
   },
   park(car, position) {
     Object.assign(car, this.point(position), { speed: 0, vx: 0, vy: 0, vF: 0, vR: 0,
@@ -36,10 +66,14 @@ const VLT = {
   },
   enter(car) {
     const r = S.vltRun;
-    if (r && !Number.isFinite(r.position)) {
-      // A antiga Linha Norte salvava apenas a coordenada horizontal.
-      r.position = r.x - this.edges[0].x;
-      r.index = 0;
+    if (r && !r.roundedTrack) {
+      if (!Number.isFinite(r.position)) {
+        // A antiga Linha Norte salvava apenas a coordenada horizontal.
+        r.position = r.x - this.track.left;
+        r.index = 0;
+      }
+      r.position = this.fromPerimeter(r.position);
+      r.roundedTrack = true;
     }
     this.park(car, r ? r.position : this.stations[0].position);
   },
@@ -54,7 +88,7 @@ const VLT = {
     if (S.vltRun) return;
     const position = this.stations[0].position;
     this.park(player, position);
-    S.vltRun = { index: 0, position, aboard: 0 };
+    S.vltRun = { index: 0, position, aboard: 0, roundedTrack: true };
     writeSave(); toast('Serviço iniciado. Aguarde o embarque na plataforma.');
   },
   cancel() {
@@ -107,17 +141,22 @@ const VLT = {
     return `<div class="ph-title">${esc(station.name)}</div><div class="ph-row">${status}</div><div class="ph-muted">${r.aboard} a bordo · ${kmStr(distance)} até a parada</div>
       <div class="ph-btns"><button class="ghost" data-act="cancel"><kbd>C</kbd> ENCERRAR</button></div>`;
   },
+  trackPath(g, inset = 0) {
+    const { left, top, w, h, radius } = this.track;
+    g.beginPath();
+    g.roundRect(left + inset, top + inset, w - 2 * inset, h - 2 * inset, radius - inset);
+  },
   drawTrack(g, cx, cy) {
-    for (const edge of this.edges) {
-      g.save();
-      g.translate(edge.x - cx, edge.y - cy);
-      g.rotate(Math.atan2(edge.dy, edge.dx));
-      g.fillStyle = '#53585c'; g.fillRect(-6, -6, edge.size + 12, 13);
-      g.fillStyle = '#353d43';
-      for (let i = 0; i < edge.size; i += 8) g.fillRect(i, -5, 3, 11);
-      g.fillStyle = '#bdc7cd'; g.fillRect(0, -3, edge.size, 1); g.fillRect(0, 3, edge.size, 1);
-      g.restore();
-    }
+    g.save(); g.translate(0.5 - cx, 0.5 - cy);
+    this.trackPath(g);
+    g.strokeStyle = '#53585c'; g.lineWidth = 13; g.stroke();
+    const spacing = this.length / Math.round(this.length / 8);
+    g.setLineDash([3, spacing - 3]);
+    g.strokeStyle = '#353d43'; g.lineWidth = 11; g.stroke();
+    g.setLineDash([]);
+    g.strokeStyle = '#bdc7cd'; g.lineWidth = 1;
+    for (const inset of [-3, 3]) { this.trackPath(g, inset); g.stroke(); }
+    g.restore();
     for (const station of this.stations) {
       g.save(); g.translate(station.x - cx, station.y - cy); g.rotate(station.a);
       g.fillStyle = '#687583'; g.fillRect(-22, -17, 44, 11);
@@ -127,9 +166,10 @@ const VLT = {
     }
   },
   drawMinimap(g, scale) {
-    const [north, east] = this.edges;
-    g.strokeStyle = '#49dfcc'; g.lineWidth = 1;
-    g.strokeRect(north.x * scale, north.y * scale, north.size * scale, east.size * scale);
+    g.save(); g.scale(scale, scale);
+    this.trackPath(g);
+    g.strokeStyle = '#49dfcc'; g.lineWidth = 1 / scale; g.stroke();
+    g.restore();
     g.fillStyle = '#49dfcc';
     for (const p of this.stations) g.fillRect(p.x * scale - 1, p.y * scale - 1, 3, 3);
   },

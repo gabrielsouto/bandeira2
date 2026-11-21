@@ -214,6 +214,97 @@ test('a multa segue a entrada sinalizada mesmo quando o carro já começou a vir
   }
 });
 
+test('passeador percorre o quarteirão, retoma a guia e só recebe ao devolver o cachorro', () => {
+  const { run, context } = game(['util', 'city', 'world', 'vehicles', 'passeador']);
+  const person = context.player, s = context.S;
+  s.dogWalks = 0;
+  const job = run("const city = generateCity(42); Veh.set('passeador', false); player.p = Veh.cur.phys; Passeador.enter(player); Passeador");
+  job.accept();
+  const fare = s.dogWalk.fare;
+  Object.assign(person, job.target());
+  job.update(1, person);
+  assert.equal(s.dogWalk.stage, 1);
+  for (let stage = 1; stage <= 4; stage++) {
+    const p = job.target();
+    for (let frame = 0; frame < 600 && Math.hypot(p.x - person.x, p.y - person.y) > 1; frame++) {
+      job.drive(person, { right: p.x - person.x > 0.7, left: person.x - p.x > 0.7,
+        up: person.y - p.y > 0.7, down: p.y - person.y > 0.7 }, 1 / 60);
+      job.update(1 / 60, person);
+    }
+    assert.equal(s.dogWalk.stage, stage);
+    assert.ok(Math.hypot(person.x - p.x, person.y - p.y) <= 1);
+    if (stage === 2) {
+      s.dogWalk = JSON.parse(JSON.stringify(s.dogWalk));
+      person.x = 0; job.enter(person);
+      assert.equal(person.x, s.dogWalk.x);
+      assert.ok(s.dogWalk.trail.length > 1);
+    }
+    job.drive(person, {}, 1 / 60);
+    assert.equal(s.money, 0);
+    job.update(1, person);
+  }
+  job.update(1, person);
+  assert.equal(s.dogWalks, 1);
+  assert.equal(s.money, fare);
+  assert.equal(s.earned, fare);
+  job.accept(); job.cancel();
+  assert.equal(s.dogWalk, null);
+  assert.equal(s.money, fare);
+});
+
+test('viatura fica isenta da multa de sinal vermelho apenas com a sirene ligada', () => {
+  const { run, context } = game(['util', 'patrulha']);
+  const charges = [];
+  Object.assign(context, {
+    RADAR_FINE: 60, Veh: { job: 'policia', cur: {} }, Easy: { solo: false },
+    SirenSound: { startSiren() {}, sirenVol() {}, stopSiren() {} },
+    Care: { charge: (amount, kind) => charges.push([amount, kind]) },
+  });
+  context.Sfx.bad = () => {};
+  run(readFileSync(join(__dirname, '..', 'js', 'semaforo.js'), 'utf8'));
+  run('Patrulha.setSiren(true); Signals.ranRed()');
+  assert.deepEqual(charges, []);
+  run('Patrulha.setSiren(false); Signals.ranRed()');
+  assert.deepEqual(charges, [[60, 'radar']]);
+});
+
+test('trânsito para antes da travessia, mantém a fila no vermelho e volta a andar no verde', () => {
+  const { run, context } = game(['util', 'city', 'traffic']);
+  context.RADAR_FINE = 60;
+  run(readFileSync(join(__dirname, '..', 'js', 'semaforo.js'), 'utf8'));
+  const city = run('const city = generateCity(42); Signals.init(city); city');
+  const signals = run('Signals'), dirs = run('DIRS');
+  for (const [d, { dx, dy }] of dirs.entries()) {
+    const s = signals.list.find(s => s.entries.includes(d));
+    const traffic = run('new Traffic(city, 0)');
+    traffic.stopFn = (...args) => signals.npcStop(...args);
+    signals.light = () => 'r';
+    const entry = city.entryPoint(s.i, s.j, d);
+    const distance = car => (entry.x - car.x) * dx + (entry.y - car.y) * dy;
+    const exit = city.exitPoint(s.i - dx, s.j - dy, d);
+    const length = distance(exit);
+    run('R.i = min => min'); // Mesma faixa para os três carros.
+    const cars = [50, 85, 120].map(dist => {
+      const car = traffic.spawnAt(s.i - dx, s.j - dy, d, 1 - dist / length);
+      car.speed = car.cruise = 85;
+      return car;
+    });
+    traffic.cars.reverse(); // O último da fila atualiza antes do primeiro.
+    for (let frame = 0; frame < 240; frame++) {
+      traffic.update(0.05, context.player);
+      assert.ok(distance(cars[0]) - 9 >= 18);
+      for (let k = 1; k < cars.length; k++) assert.ok(distance(cars[k]) - distance(cars[k - 1]) >= 26 - 1e-6);
+    }
+    for (const [k, car] of cars.entries()) {
+      assert.ok(Math.abs(distance(car) - (29 + k * 26)) < 0.01);
+      assert.equal(car.speed, 0);
+    }
+    signals.light = () => 'g';
+    for (let frame = 0; frame < 15; frame++) traffic.update(0.05, context.player);
+    assert.ok(cars.every(car => car.speed > 0));
+  }
+});
+
 test('resgate exige duas paradas completas e paga apenas na chegada ao hospital', () => {
   const { run, context } = game(['util', 'ambulancia']);
   context.S.rescues = 0;
@@ -310,6 +401,29 @@ test('VLT mantém o trilho, exige parada contínua, remunera uma vez e retorna a
   run('VLT.cancel()');
   assert.equal(context.S.vltRun, null);
   assert.equal(context.S.money, 40);
+});
+
+test('VLT acompanha os quatro arcos e retoma uma viagem do circuito retangular', () => {
+  const { run, context } = game(['util', 'vlt']);
+  run('VLT.init({ xs: [5,45], wx: [2,2], ys: [6,26], wy: [2,2] })');
+  const vlt = run('VLT');
+  for (const side of vlt.sides) {
+    const middle = side.end - vlt.bendLength / 2;
+    const p = vlt.point(middle);
+    const centerX = side.x + side.dx * side.straight - side.dy * vlt.track.radius;
+    const centerY = side.y + side.dy * side.straight + side.dx * vlt.track.radius;
+    assert.ok(Math.abs(Math.hypot(p.x - centerX, p.y - centerY) - vlt.track.radius) < 1e-8);
+    assert.ok(Math.abs(Math.cos(p.a) - (side.dx - side.dy) * Math.SQRT1_2) < 1e-8);
+    assert.ok(Math.abs(Math.sin(p.a) - (side.dx + side.dy) * Math.SQRT1_2) < 1e-8);
+    assert.ok(Math.abs(vlt.point(middle - vlt.length).x - p.x) < 1e-8);
+  }
+  const { w, h } = vlt.track;
+  context.S.vltRun = { index: 3, position: w + h + w / 2, aboard: 6 };
+  run('VLT.enter(player); VLT.enter(player)');
+  assert.equal(context.S.vltRun.position, vlt.target().position);
+  assert.equal(context.S.vltRun.aboard, 6);
+  assert.equal(context.player.x, vlt.stations[3].x);
+  assert.equal(context.player.y, vlt.stations[3].y);
 });
 
 test('farmácia de bike aguarda a retirada no balcão e avalia o estado do pacote', () => {

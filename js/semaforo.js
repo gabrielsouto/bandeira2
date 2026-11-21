@@ -52,7 +52,7 @@ const Signals = {
     const s = this.at(i, j);
     if (!s) return false;
     const l = this.light(s, d);
-    return l === 'r' || (l === 'y' && dist > 22);
+    return l === 'r' || (l === 'y' && dist >= STOP_LINE_OUTER + NPC_HALF_LENGTH);
   },
 
   // jogador: entrou num cruzamento com semáforo no vermelho?
@@ -85,7 +85,7 @@ const Signals = {
   },
 
   ranRed() {
-    if (this.cd > 0) return;
+    if (this.cd > 0 || (Veh.job === 'policia' && Patrulha.sirenOn)) return;
     this.cd = 3;
     if (Veh.cur.school) { Autoescola.fault('sinal'); return; }
     if (Easy.solo) { toast('Sinal vermelho! No vermelho a gente para e espera o verde. (Direção fácil: sem multa)', 'warn'); Sfx.bad(); return; }
@@ -117,15 +117,7 @@ const Signals = {
         g.save();
         g.transform(h.a.dx, h.a.dy, -h.a.dy, h.a.dx, Math.round(h.hx - camX), Math.round(h.hy - camY));
         g.fillStyle = '#f5f3e9';
-        g.fillRect(-7, -halfWidth + 1, 2, halfWidth * 2 - 2);
-        for (let k = 0; k < h.lanes; k++) {
-          const y = halfWidth - 8 - k * 16;
-          g.fillStyle = colors[light];
-          g.beginPath();
-          g.moveTo(-10, y); g.lineTo(-16, y - 5); g.lineTo(-16, y - 2);
-          g.lineTo(-22, y - 2); g.lineTo(-22, y + 2); g.lineTo(-16, y + 2);
-          g.lineTo(-16, y + 5); g.closePath(); g.fill();
-        }
+        g.fillRect(-5 - STOP_LINE_OUTER, -halfWidth + 1, 2, halfWidth * 2 - 2);
         g.fillStyle = '#181d24'; g.fillRect(-4, -8, 8, 16);
         for (const [index, phase] of ['r', 'y', 'g'].entries()) {
           g.fillStyle = light === phase ? colors[phase] : '#404752';
