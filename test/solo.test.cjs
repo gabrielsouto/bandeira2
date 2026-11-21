@@ -733,18 +733,31 @@ test('gincana leva a paradas acessíveis e paga cada desafio uma única vez', ()
   assert.equal(context.S.money, 320);
 });
 
-test('gincana explica a parada sem missão e a pista incorreta, sem consumir bônus', () => {
+test('gincana só mostra e ativa a parada da etapa atual', () => {
   const { run, context } = game(['util', 'city', 'vlt', 'barcas', 'gincana']);
-  const messages = [];
-  context.toast = message => messages.push(message);
+  const labels = [];
   context.Radio = { stopTalk() {}, say() {} };
-  run("const city = generateCity(20261118); VLT.init(city); Barcas.init(city); Object.assign(player, Gincana.point('west')); Gincana.update(1, player)");
-  assert.match(messages.pop(), /Escolha uma missão/);
-  run("Gincana.accept(); Object.assign(player, Gincana.point('east')); Gincana.update(1, player)");
-  assert.match(messages.pop(), /Pista resolvida/);
-  run("Object.assign(player, Gincana.point('west')); Gincana.update(1, player); Gincana.update(1, player)");
-  assert.equal(messages.length, 1);
-  assert.match(messages[0], /Cais Poente.*etapa atual/);
-  assert.equal(context.S.gincana.step, 1);
-  assert.equal(context.S.gincana.helped, false);
+  context.pxRing = () => {};
+  context.g = { save() {}, restore() {}, measureText: () => ({ width: 40 }), fillRect() {}, fillText(label) { labels.push(label); } };
+  run('const city = generateCity(20261118); VLT.init(city); Barcas.init(city)');
+  function visible() {
+    labels.length = 0;
+    run('Gincana.drawWorld(g, 0, 0)');
+    return labels;
+  }
+  assert.deepEqual(visible(), []);
+  for (const id of [0, 1, 2]) {
+    run(`Gincana.accept(${id})`);
+    for (let step = 0; step < 3; step++) {
+      const expected = run('Gincana.point().name');
+      assert.deepEqual(visible(), [expected]);
+      if (step < 2) {
+        run('Object.assign(player, Gincana.point(RADIO_MISSIONS[S.gincana.id].route[2])); Gincana.update(1, player)');
+        assert.equal(context.S.gincana.step, step);
+        assert.deepEqual(visible(), [expected]);
+      }
+      run('Object.assign(player, Gincana.point()); Gincana.update(5, player)');
+    }
+    assert.deepEqual(visible(), []);
+  }
 });

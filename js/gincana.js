@@ -31,7 +31,6 @@ const Gincana = {
   announce() { Radio.stopTalk(); Radio.say(this.message()); writeSave(); },
   accept(id = 0) {
     if (S.gincana || !RADIO_MISSIONS[id]) return;
-    this.lastStop = null;
     S.gincana = { id, step: 0, helped: false, reveal: false, dwell: 0 };
     this.announce();
   },
@@ -49,27 +48,14 @@ const Gincana = {
   onImpact(force) {
     if (S.gincana?.id === 1 && S.gincana.step === 2 && force > 10) this.end('O disco quebrou na batida. Tente de novo!', 'bad');
   },
-  lastStop: null,
   update(dt, car) {
-    const stop = Object.keys(RADIO_CLUES).find(key => {
-      const p = this.point(key);
-      return Math.hypot(car.x - p.x, car.y - p.y) <= 24;
-    });
-    if (!stop) this.lastStop = null;
     const r = S.gincana;
-    if (stop && car.speed <= 4 && this.lastStop !== stop) {
-      this.lastStop = stop;
-      const name = this.point(stop).name;
-      if (!r) toast(name + ' · Escolha uma missão no celular ou aperte E para começar.');
-      else if (stop !== RADIO_MISSIONS[r.id].route[r.step]) {
-        toast(name + ' · Esta parada não corresponde à etapa atual. Confira a pista no celular.', 'warn');
-      }
-    }
     if (!r) return;
     if (r.step === 2 && r.id === 0 && (r.seconds -= dt) <= 0) {
       this.end('A barca já partiu. Tente de novo!', 'warn'); return;
     }
-    if (stop !== RADIO_MISSIONS[r.id].route[r.step] || car.speed > 4) { r.dwell = 0; return; }
+    const p = this.point();
+    if (Math.hypot(car.x - p.x, car.y - p.y) > 24 || car.speed > 4) { r.dwell = 0; return; }
     if (r.step < 2) {
       r.step++; r.reveal = false;
       if (r.step === 2 && r.id === 0) r.seconds = 90;
@@ -83,18 +69,17 @@ const Gincana = {
   },
   target() { return S.gincana && (S.gincana.reveal || S.gincana.step === 2) ? { ...this.point(), kind: 'drop' } : null; },
   drawWorld(g, cx, cy) {
+    if (!S.gincana) return;
     g.save();
     g.font = 'bold 7px monospace';
     g.textAlign = 'center';
-    for (const key of Object.keys(RADIO_CLUES)) {
-      const p = this.point(key), x = Math.round(p.x - cx), y = Math.round(p.y - cy);
-      const width = Math.ceil(g.measureText(p.name).width) + 6;
-      g.fillStyle = '#20252e';
-      g.fillRect(x - width / 2, y - 18, width, 11);
-      g.fillStyle = '#ffd23f';
-      g.fillText(p.name, x, y - 10);
-      pxRing(g, x, y, 7, '#ffd23f');
-    }
+    const p = this.point(), x = Math.round(p.x - cx), y = Math.round(p.y - cy);
+    const width = Math.ceil(g.measureText(p.name).width) + 6;
+    g.fillStyle = '#20252e';
+    g.fillRect(x - width / 2, y - 18, width, 11);
+    g.fillStyle = '#ffd23f';
+    g.fillText(p.name, x, y - 10);
+    pxRing(g, x, y, 7, '#ffd23f');
     g.restore();
   },
   phoneHTML() {
