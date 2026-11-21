@@ -4,7 +4,7 @@
 
 **[▶ Jogar no navegador](https://gabrielsouto.github.io/bandeira2/)** · [Controles e regras](https://gabrielsouto.github.io/bandeira2/ajuda.html) · [Jogar com amigos](#jogar-com-amigos) · [Rodar localmente](#rodar-localmente)
 
-Às oito da noite, o táxi começa a cobrar bandeira 2. Até lá, dá tempo de levar a turma à escola, entregar um açaí antes que derreta ou assumir a cabine do VLT. Neste arcade de direção com vista de cima, você escolhe como ganhar a vida na cidade. Ruas, veículos e pedestres são desenhados por código, e o rádio do carro alterna entre funk, sertanejo e pagode sintetizados, notícias do jogo e cinco emissoras brasileiras ao vivo.
+Às oito da noite, o táxi começa a cobrar bandeira 2. Até lá, dá tempo de levar a turma à escola, entregar um açaí antes que derreta ou assumir a cabine do VLT. Neste arcade de direção com vista de cima, você escolhe como ganhar a vida na cidade. Ruas, veículos e pedestres são desenhados por código, e o rádio do carro alterna entre funk, sertanejo e pagode sintetizados, notícias do jogo e seis emissoras brasileiras ao vivo.
 
 | Táxi · uma chamada com pressa | VLT · próxima parada, Mercado | Barcas · rumo ao Cais Nascente |
 | :---: | :---: | :---: |
