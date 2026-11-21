@@ -43,12 +43,12 @@ let usingTouch = touchScreen.matches;
 document.body.classList.toggle('touch-ui', usingTouch);
 function resize() {
   const width = window.innerWidth, height = window.innerHeight;
-  const sc = Math.max(usingTouch ? 1 : 2, Math.round(height / (usingTouch ? 240 : 290)));
+  const sc = usingTouch ? Math.max(2, height / 180) : Math.max(2, Math.round(height / 290));
   view.scale = sc;
   view.w = Math.ceil(width / sc); view.h = Math.ceil(height / sc);
   if (canvas.width !== view.w) canvas.width = view.w;
   if (canvas.height !== view.h) canvas.height = view.h;
-  canvas.style.width = (view.w * sc) + 'px'; canvas.style.height = (view.h * sc) + 'px';
+  canvas.style.width = Math.ceil(view.w * sc) + 'px'; canvas.style.height = Math.ceil(view.h * sc) + 'px';
   ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', resize);
