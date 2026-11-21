@@ -5,6 +5,7 @@ const Barcas = {
   docks: [], dwell: 0,
   get state() { return S.ferryRun ? 'route' : 'idle'; },
   init(city) {
+    this.east = (city.W - 1) * TILE;
     this.docks = [0, city.xs.length - 1].map((i, side) => ({
       name: side ? 'Cais Nascente' : 'Cais Poente',
       x: (city.xs[i] + city.wx[i] / 2) * TILE,
@@ -13,9 +14,34 @@ const Barcas = {
     }));
   },
   get side() { return S.ferryDock || 0; },
+  buildRoute(circle) {
+    const start = this.docks[this.side], end = this.docks[1 - this.side];
+    const points = circle ? [start, { x: this.east, y: start.y }, { x: this.east, y: TILE },
+      { x: TILE, y: TILE }, { x: TILE, y: start.y }, start] : [start, end];
+    this.length = 0;
+    this.legs = points.slice(1).map((to, i) => {
+      const from = points[i], dx = to.x - from.x, dy = to.y - from.y;
+      const size = Math.hypot(dx, dy), startAt = this.length;
+      this.length += size;
+      return { from, to, dx: dx / size, dy: dy / size, startAt, endAt: this.length };
+    });
+  },
+  legAt(position) {
+    return this.legs.find(leg => position < leg.endAt) || this.legs.at(-1);
+  },
+  place(car, position) {
+    const leg = this.legAt(position), offset = position - leg.startAt;
+    car.x = leg.from.x + leg.dx * offset; car.y = leg.from.y + leg.dy * offset;
+    car.a = Math.atan2(leg.dy, leg.dx);
+  },
   enter(car) {
+    const r = S.ferryRun;
+    this.buildRoute(r?.circle);
     const dock = this.docks[this.side];
-    Object.assign(car, { x: S.ferryRun?.x ?? dock.x, y: dock.y, a: this.side ? Math.PI : 0,
+    // As travessias antigas guardavam a coordenada horizontal do canal sul.
+    if (r && r.position == null) r.position = (r.x - dock.x) * (this.side ? -1 : 1);
+    this.place(car, r?.position || 0);
+    Object.assign(car, {
       speed: 0, vF: 0, vR: 0, vx: 0, vy: 0, steer: 0, throttle: 0, braking: true });
     this.dwell = 0;
   },
@@ -23,9 +49,9 @@ const Barcas = {
     this.enter(car);
     car.y = this.docks[this.side].roadY;
   },
-  accept() {
+  accept(circle = false) {
     if (S.ferryRun) return;
-    S.ferryRun = { x: this.docks[this.side].x, passengers: R.i(6, 14), boarded: false };
+    S.ferryRun = { position: 0, circle, passengers: R.i(6, 14), boarded: false };
     this.enter(player); writeSave();
     toast('Embarque aberto. Aguarde os passageiros.');
   },
@@ -36,25 +62,26 @@ const Barcas = {
   },
   target() {
     const r = S.ferryRun;
+    if (r?.circle && r.boarded) return { ...this.legAt(r.position).to, kind: 'drop' };
     return r && { ...this.docks[r.boarded ? 1 - this.side : this.side], kind: r.boarded ? 'drop' : 'pick' };
   },
   drive(car, inp, dt) {
     const r = S.ferryRun;
     if (!r) return;
     const v = guidedSpeed(car, inp, dt);
-    const vx = this.side ? -v : v;
-    const x = car.x + vx * dt;
-    r.x = clamp(x, this.docks[0].x - 20, this.docks[1].x + 20);
-    const stopped = x !== r.x;
-    Object.assign(car, { x: r.x, vF: stopped ? 0 : v, vx: stopped ? 0 : vx,
-      speed: stopped ? 0 : Math.abs(v), braking: !!(inp.hb || inp.down), throttle: inp.up && !inp.hb ? 1 : 0 });
+    const next = r.position + v * dt;
+    r.position = clamp(next, -20, this.length + 20);
+    this.place(car, r.position);
+    const speed = next === r.position ? v : 0;
+    Object.assign(car, { vF: speed, vx: Math.cos(car.a) * speed, vy: Math.sin(car.a) * speed,
+      speed: Math.abs(speed), braking: !!(inp.hb || inp.down), throttle: inp.up && !inp.hb ? 1 : 0 });
   },
   onImpact() {},
   update(dt, car) {
     const r = S.ferryRun;
     if (!r) return;
-    const dock = this.target();
-    if (car.speed > 0.5 || Math.abs(car.x - dock.x) > 12) { this.dwell = 0; return; }
+    const dock = this.docks[r.boarded && !r.circle ? 1 - this.side : this.side];
+    if (car.speed > 0.5 || Math.abs((r.boarded ? this.length : 0) - r.position) > 12) { this.dwell = 0; return; }
     this.dwell += dt;
     if (this.dwell < 2) return;
     this.dwell = 0;
@@ -62,22 +89,24 @@ const Barcas = {
     if (r.boarded) {
       const fare = FERRY_TICKET * r.passengers;
       S.money += fare; S.earned += fare; S.ferryTrips++;
-      S.ferryDock = 1 - this.side; S.ferryRun = null;
+      if (!r.circle) S.ferryDock = 1 - this.side;
+      S.ferryRun = null;
       this.enter(car); Sfx.cash();
       toast(dock.name + ' · +' + fmtMoney(fare) + '. Aperte E para a volta.', 'good');
     } else {
       r.boarded = true;
-      toast(r.passengers + ' a bordo. Siga para o ' + this.target().name + '.');
+      toast(r.passengers + (r.circle ? ' a bordo. Contorne a ilha e volte a este cais.' : ' a bordo. Siga para o ' + this.target().name + '.'));
     }
     writeSave();
   },
   phoneHTML() {
     const r = S.ferryRun;
-    if (!r) return '<div class="ph-title">' + this.docks[this.side].name + '</div><div class="ph-row">Travessia para o ' + this.docks[1 - this.side].name + ' · ' + fmtMoney(FERRY_TICKET) + ' por passageiro</div><div class="ph-btns"><button data-act="accept"><kbd>E</kbd> ABRIR EMBARQUE</button></div>';
-    const dock = this.target(), distance = Math.abs(dock.x - r.x);
+    if (!r) return '<div class="ph-title">' + this.docks[this.side].name + '</div><div class="ph-row">Travessia para o ' + this.docks[1 - this.side].name + ' · ' + fmtMoney(FERRY_TICKET) + ' por passageiro</div><div class="ph-btns"><button data-act="accept"><kbd>E</kbd> TRAVESSIA</button><button data-act="circle"><kbd>I</kbd> VOLTA À ILHA</button></div>';
+    const dock = this.docks[r.boarded && !r.circle ? 1 - this.side : this.side];
+    const remaining = (r.boarded ? this.length : 0) - r.position, distance = Math.abs(remaining);
     const status = this.dwell ? (r.boarded ? 'Desembarcando…' : 'Embarcando…') :
-      distance <= 12 ? 'Pare junto ao cais' : (dock.x - r.x) * (this.side ? -1 : 1) < 0 ? 'Recue até o cais' : 'Siga pelo canal';
-    return '<div class="ph-title">' + dock.name + '</div><div class="ph-row">' + status + '</div><div class="ph-muted">' +
+      distance <= 12 ? 'Pare junto ao cais' : remaining < 0 ? 'Recue até o cais' : 'Siga pelo canal';
+    return '<div class="ph-title">' + (r.circle ? 'Volta à ilha · ' : '') + dock.name + '</div><div class="ph-row">' + status + '</div><div class="ph-muted">' +
       r.passengers + (r.boarded ? ' a bordo' : ' aguardando') + ' · ' + kmStr(distance) +
       '</div><div class="ph-btns"><button class="ghost" data-act="cancel"><kbd>C</kbd> CANCELAR</button></div>';
   },
@@ -90,6 +119,7 @@ const Barcas = {
     }
     const dock = this.target();
     if (!dock) return;
+    if (!dock.name) return; // As curvas do circuito usam a seta de navegação.
     pxDownArrow(g, dock.x - cx, dock.y - cy - 18, dock.kind === 'pick' ? '#39ff88' : '#ffd23f');
     const progress = dock.kind === 'pick' ? 1 - this.dwell / 2 : this.dwell / 2;
     if (progress > 0) for (let i = -1; i <= 1; i++)
@@ -99,7 +129,10 @@ const Barcas = {
   drawMinimap(g, scale) {
     const [west, east] = this.docks;
     g.fillStyle = '#6cdbed';
-    g.fillRect(west.x * scale, west.y * scale, (east.x - west.x) * scale, 1);
+    if (S.ferryRun?.circle) {
+      g.strokeStyle = '#6cdbed'; g.lineWidth = 1;
+      g.strokeRect(TILE * scale, TILE * scale, (this.east - TILE) * scale, (west.y - TILE) * scale);
+    } else g.fillRect(west.x * scale, west.y * scale, (east.x - west.x) * scale, 1);
     for (const p of this.docks) g.fillRect(p.x * scale - 1, p.y * scale - 1, 3, 3);
   },
 };

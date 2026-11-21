@@ -346,7 +346,7 @@ test('Barcas embarca, retoma no canal, paga no desembarque e retorna pelo sentid
     step({ up: true });
     assert.equal(run('city.tileAtPx(player.x, player.y) === T.WATER'), true);
   }
-  const savedX = context.S.ferryRun.x;
+  const savedX = context.player.x;
   run('S = JSON.parse(JSON.stringify(S)); Barcas.enter(player)');
   assert.equal(context.player.x, savedX);
   assert.equal(context.S.money, 0);
@@ -362,4 +362,41 @@ test('Barcas embarca, retoma no canal, paga no desembarque e retorna pelo sentid
   assert.equal(context.player.x, dest);
   assert.equal(context.S.money, fare);
   assert.equal(run('city.tileAtPx(player.x, player.y) === T.ROAD'), true);
+});
+
+test('Volta à ilha percorre as quatro margens e paga no retorno ao cais escolhido', () => {
+  for (const side of [0, 1]) {
+    const { run, context } = game(['util', 'city', 'vehicles', 'barcas']);
+    Object.assign(context.S, { ferryDock: side, ferryTrips: 0 });
+    run('const city = generateCity(20261118); player.p = VEHICLES.barcas.phys; Barcas.init(city); Barcas.enter(player); Barcas.accept(true); Barcas.update(2, player); Barcas.update(2, player)');
+    const start = context.player.x, fare = context.S.ferryRun.passengers * 4;
+    assert.equal(context.S.money, 0);
+    const directions = new Set();
+    for (let i = 0; i < 1000; i++) {
+      run('Barcas.drive(player, { up: true }, 0.1); Barcas.update(0.1, player)');
+      directions.add(context.player.a);
+      assert.equal(run('city.tileAtPx(player.x, player.y) === T.WATER'), true);
+      if (i === 250) {
+        const { x, y, a } = context.player;
+        run('S = JSON.parse(JSON.stringify(S)); Barcas.enter(player)');
+        assert.deepEqual([context.player.x, context.player.y, context.player.a], [x, y, a]);
+      }
+      if (run('S.ferryRun.position >= Barcas.length')) break;
+    }
+    assert.equal(directions.size, 4);
+    assert.equal(context.S.money, 0);
+    run('Barcas.drive(player, { hb: true }, 2); Barcas.update(2, player); Barcas.update(2, player)');
+    assert.equal(context.S.ferryRun, null);
+    assert.equal(context.player.x, start);
+    assert.equal(context.S.money, fare);
+    assert.equal(context.S.ferryDock, side);
+    assert.equal(context.S.ferryTrips, 1);
+  }
+});
+
+test('Barcas retoma uma travessia salva antes do circuito', () => {
+  const { run, context } = game(['util', 'city', 'barcas']);
+  run('Barcas.init(generateCity(20261118)); S.ferryDock = 1; S.ferryRun = { x: 650, boarded: true, passengers: 8 }; Barcas.enter(player)');
+  assert.equal(context.player.x, 650);
+  assert.equal(run('Barcas.target().name'), 'Cais Poente');
 });

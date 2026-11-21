@@ -37,13 +37,9 @@ const SPR = { player: null, npc: NPC_COLORS.map((c) => makeCarSprites(c, false))
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const view = { w: 480, h: 270, scale: 4 };
 let camX = 0, camY = 0;
-const touchScreen = matchMedia('(any-pointer: coarse)');
-const portrait = matchMedia('(orientation: portrait)');
-let usingTouch = touchScreen.matches;
-document.body.classList.toggle('touch-ui', usingTouch);
 function resize() {
   const width = window.innerWidth, height = window.innerHeight;
-  const sc = usingTouch ? Math.max(2, height / 180) : Math.max(2, Math.round(height / 290));
+  const sc = Math.max(2, Math.round(height / 290));
   view.scale = sc;
   view.w = Math.ceil(width / sc); view.h = Math.ceil(height / sc);
   if (canvas.width !== view.w) canvas.width = view.w;
@@ -135,87 +131,21 @@ function clockStr() {
 function addFloater(x, y, text, col) { floaters.push({ x, y, text, col, t: 0 }); }
 
 // ---------- entrada ----------
-const driveButtons = document.querySelectorAll('[data-drive]');
-const driving = createDrivingInput(driveButtons);
+const driving = createDrivingInput();
 const input = driving.state;
 function clearInput() { driving.clear(); }
-const rotation = $('rotation'), resumeRotation = $('rotationresume');
-let rotationPause = false;
-const canDrive = () => mode === 'play' && !rotationPause && !document.hidden;
-
-function updateRotation() {
-  const mustRotate = usingTouch && portrait.matches && mode !== 'title';
-  const wasPaused = rotationPause;
-  if (mustRotate && !rotationPause) {
-    clearInput();
-    writeSave();
-    if (GAME.mode === 'multi') {
-      player.vx = player.vy = player.vF = player.vR = player.speed = player.throttle = 0;
-    }
-    Police.sirenVol(0);
-    Sfx.engine(0, 0, false);
-    Sfx.screech(0);
-  }
-  rotationPause = mustRotate || (rotationPause && GAME.mode === 'solo' && mode !== 'title');
-  rotation.classList.toggle('hidden', !rotationPause);
-  $('hud').inert = rotationPause || mode === 'menu';
-  $('modal').inert = rotationPause;
-  $('rotationtitle').textContent = mustRotate ? 'Gire o aparelho para dirigir' : 'Pronto para voltar à pista?';
-  $('rotationnote').textContent = mustRotate
-    ? (GAME.mode === 'multi' ? 'O turno continua para os outros jogadores.' : 'A partida está pausada.')
-    : '';
-  resumeRotation.hidden = mustRotate;
-  if (mustRotate && !wasPaused) $('rotationtitle').focus();
-  if (rotationPause && !mustRotate) resumeRotation.focus();
-}
-resumeRotation.addEventListener('click', () => {
-  if (portrait.matches) return;
-  clearInput();
-  rotationPause = false;
-  updateRotation();
-  if (mode === 'menu') $('modalbox').focus();
-  Sfx.init();
-});
-portrait.addEventListener('change', () => { clearInput(); updateRotation(); });
-function enableTouch() {
-  if (usingTouch) return;
-  usingTouch = true;
-  document.body.classList.add('touch-ui');
-  resize();
-  updateRotation();
-}
-touchScreen.addEventListener('change', (e) => { if (e.matches) enableTouch(); });
-window.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') enableTouch(); }, true);
-for (const button of driveButtons) {
-  button.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || !canDrive() || Multi.frozen()) return;
-    e.preventDefault();
-    button.setPointerCapture(e.pointerId);
-    driving.grab(e.pointerId, button);
-    if (Sfx.ac?.state === 'suspended' || Sfx.ac?.state === 'interrupted') Sfx.init();
-  });
-  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-    button.addEventListener(event, (e) => driving.release(e.pointerId));
-  }
-}
-$('touchtools').addEventListener('click', (e) => {
-  if (!canDrive()) return;
-  const button = e.target.closest('button');
-  if (button?.dataset.command) onKey(button.dataset.command);
-  else if (button?.id === 'touchstatus') openTouchStatus();
-});
+const canDrive = () => mode === 'play' && !document.hidden;
 function suspendInput() { clearInput(); writeSave(); }
 window.addEventListener('pagehide', suspendInput);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspendInput();
-  else updateRotation();
 });
 // teclas digitadas em campos de texto (apelido, código da sala) não comandam o carro
 const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
 const nativeActivation = (e) => mode !== 'play' && (e.code === 'Enter' || e.code === 'Space') &&
   e.target.closest?.('button, a, summary');
 window.addEventListener('keydown', (e) => {
-  if (typing(e) || nativeActivation(e) || rotationPause) return;
+  if (typing(e) || nativeActivation(e)) return;
   if (KEYMAP[e.code] && canDrive()) {
     if (!e.repeat) driving.key(e.code, true);
     e.preventDefault();
@@ -257,6 +187,7 @@ function onKey(code) {
   if (Multi.roomKey(code)) return;
   switch (code) {
     case 'KeyE': activeJob().accept(); break;
+    case 'KeyI': if (Veh.job === 'barcas') Barcas.accept(true); break;
     case 'KeyQ': activeJob().decline?.(); break;
     case 'KeyC': activeJob().cancel(); break;
     case 'KeyV': if (Veh.cur.parcels && Parcels.state === 'route') Parcels.startReturn(); break;
@@ -284,7 +215,6 @@ function startGame() {
   $('hud').classList.remove('hidden');
   mode = 'play';
   clearInput();
-  $('touchpega').hidden = GAME.mode !== 'multi';
   if (Garagem.enabled) {
     if (Escolar.busy) {
       Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
@@ -330,7 +260,6 @@ function startGame() {
     toast('Você está online! As corridas chegam no celular.', 'good');
     setTimeout(() => toast('Áreas laranjas = tarifa dinâmica. Chamadas de lá pagam mais.'), 2500);
   }
-  updateRotation();
 }
 $('jobbtn').addEventListener('click', () => { if (canDrive()) Garagem.jobsMenu(); });
 $('startbtn').addEventListener('click', startGame);
@@ -400,7 +329,7 @@ function showModal(title, sub, items, closeLabel, noMoney) {
   modal.classList.remove('hidden');
   mode = 'menu';
   $('hud').inert = true;
-  if (!rotationPause) modalBox.focus();
+  modalBox.focus();
   Police.sirenVol(0);
   Sfx.engine(0, 0, false); Sfx.screech(0);
   clearInput();
@@ -408,7 +337,7 @@ function showModal(title, sub, items, closeLabel, noMoney) {
 function closeModal() {
   modal.classList.add('hidden');
   mode = 'play';
-  $('hud').inert = rotationPause;
+  $('hud').inert = false;
   clearInput();
   writeSave();
 }
@@ -513,36 +442,11 @@ function openPlaceMenu(pl) {
   else postoMenu(pl);
 }
 
-function openTouchStatus() {
-  const c = S.car;
-  const level = Veh.cur.pedal ? Care.legs : Care.level();
-  const vehicle = Veh.job === 'barcas' ? '<p>Barcas da Orla · ' + S.ferryTrips + ' travessias concluídas</p>' : Veh.job === 'vlt' ? '<p>VLT elétrico · Alimentação pela rede da Linha Circular</p>' : `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
-    ($('tempwrap').style.display === 'none' ? '' : `<p>Temperatura: ${Math.round(c.temp)} °C</p>`) +
-    $('problems').innerHTML + ($('radio').textContent ? `<p>${esc($('radio').textContent)}</p>` : '');
-  const room = GAME.mode === 'multi' ? `<div>${$('netinfo').innerHTML}</div>` : '';
-  const legend = $('mapbox').querySelector('.legend').cloneNode(true);
-  for (const item of legend.querySelectorAll('[id]')) item.removeAttribute('id');
-  showModal('PAINEL', vehicle + room + `<p>Legenda do mapa</p>${legend.outerHTML}`,
-    [], 'Voltar', true);
-}
-
-function touchPauseItems() {
-  if (!usingTouch) return [];
-  const run = (code) => () => { closeModal(); onKey(code); };
-  return [
-    { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },
-    { label: 'Navegar até a oficina', run: run('KeyO') },
-    { label: Veh.cur.electric ? 'Navegar até a recarga' : 'Navegar até o posto', run: run('KeyP') },
-    { label: 'Navegar até o lava jato', run: run('KeyL') },
-  ];
-}
-
 function openPause(confirmReset) {
   if (GAME.mode === 'multi') {
     showModal(`PAUSA · SALA ${Multi.sala}`, 'O jogo continua para os outros: seu carro fica parado onde está.', [
       { label: 'Continuar', run: closeModal },
       ...Multi.pauseItems(),
-      ...touchPauseItems(),
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
       { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
@@ -569,7 +473,6 @@ function openPause(confirmReset) {
       (Autoescola.prog.cnh ? ' · Carteira: ✓' : ''), [
       { label: 'Continuar', run: closeModal },
       { label: 'Escolher a aula', run: () => Autoescola.lessonMenu() },
-      ...touchPauseItems(),
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
       { label: Sfx.muted ? 'Ligar o som (e a voz do instrutor)' : 'Desligar o som (e a voz do instrutor)', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
@@ -580,7 +483,6 @@ function openPause(confirmReset) {
     { label: 'Continuar', run: closeModal },
     { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
     { label: 'Minha casa', run: () => { if (Garagem.atHome()) Garagem.menu(); else { closeModal(); Nav.go('casa'); } } },
-    ...touchPauseItems(),
     ...(!Veh.twoWheel() && S.car.problems.flat ? [{ label: S.car.spare ? 'Montar estepe · grátis' : 'Estepe usado · reponha na oficina', disabled: !S.car.spare || player.speed >= 8, run: () => { closeModal(); Garagem.spare(); } }] : []),
     ...(!Rides.canWork() || Garagem.pushing ? [{ label: Garagem.pushing ? 'Voltar ao volante' : 'Descer e empurrar', run: () => { closeModal(); Garagem.push(); } }] : []),
     { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
@@ -760,13 +662,11 @@ function drawCar(spr, x, y, a, braking) {
 function render() {
   const vw = view.w, vh = view.h;
   let cx = cam.x - vw / 2, cy = cam.y - vh / 2;
-  if (usingTouch && mode !== 'title') {
-    cx += Math.cos(player.a) * 22;
-    cy += Math.sin(player.a) * 22;
-  }
   if (shake > 0) { cx += R.f(-shake, shake); cy += R.f(-shake, shake); }
-  camX = Math.round(clamp(cx, 0, Math.max(0, mapCanvas.width - vw)));
-  camY = Math.round(clamp(cy, 0, Math.max(0, mapCanvas.height - (Veh.job === 'barcas' ? vh / 2 : vh))));
+  const ferry = Veh.job === 'barcas';
+  const padX = ferry ? vw / 2 : 0, padY = ferry ? vh / 2 : 0;
+  camX = Math.round(clamp(cx, -padX, Math.max(0, mapCanvas.width - vw + padX)));
+  camY = Math.round(clamp(cy, -padY, Math.max(0, mapCanvas.height - vh + padY)));
 
   ctx.fillStyle = PAL.water; ctx.fillRect(0, 0, vw, vh);
   ctx.drawImage(mapCanvas, camX, camY, Math.min(vw, mapCanvas.width), Math.min(vh, mapCanvas.height),

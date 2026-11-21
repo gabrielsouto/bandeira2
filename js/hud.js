@@ -33,18 +33,13 @@ const HUD = {
     this.el.mm.width = city.W * 2; this.el.mm.height = city.H * 2;
     this.mmCtx = this.el.mm.getContext('2d');
     this.mmCtx.imageSmoothingEnabled = false;
-    const phone = $('phone'), more = $('phonemore');
-    more.addEventListener('click', () => {
-      const expanded = phone.classList.toggle('expanded');
-      more.setAttribute('aria-expanded', expanded);
-      more.textContent = expanded ? 'Recolher' : 'Detalhes';
-    });
-    phone.addEventListener('click', (e) => {
+    $('phone').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]');
       if (!b || !canDrive()) return;
       const a = b.dataset.act;
       const tgt = activeJob();
       if (a === 'accept') tgt.accept(); else if (a === 'decline') tgt.decline?.(); else if (a === 'cancel') tgt.cancel();
+      else if (a === 'circle' && tgt === Barcas) Barcas.accept(true);
       else if (a === 'return' && tgt === Parcels && tgt.state === 'route') tgt.startReturn();
       else if (a === 'tow') onKey('KeyG');
       else if (a === 'push') onKey('KeyU');
@@ -129,12 +124,6 @@ const HUD = {
       const stopList = e.phone.querySelector('.ph-stops');
       if (stopList) stopList.scrollTop = stops;
       this.lastPhone = html;
-    }
-    const pega = $('touchpega');
-    if (Multi.active) {
-      const label = Pega.mine() ? 'Sair do pega' : Pega.p ? 'Entrar no pega' : 'Chamar pega';
-      if (pega.textContent !== label) pega.textContent = label;
-      pega.disabled = !!Pega.p && (Pega.mine() ? Pega.p.chegaram.includes(Multi.me) : Pega.p.fase !== 'inscricao');
     }
     this.drawMinimap();
   },

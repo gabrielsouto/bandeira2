@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bandeira 2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +37,6 @@
 
   <div id="phone">
     <div class="appbar"><span id="appname">REBU</span><span id="clock">07:00</span>
-      <button type="button" id="phonemore" class="touch-only ghost" aria-expanded="false" aria-controls="phonebody">Detalhes</button>
     </div>
     <div id="phonebody"></div>
     <div id="offertime" hidden><div class="ph-timer" aria-hidden="true"><div></div></div><span id="offerleft"></span></div>
@@ -45,37 +44,12 @@
     <button id="jobbtn" class="ghost"><kbd>J</kbd> Trocar modalidade</button>
   </div>
 
-  <div id="touchtools" class="touch-only" aria-label="Ações da partida">
-    <button type="button" class="ghost" data-command="Escape">Pausa</button>
-    <button type="button" class="ghost" data-command="KeyH">Buzina</button>
-    <button type="button" class="ghost" id="touchpega" data-command="KeyX" hidden>Pega</button>
-    <button type="button" class="ghost" id="touchstatus">Painel</button>
-  </div>
-  <div id="touchdrive" class="touch-only" aria-label="Controles de direção">
-    <div class="steering">
-      <button type="button" data-drive="left" aria-label="Virar à esquerda"></button>
-      <button type="button" data-drive="right" aria-label="Virar à direita"></button>
-    </div>
-    <div class="pedals">
-      <button type="button" data-drive="hb" aria-label="Freio de mão"><span>Mão</span></button>
-      <button type="button" data-drive="down" aria-label="Freio e ré"><span>Freio/Ré</span></button>
-      <button type="button" data-drive="up"><span>Acelerar</span></button>
-    </div>
-  </div>
   <div id="roompanel" class="panel hidden"></div>
   <div id="toasts"></div>
   <div id="help">WASD/setas dirigir · Espaço freio de mão · E aceitar · Q recusar · C cancelar · H buzina · R rádio · J modalidade · B casa · O oficina · P posto · Esc ajuda e serviços</div>
 </div>
 
 <div id="modal" class="hidden"><div id="modalbox" class="panel" role="dialog" aria-modal="true" aria-labelledby="modaltitle" tabindex="-1"></div></div>
-<div id="rotation" class="hidden" role="dialog" aria-modal="true" aria-labelledby="rotationtitle">
-  <div class="panel">
-    <h2 id="rotationtitle" tabindex="-1">Gire o aparelho para dirigir</h2>
-    <p id="rotationnote"></p>
-    <button type="button" id="rotationresume" hidden>Continuar</button>
-  </div>
-</div>
-
 <main id="title" aria-labelledby="game-title">
   <div class="tbox panel">
     <header class="title-header">
