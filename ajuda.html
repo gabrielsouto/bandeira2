@@ -41,6 +41,7 @@
   .tip { background: var(--panel); border-left: 4px solid var(--accent); padding: 8px 12px; margin: 10px 0 14px; }
   .tip.warn { border-color: var(--warn); }
   .c-posto { color: #ff7b6e; } .c-ofi { color: #f1c40f; } .c-lava { color: #3fb6ff; } .c-surge { color: var(--surge); } .c-risk { color: #ff6b6b; }
+  @media (min-width: 761px) { nav { max-height: calc(100vh - 32px); overflow-y: auto; } }
   @media (max-width: 760px) {
     .wrap { grid-template-columns: minmax(0, 1fr); }
     nav { position: static; }
@@ -61,9 +62,12 @@
   <div class="links">
     <a href="#objetivo">Objetivo</a>
     <a href="#controles">Controles</a>
+    <a href="#mapa">Mapa e trânsito</a>
     <a href="#veiculos">Veículos</a>
     <a href="#facil">Direção fácil</a>
     <a href="#autoescola">Autoescola</a>
+    <a href="#entregas">Entregas de comida</a>
+    <a href="#escolar">Van escolar</a>
     <a href="#farmacia">Farmácia de bike</a>
     <a href="#vlt">VLT</a>
     <a href="#aereo">Táxi aéreo</a>
@@ -78,6 +82,7 @@
     <a href="#dinamica">Tarifa dinâmica</a>
     <a href="#carro">O carro</a>
     <a href="#lugares">Posto, oficina, lava jato</a>
+    <a href="#casa">Casa e garagem</a>
     <a href="#dinheiro">Fiado e guincho</a>
     <a href="#noite">Dia e noite</a>
     <a href="#radio">Rádio</a>
@@ -97,12 +102,22 @@
 <section id="objetivo">
   <h2>OBJETIVO</h2>
   <p>Você é motorista de aplicativo numa cidade inventada. Aceite corridas no celular, busque o passageiro, leve até o destino e ganhe dinheiro. Cuide do carro, fuja dos bandidos, da polícia e do trânsito, e mantenha a nota alta para receber mais chamadas.</p>
-  <p>No modo sozinho o progresso fica salvo no navegador. No multiplayer, até 4 amigos disputam um turno e ganha quem tiver mais lucro.</p>
+  <p>No modo sozinho o progresso fica salvo no navegador. Na pausa das modalidades de rua, você pode consultar o total ganho e o contador do serviço atual. Para apagar o progresso do solo, escolha <b>Recomeçar do zero</b> e confirme no mesmo botão. No multiplayer, até 4 amigos disputam um turno e ganha quem tiver mais lucro.</p>
 </section>
 
 <section id="controles">
   <h2>CONTROLES</h2>
-  <h3>Teclado</h3>
+  <p>Na tela inicial, abra <b>Seu veículo → Trocar</b> para ver a lista. Clique no veículo ou use um dos atalhos abaixo e aperte <kbd>Enter</kbd> ou <kbd>Espaço</kbd> para começar.</p>
+  <div class="tbl"><table>
+    <tr><th>Atalhos no início</th><th>Veículos, na mesma ordem</th></tr>
+    <tr><td>1 / 2 / 3 / 4</td><td>Rebu, 66, Táxi, Moto Rebu</td></tr>
+    <tr><td>5 / 6 / 7</td><td>euComida, 66Comida, Autoescola</td></tr>
+    <tr><td>8 / 9 / 0</td><td>Mercado Leve, Amazoom, Xopi</td></tr>
+    <tr><td>V / E / N / D</td><td>Van escolar, Carro elétrico, Rebu Envios, Farmácia de bike</td></tr>
+    <tr><td>A / P / O</td><td>Ambulância, Polícia, Ônibus urbano</td></tr>
+    <tr><td>T / B / H</td><td>VLT, Barcas, Táxi aéreo</td></tr>
+  </table></div>
+  <h3>Durante o jogo</h3>
   <div class="tbl"><table>
     <tr><th>Tecla</th><th>O que faz</th></tr>
     <tr><td><kbd>W A S D</kbd> ou setas</td><td>dirigir</td></tr>
@@ -116,6 +131,9 @@
     <tr><td><kbd>B</kbd> / <kbd>T</kbd></td><td>no solo, traçar rota para casa / montar o estepe com o veículo parado</td></tr>
     <tr><td><kbd>J</kbd></td><td>no solo, escolher outra modalidade com o veículo estacionado</td></tr>
     <tr><td><kbd>R</kbd></td><td>rádio: troca a estação (no fim do turno da sala, abre o ranking)</td></tr>
+    <tr><td><kbd>V</kbd></td><td>nas rotas de encomendas, iniciar a volta ao galpão com a carga restante</td></tr>
+    <tr><td><kbd>K</kbd> / <kbd>Z</kbd></td><td>na viatura, alternar a sirene e o giroflex / iniciar uma ronda</td></tr>
+    <tr><td><kbd>I</kbd></td><td>na barca, escolher a volta à ilha antes do embarque</td></tr>
     <tr><td><kbd>X</kbd></td><td>pega (multiplayer): chamar, entrar ou desistir</td></tr>
     <tr><td><kbd>F</kbd></td><td>liga e desliga a <a href="#facil">direção fácil</a> (também na tela inicial e na pausa)</td></tr>
     <tr><td><kbd>M</kbd></td><td>liga e desliga o som</td></tr>
@@ -125,12 +143,18 @@
   </table></div>
 </section>
 
+<section id="mapa">
+  <h2>MAPA E TRÂNSITO</h2>
+  <p>No minimapa, o quadrado branco é você. O pontinho verde junto dele mostra para onde o veículo está virado. O alvo do serviço pisca em verde na busca e em amarelo na entrega. Ao traçar uma rota para casa, posto, oficina ou lava jato, procure a moldura branca piscando no local escolhido.</p>
+  <p>O trânsito circula pela direita. Nas ruas de mão única, as duas faixas seguem no mesmo sentido. As avenidas têm duas faixas para cada sentido. Observe as setas pintadas no asfalto antes de virar. Se bloquear a rua, os carros formam fila e podem buzinar.</p>
+</section>
+
 <section id="veiculos">
   <h2>VEÍCULOS</h2>
   <p>No solo, estacione e abra <b>Trocar modalidade</b> no celular (<kbd>J</kbd>). Escolha o serviço para pegar o veículo dele no mesmo local. Conclua ou cancele o trabalho em andamento antes da troca.</p>
   <p>A Van escolar leva a turma, a van da Amazoom carrega encomendas, o carro Rebu busca passageiros e a moto do euComida leva refeições. Cada veículo guarda seu combustível, a lataria e o estepe até você voltar a usá-lo.</p>
-  <h3>VAN ESCOLAR</h3>
-  <p>O contrato lista os alunos e o valor por trecho de cada família. Pare perto de cada casa e espere a criança caminhar até a van. No portão da escola, aguarde a turma desembarcar para receber a ida. Durante os 90 segundos de aula você pode fazer outro trabalho. Na saída, volte à modalidade escolar, espere o último aluno embarcar e leve cada criança de volta à sua casa. Cada família paga a volta no desembarque.</p>
+  <h3 id="escolar">VAN ESCOLAR</h3>
+  <p>Escolha <b>V · Van escolar</b> e aceite o contrato com <kbd>E</kbd> em até 18 segundos. Cada contrato reúne até três alunos e lista seus nomes e o valor por trecho de cada família. Pare perto de cada casa e espere a criança caminhar até a van. No portão da escola, aguarde a turma desembarcar para receber a ida. Durante os 90 segundos de aula você pode fazer outro trabalho. Na saída, volte à modalidade escolar, espere o último aluno embarcar e leve cada criança de volta à sua casa. Cada família paga a volta no desembarque.</p>
   <div class="tbl"><table>
     <tr><th>Veículo</th><th>Tarifa</th><th>Chamadas</th><th>Combustível</th><th>Detalhes</th></tr>
     <tr><td>Rebu</td><td>normal</td><td>normal</td><td>normal</td><td>equilibrado</td></tr>
@@ -191,7 +215,7 @@
     <tr><td>5. Aula à noite</td><td>a aula acontece às 21:00, limite 40 km/h</td></tr>
     <tr><td>6. Prova do DETRAN</td><td>8 cruzamentos, três PARE; precisa de 70 pontos. Quem passa ganha a <b>carteira de motorista</b> e libera o treino livre</td></tr>
   </table></div>
-  <p>Na pausa, <b>Escolher a aula</b> repete qualquer aula já liberada (ou apaga o progresso da autoescola).</p>
+  <p>Na pausa, <b>Escolher a aula</b> repete qualquer aula já liberada (ou apaga o progresso da autoescola). Durante a aula, <kbd>C</kbd> encerra o percurso. Depois de tirar a carteira, o treino livre sorteia um trajeto de sete cruzamentos, com duas placas de PARE e limite de 50 km/h.</p>
 </section>
 
 <section id="entregas">
@@ -221,13 +245,13 @@
 <section id="farmacia">
   <h2>Entregas de farmácia com bicicleta</h2>
   <p>Escolha <b>D · Farmácia de bike</b> no início do solo ou estacione e use <kbd>J</kbd>. Aceite um pedido com <kbd>E</kbd>. Siga a seta verde até a farmácia, identificada por uma cruz verde, e pare para retirar o pacote. Depois siga a seta amarela e pare perto do cliente para receber a taxa de entrega.</p>
-  <p>O celular mostra o item, o prazo e o valor. Batidas pesam mais na avaliação dos pedidos com frasco de vidro. Pedalar consome fôlego, que se recupera ao descansar.</p>
+  <p>O celular mostra o item, o prazo e o valor. O frasco de xampu em vidro rende 20% a mais que um pacote lacrado na mesma rota, mas cada batida tira o dobro de pontos da avaliação. Pedalar consome fôlego, que se recupera ao descansar.</p>
 </section>
 
 <section id="aereo">
   <h2>Táxi aéreo</h2>
   <p>Escolha <b>H · Táxi aéreo</b> na tela inicial do solo ou troque de modalidade com <kbd>J</kbd>. Aceite o voo com <kbd>E</kbd> e aguarde dois segundos para o embarque.</p>
-  <p>Acelere com <kbd>W</kbd> ou ↑ e gire com <kbd>A</kbd>/<kbd>D</kbd> ou ←/→. Siga a seta até o H no telhado de destino. Use <kbd>Espaço</kbd> para frear ou <kbd>S</kbd> para recuar. Fique parado sobre o H por dois segundos para desembarcar, receber a tarifa indicada e liberar o próximo voo. <kbd>C</kbd> cancela o voo e retorna à origem.</p>
+  <p>Há três helipontos, Noroeste, Leste e Sul. O destino é sorteado a cada voo e a tarifa aumenta com a distância entre os telhados. Acelere com <kbd>W</kbd> ou ↑ e gire com <kbd>A</kbd>/<kbd>D</kbd> ou ←/→. Siga a seta até o H no telhado de destino. Use <kbd>Espaço</kbd> para frear ou <kbd>S</kbd> para recuar. Fique parado sobre o H por dois segundos para desembarcar, receber a tarifa indicada e liberar o próximo voo. <kbd>C</kbd> cancela o voo e retorna à origem.</p>
 </section>
 <section id="barcas">
   <h2>Barcas da Orla</h2>
@@ -238,31 +262,31 @@
 <section id="vlt">
   <h2>VLT · Linha Circular</h2>
   <p>Escolha <b>T · VLT</b> no início do solo ou estacione e use <kbd>J</kbd>. Na cabine, aperte <kbd>E</kbd> para iniciar a viagem. O trem segue os trilhos automaticamente na direção da linha. Acelere com <kbd>W</kbd> ou ↑ e freie com <kbd>Espaço</kbd>. Se passar da plataforma, use <kbd>S</kbd> ou ↓ para frear e recuar.</p>
-  <p>Pare na marca de cada uma das cinco estações por dois segundos para o embarque e desembarque. Ao retornar ao Terminal Poente e concluir o desembarque, você recebe R$ 40 pela viagem e pode iniciar outra volta.</p>
+  <p>Pare na marca de cada uma das cinco estações por dois segundos para o embarque e desembarque. Ao retornar ao Terminal Poente e concluir o desembarque, você recebe R$ 40 pela viagem e pode iniciar outra volta. Para recolher o VLT ao terminal antes de completar o circuito, aperte <kbd>C</kbd>.</p>
 </section>
 
 <section id="onibus">
   <h2>Ônibus urbano · Linha 01</h2>
-  <p>Escolha <b>O · Ônibus urbano</b> na tela inicial do solo ou estacione e aperte <kbd>J</kbd> para trocar de modalidade. Aceite a viagem com <kbd>E</kbd> e siga a seta até o terminal de partida. A linha tem quatro pontos. Em cada um, mantenha o ônibus parado por dois segundos para quem precisa descer ou subir.</p>
+  <p>Escolha <b>O · Ônibus urbano</b> na tela inicial do solo ou estacione e aperte <kbd>J</kbd> para trocar de modalidade. Aceite a viagem com <kbd>E</kbd> e siga a seta até o terminal de partida. A oferta fica no celular por 20 segundos. A linha tem quatro pontos. Em cada um, mantenha o ônibus parado por dois segundos para quem precisa descer ou subir.</p>
   <p>O celular mostra o próximo ponto e a lotação. Cada passageiro que chega ao seu destino rende R$ 5,00. No terminal final, todos descem e a próxima oferta permite fazer a volta.</p>
 </section>
 
 <section id="patrulha">
   <h2>Patrulha policial</h2>
-  <p>No solo, escolha <b>P · Polícia</b> na tela inicial ou estacione e use <kbd>J</kbd> para pegar a viatura. Quando a central chamar, aceite com <kbd>E</kbd> ou recuse com <kbd>Q</kbd>. Siga a seta até a ocorrência e fique parado no marcador por três segundos para concluir o atendimento e receber o valor anunciado. Use <kbd>C</kbd> para devolver o chamado à central.</p>
+  <p>No solo, escolha <b>P · Polícia</b> na tela inicial ou estacione e use <kbd>J</kbd> para pegar a viatura. A central chama para colisões sem feridos, pessoas perdidas e veículos em pane. Você tem 18 segundos para responder. Quando a central chamar, aceite com <kbd>E</kbd> ou recuse com <kbd>Q</kbd>. Siga a seta até a ocorrência e fique parado no marcador por três segundos para concluir o atendimento e receber o valor anunciado. Use <kbd>C</kbd> para devolver o chamado à central.</p>
   <p>Use <kbd>K</kbd> para ligar ou desligar a sirene e o giroflex. Para iniciar uma ronda, pressione <kbd>Z</kbd> quando estiver livre. Siga a seta verde até a área de risco e pare perto de um bandido para embarcá-lo. A seta muda para amarelo e indica a prisão. Pare na entrada por três segundos para entregar o detido e receber. Os dois comandos também estão no celular da viatura.</p>
 </section>
 
 <section id="ambulancia">
   <h2>Plantão de ambulância</h2>
-  <p>No solo, escolha <b>A · Ambulância</b> na tela inicial ou estacione e use <kbd>J</kbd> para trocar de modalidade. Aceite o chamado com <kbd>E</kbd> e siga a seta verde até o paciente. Pare por dois segundos para embarcar a pessoa. Depois siga a seta amarela até o hospital e pare na entrada por dois segundos. A central paga o atendimento quando o hospital recebe o paciente.</p>
+  <p>No solo, escolha <b>A · Ambulância</b> na tela inicial ou estacione e use <kbd>J</kbd> para trocar de modalidade. Aceite o chamado com <kbd>E</kbd> e siga a seta verde até o paciente. A oferta fica disponível por 18 segundos. Use <kbd>Q</kbd> para recusar ou <kbd>C</kbd> para devolver à central um resgate já aceito. Pare por dois segundos para embarcar a pessoa. Depois siga a seta amarela até o hospital e pare na entrada por dois segundos. A central paga o atendimento quando o hospital recebe o paciente.</p>
 </section>
 
 <section id="envios">
   <h2>REBU ENVIOS</h2>
   <p>Para transportar um pacote de pessoa para pessoa no solo, escolha <b>N · Rebu Envios</b> no início ou estacione e aperte <kbd>J</kbd> para pegar o carro do Rebu Envios. A oferta mostra o que vai ser enviado, quem entrega, quem recebe, a distância e o valor.</p>
-  <p>Aceite com <kbd>E</kbd> e pare na seta verde para retirar o pacote. Depois, pare na seta amarela junto ao destinatário. Se o envio pedir PIN, aperte <kbd>E</kbd> e selecione o código que a pessoa disser. Você recebe o frete na entrega. Batidas com o pacote a bordo afetam a avaliação.</p>
-  <p>Você pode recusar uma oferta com <kbd>Q</kbd>. Após aceitar, cancelar com <kbd>C</kbd> custa R$ 5 antes da coleta ou R$ 15 e uma estrela depois dela. Se fechar o jogo, o envio aceito será retomado ao continuar no solo.</p>
+  <p>Aceite com <kbd>E</kbd> e pare na seta verde para retirar o pacote. Depois, pare na seta amarela junto ao destinatário. Espere a caixa mudar de mãos antes de arrancar. Se o envio pedir PIN, aperte <kbd>E</kbd> e selecione o código que a pessoa disser. Você recebe o frete na entrega. Batidas com o pacote a bordo afetam a avaliação.</p>
+  <p>A oferta dura 15 segundos. Você pode recusá-la com <kbd>Q</kbd>. Após aceitar, cancelar com <kbd>C</kbd> custa R$ 5 antes da coleta ou R$ 15 e uma estrela depois dela. Se fechar o jogo, o envio aceito será retomado ao continuar no solo.</p>
 </section>
 
 <section id="encomendas">
@@ -309,7 +333,7 @@
     <li>enjoa fácil: perde nota conforme o estômago</li>
     <li>executivo com qualquer defeito no carro: −1</li>
   </ul>
-  <p>Só corrida de 5 estrelas tem chance de gorjeta (65%), de 10% a 35% do valor.</p>
+  <p>A média do solo considera até 30 avaliações. Quando entra uma nova com o histórico cheio, sai a mais antiga. Só corrida de 5 estrelas tem chance de gorjeta (65%), de 10% a 35% do valor.</p>
 </section>
 
 <section id="dinamica">
@@ -341,10 +365,11 @@
     <tr><td class="c-ofi">Oficina</td><td>revisão (zera o desgaste)</td><td class="money">R$ 30 + R$ 1,50 por % de desgaste</td></tr>
     <tr><td class="c-lava">Lava jato</td><td>lavagem completa com aspiração</td><td class="money">R$ 35,00</td></tr>
   </table></div>
-  <h3>CASA, ESTEPE E ENERGIA NO SOLO</h3>
+  <h3 id="casa">CASA, ESTEPE E ENERGIA NO SOLO</h3>
   <p>A casa é o ponto lilás no mapa. Pare na porta para lavar à mão, trocar de veículo ou instalar um kit GNV grátis no carro ou na van. O cilindro começa vazio. Abasteça em qualquer posto por R$ 0,32 por ponto percentual no carro e um pouco mais na van. O motor usa o gás primeiro e volta à gasolina quando ele acaba.</p>
-  <p>O carro elétrico fica na garagem e também pode ser escolhido no início. Um dos três postos tem carregador público gratuito, marcado em verde-água. No elétrico, <kbd>P</kbd> indica esse posto. Com a bateria vazia, você pode empurrar até lá ou pagar o guincho.</p>
+  <p>O carro elétrico faz corridas do Rebu. Pegue-o na garagem ou aperte <kbd>E</kbd> na tela inicial. Um dos três postos tem carregador público gratuito, marcado em verde-água. No elétrico, <kbd>P</kbd> indica esse posto. Com a bateria vazia, você pode empurrar até lá ou pagar o guincho.</p>
   <p>Carros e vans saem com um estepe. Se furar um pneu, pare e aperte <kbd>T</kbd>. A troca é gratuita e consome o estepe. A oficina vende outro por R$ 70.</p>
+  <p>Se o custo de completar o tanque passar de R$ 20, o posto também oferece essa quantia em gasolina. No elétrico, um posto sem carregador oferece a opção de traçar a rota para recarga.</p>
   <h3>POSTO PREÇO BAIXO</h3>
   <p>Um dos postos vende gasolina 40% mais barata... só que batizada. Com ela no tanque o carro gasta mais, perde força, engasga de vez em quando e se desgasta mais rápido. O efeito é proporcional à mistura: abastecer num posto normal dilui.</p>
 </section>
@@ -451,10 +476,13 @@
 <section id="multi">
   <h2>MULTIPLAYER</h2>
   <ul>
-    <li>Na tela inicial, escolha um apelido e <b>crie uma sala</b> ou entre com o código de 4 letras. Mande o link da barra de endereço para os amigos. Cabem até 4 pessoas.</li>
+    <li>Na tela inicial, abra <b>Jogar com amigos</b>, escolha um apelido e <b>crie uma sala</b> ou entre com o código de 4 letras. Mande o link da barra de endereço para os amigos. Cabem até 4 pessoas.</li>
     <li><b>Espera:</b> dá para dar voltas pela cidade, mas não há chamadas e o posto, a oficina e o lava jato ficam fechados (o guincho é grátis). Quem criou a sala aperta <kbd>Enter</kbd> para começar.</li>
     <li><b>Turno:</b> depois de um 3-2-1 todos largam iguais, com <span class="money">R$ 150,00</span> e carro novo. O turno vai das 07:00 às 19:00 em 12 minutos reais.</li>
     <li><b>Chamadas:</b> são as mesmas para todos (sempre há o número de jogadores mais duas chamadas abertas). <kbd>E</kbd> vai buscar a destacada e <kbd>Q</kbd> passa para a próxima. Ir buscar não reserva nada: leva quem parar ao lado do passageiro primeiro.</li>
+    <li>O placar no canto superior esquerdo mostra o saldo dos jogadores ao vivo. Você vê os veículos dos rivais e pode esbarrar neles.</li>
+    <li>Na pausa, use <b>Copiar o link da sala</b> para convidar alguém. Seu carro fica parado enquanto os outros continuam jogando. Se o dono sair, quem está na sala há mais tempo assume.</li>
+    <li>Se a conexão cair, o jogo tenta reconectar automaticamente. Durante o turno, a sala só admite de volta quem já estava participando.</li>
     <li><b>Caixa:</b> o dinheiro é controlado pela sala. Ela paga as corridas com o multiplicador do seu veículo e confere cada compra e cada multa.</li>
     <li><b>19:00:</b> quem está com passageiro tem 30 s de prorrogação para entregar. Depois vem o ranking (maior lucro; empate decidido pela nota média). O dono pode pedir <b>revanche</b>.</li>
     <li>Polícia, bandidos, bichos e colégios são só de cada jogador (os outros não veem), mas as multas e o assalto saem do seu caixa na sala.</li>
