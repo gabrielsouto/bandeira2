@@ -13,7 +13,7 @@ const RED_FINE = RADAR_FINE; // multa de quem avança o vermelho (no multiplayer
 const RED_GRACE = 0.4;       // segundos de tolerância depois que fecha
 
 const Signals = {
-  list: [], map: new Map(), lastKey: -1, cd: 0,
+  list: [], map: new Map(), lastKey: -1, prevX: null, prevY: null, cd: 0,
 
   init(city) {
     this.city = city;
@@ -61,13 +61,26 @@ const Signals = {
     const tx = Math.floor(car.x / 16), ty = Math.floor(car.y / 16);
     const i = this.colOf[tx] ?? -1, j = this.rowOf[ty] ?? -1;
     const key = i >= 0 && j >= 0 ? i * 100 + j : -1;
+    const prevX = this.prevX, prevY = this.prevY;
+    this.prevX = car.x;
+    this.prevY = car.y;
     if (key === this.lastKey) return;
     const from = this.lastKey;
     this.lastKey = key;
     if (key < 0 || from >= 0 || car.speed < 25) return; // só conta quem vem da rua e entra andando
     const s = this.map.get(key);
-    if (!s) return;
-    const d = Math.abs(car.vx) > Math.abs(car.vy) ? (car.vx > 0 ? 0 : 2) : (car.vy > 0 ? 1 : 3);
+    if (!s || prevX === null) return;
+    // A rua de origem continua valendo quando o motorista começa a virar.
+    const d = s.entries.find(dir => {
+      const x = this.city.xs[i] * 16, y = this.city.ys[j] * 16;
+      switch (dir) {
+        case 0: return prevX < x && this.rowOf[Math.floor(prevY / 16)] === j;
+        case 2: return prevX >= x + this.city.wx[i] * 16 && this.rowOf[Math.floor(prevY / 16)] === j;
+        case 1: return prevY < y && this.colOf[Math.floor(prevX / 16)] === i;
+        default: return prevY >= y + this.city.wy[j] * 16 && this.colOf[Math.floor(prevX / 16)] === i;
+      }
+    });
+    if (d === undefined) return;
     if (this.light(s, d) === 'r' && this.redFor(s, d) > RED_GRACE) this.ranRed();
   },
 
@@ -82,34 +95,43 @@ const Signals = {
   },
 
   // ---------- desenho ----------
-  // para cada rua que chega: faixa branca antes do cruzamento e o semáforo na esquina da direita
+  // O foco fica logo depois da linha, centralizado sobre as faixas que ele controla.
   heads(s) {
-    const out = [];
-    for (let d = 0; d < 4; d++) {
-      if (!s.entries.includes(d)) continue; // ninguém chega por esse lado
-      const a = DIRS[d], e = this.city.entryPoint(s.i, s.j, d), rx = -a.dy, ry = a.dx;
-      out.push({ d, a, e, lanes: this.city.laneCount(s.i, s.j, d), hx: e.x - a.dx * 6 + rx * 14, hy: e.y - a.dy * 6 + ry * 14 });
-    }
-    return out;
+    return s.entries.map(d => {
+      const a = DIRS[d], lanes = this.city.laneCount(s.i, s.j, d);
+      const outer = this.city.entryPoint(s.i, s.j, d);
+      const inner = this.city.entryPoint(s.i, s.j, d, lanes - 1);
+      const hx = (outer.x + inner.x) / 2 + a.dx * 5, hy = (outer.y + inner.y) / 2 + a.dy * 5;
+      return { d, a, lanes, hx, hy };
+    });
   },
 
   draw(g, camX, camY, vw, vh) {
-    const COLS = { r: ['#ff3030', '#4a1010'], y: ['#ffc21a', '#4a3a08'], g: ['#3dff6e', '#0f3a1a'] };
+    const colors = { r: '#ff5454', y: '#ffd147', g: '#53ef89' };
     for (const s of this.list) {
       const cx = this.city.xs[s.i] * 16 + this.city.wx[s.i] * 8 - camX, cy = this.city.ys[s.j] * 16 + this.city.wy[s.j] * 8 - camY;
-      if (cx < -50 || cy < -50 || cx > vw + 50 || cy > vh + 50) continue;
+      if (cx < -60 || cy < -60 || cx > vw + 60 || cy > vh + 60) continue;
       for (const h of this.heads(s)) {
-        g.fillStyle = 'rgba(255,255,255,0.75)';
+        const light = this.light(s, h.d), halfWidth = h.lanes * 8;
+        // Coordenadas locais: x aponta para o cruzamento, y para a direita do motorista.
+        g.save();
+        g.transform(h.a.dx, h.a.dy, -h.a.dy, h.a.dx, Math.round(h.hx - camX), Math.round(h.hy - camY));
+        g.fillStyle = '#f5f3e9';
+        g.fillRect(-7, -halfWidth + 1, 2, halfWidth * 2 - 2);
         for (let k = 0; k < h.lanes; k++) {
-          const e = this.city.entryPoint(s.i, s.j, h.d, k), mx = Math.round(e.x - h.a.dx * 2 - camX), my = Math.round(e.y - h.a.dy * 2 - camY);
-          if (h.a.dx) g.fillRect(mx - 1, my - 7, 2, 14); else g.fillRect(mx - 7, my - 1, 14, 2);
+          const y = halfWidth - 8 - k * 16;
+          g.fillStyle = colors[light];
+          g.beginPath();
+          g.moveTo(-10, y); g.lineTo(-16, y - 5); g.lineTo(-16, y - 2);
+          g.lineTo(-22, y - 2); g.lineTo(-22, y + 2); g.lineTo(-16, y + 2);
+          g.lineTo(-16, y + 5); g.closePath(); g.fill();
         }
-        const l = this.light(s, h.d), x = Math.round(h.hx - camX), y = Math.round(h.hy - camY);
-        g.fillStyle = '#000'; g.fillRect(x - 2, y - 5, 5, 11);
-        g.fillStyle = '#26282e'; g.fillRect(x - 1, y - 4, 3, 9);
-        g.fillStyle = l === 'r' ? COLS.r[0] : COLS.r[1]; g.fillRect(x - 1, y - 4, 3, 3);
-        g.fillStyle = l === 'y' ? COLS.y[0] : COLS.y[1]; g.fillRect(x - 1, y - 1, 3, 3);
-        g.fillStyle = l === 'g' ? COLS.g[0] : COLS.g[1]; g.fillRect(x - 1, y + 2, 3, 3);
+        g.fillStyle = '#181d24'; g.fillRect(-4, -8, 8, 16);
+        for (const [index, phase] of ['r', 'y', 'g'].entries()) {
+          g.fillStyle = light === phase ? colors[phase] : '#404752';
+          g.fillRect(-2, -7 + index * 5, 4, 4);
+        }
+        g.restore();
       }
     }
   },

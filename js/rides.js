@@ -195,7 +195,7 @@ const Rides = {
       if (this.state !== 'onTrip') return;
       r.hits++;
       if (DTYPES[r.type].slosh) r.comfort -= imp * 0.25;
-      if (this.hitCd <= 0) { toast(R.pick(FOOD_HIT_LINES), 'warn'); this.hitCd = 2.5; }
+      if (this.hitCd <= 0) { toast(r.pharmacy ? 'O pacote bateu dentro da mochila!' : R.pick(FOOD_HIT_LINES), 'warn'); this.hitCd = 2.5; }
       return;
     }
     r.hits++;
@@ -267,7 +267,7 @@ const Rides = {
         Sfx.bad();
       }
     }
-    if (Math.hypot(car.x - r.drop.x, car.y - r.drop.y) < 30 && car.speed < 30) this.finish(car);
+    if (Math.hypot(car.x - r.drop.x, car.y - r.drop.y) < 30 && car.speed < (r.pharmacy ? 8 : 30)) this.finish(car);
   },
 
   update(dt, car) {
@@ -301,7 +301,7 @@ const Rides = {
           this.reset();
           break;
         }
-        if (Math.hypot(car.x - r.pick.x, car.y - r.pick.y) < 30 && car.speed < 30) {
+        if (Math.hypot(car.x - r.pick.x, car.y - r.pick.y) < (r.pharmacy ? 26 : 30) && car.speed < (r.pharmacy ? 8 : 30)) {
           this.state = 'boarding'; r.boardT = 0;
           if (r.order && r.prep > 0 && !r.waitedMsg) { r.waitedMsg = true; toast(`${r.rest.name}: "Tá saindo, só um minutinho!"`); }
         }

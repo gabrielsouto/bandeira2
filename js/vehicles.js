@@ -66,6 +66,22 @@ const VEHICLES = {
     phys: { accel: 210, maxSpeed: 215, grip: 10, hbGrip: 1.4, steerRate: 3.8, r: 3, off: 3 },
     fare: 1, offerMul: 0.7, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
+  vlt: {
+    name: 'VLT', app: 'VLT · LINHA NORTE', color: '#27b3a7', art: 'vlt', soloOnly: true,
+    desc: 'Conduza o trem elétrico pelos trilhos e pare nas plataformas da Linha Norte. Só no solo.',
+    phys: { accel: 80, maxSpeed: 155, brake: 210, reverseMax: 36 }, electric: true,
+    fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
+  },
+  onibus: {
+    name: 'Ônibus urbano', app: 'LINHA 01', color: '#3785bd', art: 'onibus', soloOnly: true,
+    desc: 'Dirija a linha entre os terminais, pare nos pontos e receba por passageiro transportado. Só no solo.',
+    phys: { accel: 95, maxSpeed: 165, reverseMax: 40, brake: 265, steerRate: 2.25, off: 8 },
+    fare: 1, offerMul: 1, fuelUse: 1.3, tankMul: 1.4, dmgMul: 0.85,
+  },
+  ambulancia: {
+    ...PARCEL_VAN, name: 'Ambulância', app: 'CENTRAL DE RESGATE', color: '#f4f6f5', art: 'ambulancia',
+    desc: 'Atenda chamados, resgate pacientes e leve cada pessoa ao pronto-socorro. Só no solo.',
+  },
   escolar: {
     ...PARCEL_VAN, name: 'Van escolar', app: 'ESCOLAR', color: '#ffcb39', shuttle: true,
     desc: 'Busque os alunos, leve a turma à escola e volte na saída. Cada família paga por trecho. Só no solo.',
@@ -80,11 +96,15 @@ VEHICLES.envios = {
   ...VEHICLES.uber, name: 'Rebu Envios', app: 'REBU ENVIOS', color: '#69ccad', soloOnly: true, bag: '#69ccad',
   desc: 'Retire o pacote com o remetente e entregue em mãos. Alguns envios pedem um código na chegada. Só no solo.',
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios'];
+VEHICLES.farmacia = {
+  ...VEHICLES.comida66, name: 'Farmácia de bike', app: 'FARMA BIKE', color: '#37c396', bag: '#37c396',
+  desc: 'Retire pedidos na farmácia e pedale até o cliente. Proteja os frascos contra batidas. Só no solo.',
+};
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios', 'ambulancia', 'onibus', 'vlt', 'farmacia'];
 const JOBS_BY_ART = {
-  van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
+  vlt: ['vlt'], onibus: ['onibus'], ambulancia: ['ambulancia'], van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
   car: ['uber', 'n99', 'eucomida', 'envios'], taxi: ['taxi', 'uber', 'n99', 'eucomida', 'envios'],
-  moto: ['moto', 'eucomida', 'xopi', 'envios'], bike: ['comida66'], escola: ['escola'],
+  moto: ['moto', 'eucomida', 'xopi', 'envios'], bike: ['comida66', 'farmacia'], escola: ['escola'],
 };
 const VEH_KEY = 'bandeira2-veiculo';
 
@@ -115,8 +135,8 @@ const Veh = {
   // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
   twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },
   // nome do veículo nos avisos: "carro", "moto" ou "bike" (fem: usa "a")
-  noun(k = this.key) { const a = VEHICLES[k].art; return ['moto', 'bike', 'van'].includes(a) ? a : 'carro'; },
-  fem(k = this.key) { return this.noun(k) !== 'carro'; },
+  noun(k = this.key) { const a = VEHICLES[k].art; if (a === 'vlt') return 'VLT'; if (a === 'onibus') return 'ônibus'; if (a === 'ambulancia') return 'ambulância'; return ['moto', 'bike', 'van'].includes(a) ? a : 'carro'; },
+  fem(k = this.key) { return !['carro', 'ônibus', 'VLT'].includes(this.noun(k)); },
 
   // física completa do veículo (o que não muda fica igual ao carro padrão)
   phys(k = this.key) { return Object.assign({}, CARP, VEHICLES[k].phys); },

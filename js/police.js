@@ -53,7 +53,9 @@ const Police = {
     if (caught) {
       Care.charge(POLICE_FINE, 'policia');
       Care.stallT = Math.max(Care.stallT, 2);
-      if (Veh.job === 'envios') Envios.cancel(true);
+      if (Veh.job === 'onibus') Onibus.cancel(true);
+      else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
+      else if (Veh.job === 'envios') Envios.cancel(true);
       else if (Veh.cur.shuttle) Escolar.cancel(true);
       else if (Veh.cur.parcels) Parcels.cancel(true);
       else if (Rides.ride && Rides.state !== 'dropping') { toast(Rides.ride.order ? `Parado na blitz: o pedido de ${Rides.ride.name} foi cancelado.` : `${Rides.ride.name} desceu na blitz.`, 'bad'); Rides.cancel(true); }

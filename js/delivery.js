@@ -21,6 +21,8 @@ const RESTAURANTS = [
 
 // tipos de pedido: tarifa, o que pesa na nota e o aviso no celular
 const DTYPES = {
+  farmacia: { label: 'Pacote lacrado', fare: 1, desc: 'Retire no balcão da farmácia.' },
+  frasco: { label: 'Frágil', fare: 1.2, hitMul: 2, desc: 'Leve com cuidado. Batidas danificam os frascos.' },
   lanche: { label: 'Lanche', fare: 1, desc: '' },
   pizza: { label: 'Pizza', fare: 1.2, hitMul: 2, desc: 'Batida desmonta a pizza. Vai liso!' },
   acai: { label: 'Açaí', fare: 1.3, timeMul: 0.7, lateMul: 2, desc: 'Derrete rápido: corre!' },
@@ -49,7 +51,8 @@ function deliveryStars(type, v) {
 }
 
 const Delivery = {
-  rests: [],
+  rests: [], pharmacies: [],
+  get shops() { return Veh.job === 'farmacia' ? this.pharmacies : this.rests; },
 
   get on() { return !!Veh.cur.delivery; },
 
@@ -68,6 +71,31 @@ const Delivery = {
         x: (bd.x0 + bd.x1 + 1) * 8, y: (bd.y0 + bd.y1 + 1) * 8 }));
     }
     for (const rs of this.rests) this.paint(mapCtx, rs);
+  },
+
+  initPharmacies(city, g) {
+    const occupied = new Set([...this.rests, ...World.schools, ...Object.values(Parcels.hubs)].map(p => p.bd));
+    const candidates = city.buildings.filter(b => !occupied.has(b));
+    const menu = [['Kit de curativos', 'farmacia'], ['Protetor solar e hidratante', 'farmacia'],
+      ['Medicamentos em caixa lacrada', 'farmacia'], ['Frasco de xampu em vidro', 'frasco']];
+    this.pharmacies = [];
+    for (const [name, fx, fy] of [['Farmácia Primavera', .25, .25], ['Drogaria Central', .5, .5],
+      ['Farmácia do Sol', .75, .25], ['Drogaria do Parque', .25, .75], ['Farmácia Boa Vista', .75, .75]]) {
+      const distance = b => Math.hypot((b.x0 + b.x1 + 1) / 2 - fx * city.W, (b.y0 + b.y1 + 1) / 2 - fy * city.H);
+      candidates.sort((a, b) => distance(a) - distance(b));
+      for (const bd of candidates) {
+        const door = this.doorOf(bd);
+        if (!door || World.inRisk(door.x, door.y) || this.pharmacies.some(p => Math.hypot(p.x - door.x, p.y - door.y) < 100)) continue;
+        if (Ambulancia.hospital && Math.hypot(door.x - Ambulancia.hospital.x, door.y - Ambulancia.hospital.y) < 65) continue;
+        if (Math.hypot(door.x - Garagem.home.cx, door.y - Garagem.home.cy) < 50) continue;
+        const x = (bd.x0 + bd.x1 + 1) * TILE / 2, y = (bd.y0 + bd.y1 + 1) * TILE / 2;
+        this.pharmacies.push({ name, bd, door, x, y, menu });
+        g.fillStyle = '#f0fff5'; g.fillRect(x - 7, y - 7, 14, 14);
+        g.fillStyle = '#178458'; g.fillRect(x - 2, y - 5, 4, 10); g.fillRect(x - 5, y - 2, 10, 4);
+        candidates.splice(candidates.indexOf(bd), 1);
+        break;
+      }
+    }
   },
 
   // meio-fio mais perto do prédio (onde a moto encosta para retirar o pedido)
@@ -97,13 +125,17 @@ const Delivery = {
 
   // ---------- pedidos ----------
   makeOffer(px, py) {
-    if (!this.rests.length) return null;
+    const shops = this.shops, pharmacy = Veh.job === 'farmacia';
+    if (!shops.length) return null;
     const bike = !!Veh.cur.near, reach = bike ? 22 : 35, [dMin, dMax] = bike ? [6, 26] : [10, 50];
-    const near = this.rests.filter((rs) => Math.hypot(rs.door.x - px, rs.door.y - py) / 16 < reach);
-    const rs = R.pick(near.length ? near : this.rests), pick = rs.door;
+    const near = shops.filter((rs) => Math.hypot(rs.door.x - px, rs.door.y - py) / 16 < reach);
+    const distance = shop => Math.hypot(shop.door.x - px, shop.door.y - py);
+    const rs = near.length ? R.pick(near) : pharmacy ? shops.reduce((a, b) => distance(a) < distance(b) ? a : b) : R.pick(shops);
+    const pick = rs.door;
+    const destinations = pharmacy ? Parcels.doors : this.city.curbs;
     let drop = null;
     for (let t = 0; t < 60 && !drop; t++) {
-      const s = R.pick(this.city.curbs);
+      const s = R.pick(destinations);
       const d = (Math.abs(s.x - pick.x) + Math.abs(s.y - pick.y)) / 16;
       if (d > dMin && d < dMax) drop = s;
     }
@@ -113,7 +145,7 @@ const Delivery = {
     const tripD = Math.abs(drop.x - pick.x) + Math.abs(drop.y - pick.y), pickD = Math.hypot(pick.x - px, pick.y - py);
     const surge = Rides.surgeAt(pick.x, pick.y);
     const fare = Math.round(deliveryFare(tripD, pickD, type, surge) * Veh.fareMul(gameMin) * 100) / 100;
-    return { id: ++offerSeq, order: true, rest: rs, item, pick, drop, type, surge, fare, tripD, pickD,
+    return { id: ++offerSeq, order: true, pharmacy, rest: rs, item, pick, drop, type, surge, fare, tripD, pickD,
       name: R.pick(FIRST_NAMES), stars: R.f(4.2, 5).toFixed(1).replace('.', ','),
       expires: 12, expMax: 12, shirt: R.pick(SHIRTS), hair: R.pick(HAIRS), prep: R.chance(0.3) ? 0 : R.f(4, 22) };
   },
@@ -127,7 +159,7 @@ const Delivery = {
   // parado na porta do restaurante: espera a cozinha e o atendente traz a bag (aqui "this" é o Rides)
   stepPickup(dt, car) {
     const r = this.ride;
-    if (car.speed > 40) {
+    if (car.speed > 40 || (r.pharmacy && (car.speed >= 8 || Math.hypot(car.x - r.pick.x, car.y - r.pick.y) >= 26))) {
       this.state = 'toPickup'; r.paxX = r.pick.x; r.paxY = r.pick.y;
       toast('Calma! O pedido ainda não está na bag.', 'warn');
       return;
@@ -157,7 +189,7 @@ const Delivery = {
     }
   },
 
-  report(r) { return { hits: r.hits, late: r.t > r.allowed, cold: r.t > r.allowed * 1.5, spilled: r.spilled }; },
+  report(r) { return { hits: r.hits, late: r.t > r.allowed, cold: !r.pharmacy && r.t > r.allowed * 1.5, spilled: r.spilled }; },
 
   heatLabel(r) {
     const k = r.t / r.allowed;
@@ -189,12 +221,12 @@ const Delivery = {
     }
     if (st === 'toPickup' || st === 'boarding') {
       const ready = r.prep <= 0;
-      const msg = st === 'boarding' ? (ready ? 'O atendente está trazendo a bag…' : `Esperando a cozinha… segura a ${Veh.noun()}.`)
+      const msg = r.pharmacy ? (st === 'boarding' ? 'Aguarde a retirada no balcão.' : 'Siga a seta verde e pare junto à farmácia.') : st === 'boarding' ? (ready ? 'O atendente está trazendo a bag…' : `Esperando a cozinha… segura a ${Veh.noun()}.`)
         : 'Siga a seta verde e pare na porta do restaurante.';
       return `<div class="ph-title">RETIRAR PEDIDO</div>
         <div class="ph-row">${esc(r.rest.name)}</div>
         <div class="ph-muted">${esc(r.item)} <span class="ph-type t-${r.type}">${DTYPES[r.type].label}</span></div>
-        <div class="ph-row">${ready ? '<b class="ok">PEDIDO PRONTO</b>' : `Na cozinha: pronto em ${mmss(r.prep)}`}</div>
+        <div class="ph-row">${ready ? '<b class="ok">PEDIDO PRONTO</b>' : `${r.pharmacy ? 'Em separação' : 'Na cozinha'}: pronto em ${mmss(r.prep)}`}</div>
         <div class="ph-muted">${msg}</div>
         ${st === 'toPickup' ? `<div class="ph-row">Espera máx.: ${mmss(r.maxWait - r.waitT)}</div>` : ''}
         <div class="ph-fare small">${fmtMoney(r.fare)}</div>
@@ -206,7 +238,8 @@ const Delivery = {
         <div class="ph-row">Para ${esc(r.name)} <span class="ph-type t-${r.type}">${DTYPES[r.type].label}</span></div>
         <div class="ph-muted">${esc(r.item)}</div>
         <div class="ph-big ${left < 0 ? 'late' : ''}">${mmss(left)}</div>
-        <div class="ph-row">Comida: <b class="${left < 0 ? 'late' : 'ok'}">${heat}</b></div>
+        ${r.pharmacy ? '<div class="ph-row">Pacote: ' + (r.hits ? 'sofreu impacto' : 'intacto') + '</div>' :
+          `<div class="ph-row">Comida: <b class="${left < 0 ? 'late' : 'ok'}">${heat}</b></div>`}
         <div class="ph-row">Valor: ${fmtMoney(r.fare)} · Batidas: ${r.hits}</div>
         ${DTYPES[r.type].slosh ? (r.spilled ? '<div class="ph-row late">Refri vazou!</div>'
           : `<div class="ph-row">Refri</div><div class="ph-comfort"><div style="width:${Math.max(0, Math.round(r.comfort / 5) * 5)}%"></div></div>`) : ''}
@@ -259,25 +292,27 @@ const Delivery = {
   draw(g, camX, camY, vw, vh) {
     if (!this.on) return;
     g.font = '12px VT323, monospace'; g.textAlign = 'center';
-    for (const rs of this.rests) {
+    for (const rs of this.shops) {
       const cx = rs.x, cy = rs.bd.y0 * 16 - 2;
       if (cx + 80 < camX || cy + 80 < camY || cx - 80 > camX + vw || cy - 80 > camY + vh) continue;
       g.fillStyle = '#000'; g.fillText(rs.name.toUpperCase(), Math.round(cx - camX) + 1, Math.round(cy - camY) + 1);
-      g.fillStyle = '#ff8a7a'; g.fillText(rs.name.toUpperCase(), Math.round(cx - camX), Math.round(cy - camY));
+      g.fillStyle = Veh.job === 'farmacia' ? '#72e6b5' : '#ff8a7a'; g.fillText(rs.name.toUpperCase(), Math.round(cx - camX), Math.round(cy - camY));
     }
   },
 
   drawLights(L, camX, camY) {
     if (!this.on) return;
-    for (const rs of this.rests) L.hole(rs.door.x - camX, rs.door.y - camY, 26, 0.45);
+    for (const rs of this.shops) L.hole(rs.door.x - camX, rs.door.y - camY, 26, 0.45);
   },
 
   drawMinimap(g, s) {
     if (!this.on) return;
-    for (const rs of this.rests) {
+    for (const rs of this.shops) {
       const x = Math.round(rs.x * s), y = Math.round(rs.y * s);
       g.fillStyle = '#000'; g.fillRect(x - 3, y - 3, 6, 6);
-      g.fillStyle = '#ff6fa8'; g.fillRect(x - 2, y - 2, 4, 4);
+      if (Veh.job === 'farmacia') {
+        g.fillStyle = '#37c396'; g.fillRect(x - 1, y - 3, 2, 6); g.fillRect(x - 3, y - 1, 6, 2);
+      } else { g.fillStyle = '#ff6fa8'; g.fillRect(x - 2, y - 2, 4, 4); }
     }
   },
 };

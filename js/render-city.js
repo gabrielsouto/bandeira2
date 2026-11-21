@@ -27,6 +27,41 @@ const CAR_ART = [
   '.oooooooooooooooo.',
 ];
 // Furgão voltado para a direita. A faixa na caixa de carga leva a cor do app.
+const VLT_ART = [
+  '..ooooooooooookkoooooooooooo..',
+  '.obwwbwwbwwbbdkkdbbwwbwwbwwbo.',
+  'ohwlllllllllldkkdllllllllllwho',
+  'obwbbbdddbbbbdkkdbbbbdddbbbwbo',
+  'obwbbbdddbbbbdkkdbbbbdddbbbwbo',
+  'ohwlllllllllldkkdllllllllllwho',
+  '.obwwbwwbwwbbdkkdbbwwbwwbwwbo.',
+  '..ooooooooooookkoooooooooooo..',
+];
+const BUS_ART = [
+  '.oooooooooooooooooooooo.',
+  'obwwbwwbwwbwwbwwbwwwbbbo',
+  'tllllllllllllllllllwwbbh',
+  'obbbbbldddlbbldddlbwwbbo',
+  'obbbbbldddlbbldddlbwwbbo',
+  'obbbbbldddlbbldddlbwwbbo',
+  'obbbbbbbbbbbbbbbbbbwwbbo',
+  'tllllllllllllllllllwwbbh',
+  'obwwbwwbwwbwwbwwbwwwbbbo',
+  '.oooooooooooooooooooooo.',
+];
+const AMBULANCE_ART = [
+  '.oooooooooooooooooo..',
+  'obbbbbbbbbbbbdwwwbbo.',
+  'tzzzzzzzzzzzzdwwwwbbh',
+  'olbbbbbzbbbbsdwwwwbbo',
+  'olbbbbbzbbbbsdwwwwbbo',
+  'olbbbzzzzzbbbdwwwwbbo',
+  'olbbbbbzbbbbzdwwwwbbo',
+  'olbbbbbzbbbbzdwwwwbbo',
+  'tzzzzzzzzzzzzdwwwwbbh',
+  'obbbbbbbbbbbbdwwwbbo.',
+  '.oooooooooooooooooo..',
+];
 const VAN_ART = [
   '.oooooooooooooooooo..',
   'obbbbbbbbbbbbdwwwbbo.',
@@ -147,6 +182,9 @@ function artToCanvas(rows, pal) {
 function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
   let rows = art === 'bike' ? BIKE_ART : art === 'moto' ? (bag ? MOTO_BAG_ART : MOTO_ART) : CAR_ART;
   if (art === 'van') rows = VAN_ART;
+  if (art === 'vlt') rows = VLT_ART;
+  if (art === 'onibus') rows = BUS_ART;
+  if (art === 'ambulancia') rows = AMBULANCE_ART;
   const bagCol = typeof bag === 'string' ? bag : '#e3262e';
   if (art === 'taxi') rows = rows.map((row, y) => (y >= 3 && y <= 6) ? row.slice(0, 7) + 'sss' + row.slice(10) : row);
   // autoescola: faixa vermelha dos lados e placa no teto
@@ -158,6 +196,7 @@ function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
     x: shade(bagCol, -0.55), y: bagCol, z: typeof bag === 'string' ? '#151515' : '#f4f4f4' };
   if (art === 'bike') { pal.b = '#2a2a2a'; pal.h = '#e8f4ff'; } // quadro preto, farolete branco
   if (art === 'van') { pal.l = '#d9dcdd'; pal.z = '#232f3e'; }
+  if (art === 'ambulancia') { pal.z = '#e63d42'; pal.s = '#357fe5'; }
   const shadowPal = {};
   for (const k in pal) shadowPal[k] = 'rgba(0,0,0,0.35)';
   return {

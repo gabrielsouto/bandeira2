@@ -78,6 +78,9 @@ const HUD = {
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
     e.rating.textContent = Veh.cur.school ? `Aulas: ${Autoescola.passed()}/${LESSONS.length} · ${Autoescola.totalStars()} ★`
+      : Veh.job === 'vlt' ? 'Linha Norte · ' + S.vltTrips + (S.vltTrips === 1 ? ' viagem' : ' viagens')
+      : Veh.job === 'onibus' ? S.busPassengers + (S.busPassengers === 1 ? ' passageiro transportado' : ' passageiros transportados')
+      : Veh.job === 'ambulancia' ? S.rescues + (S.rescues === 1 ? ' resgate' : ' resgates')
       : Veh.job === 'envios' ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.envios} envio${S.envios === 1 ? '' : 's'}`
       : Veh.cur.shuttle ? 'Escolar · ' + S.schoolLegs + ' trechos pagos' : Veh.cur.parcels ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.parcels} pacote${S.parcels === 1 ? '' : 's'}`
       : `★ ${nota == null ? '–' : nota.toFixed(2).replace('.', ',')} · ${S.rides} ${Veh.cur.delivery ? 'entrega' : 'corrida'}${S.rides === 1 ? '' : 's'}`;
@@ -136,6 +139,7 @@ const HUD = {
   },
 
   phoneHTML() {
+    if (Veh.job === 'vlt') return VLT.phoneHTML();
     const c = S.car, st = Rides.state, r = Veh.cur.parcels ? Parcels.route : Rides.ride;
     if ((Garagem.enabled || !r) && (c.health <= 0 || Care.empty())) {
       const alert = c.health <= 0 ? 'VEÍCULO QUEBRADO' : Veh.cur.electric ? 'BATERIA ESGOTADA' : 'SEM COMBUSTÍVEL';
@@ -144,6 +148,8 @@ const HUD = {
         (Garagem.enabled ? `<button data-act="push" class="ghost"><kbd>U</kbd> ${Garagem.pushing ? 'Voltar ao volante' : 'Empurrar'}</button>` : '') + '</div>';
     }
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
+    if (Veh.job === 'onibus') return Onibus.phoneHTML();
+    if (Veh.job === 'ambulancia') return Ambulancia.phoneHTML();
     if (Veh.job === 'envios') return Envios.phoneHTML();
     if (Veh.cur.school) return Autoescola.phoneHTML();
     if (Veh.cur.shuttle) return Escolar.phoneHTML();
@@ -200,7 +206,7 @@ const HUD = {
   drawMinimap() {
     const g = this.mmCtx, s = 2 / 16;
     g.drawImage(minimapBase, 0, 0);
-    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle ? [] : Rides.surges) {
+    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.job === 'vlt' ? [] : Rides.surges) {
       const a = Math.min(1, z.age / 2, (z.life - z.age) / 2);
       if (a <= 0) continue;
       g.globalAlpha = a;
@@ -223,6 +229,7 @@ const HUD = {
       const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);
       g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x - 5.5, y - 5.5, 11, 11);
     }
+    if (Veh.job === 'vlt') VLT.drawMinimap(g, s);
     const tg = activeJob().target();
     if (tg && Math.floor(time * 4) % 2 === 0) {
       const x = Math.round(tg.x * s), y = Math.round(tg.y * s);

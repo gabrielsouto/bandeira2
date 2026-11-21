@@ -184,3 +184,124 @@ test('no portão os alunos caminham em fila e a van espera o último entrar', ()
   run('Escolar.update(0.9, player)');
   assert.equal(context.S.schoolRoute.phase, 'volta');
 });
+
+test('a multa segue a entrada sinalizada mesmo quando o carro já começou a virar', () => {
+  const { run, context } = game(['util', 'city']);
+  context.RADAR_FINE = 60;
+  run(readFileSync(join(__dirname, '..', 'js', 'semaforo.js'), 'utf8'));
+  run('const city = generateCity(42); Signals.init(city)');
+  for (let d = 0; d < 4; d++) {
+    context.d = d;
+    for (const red of [true, false]) {
+      context.red = red;
+      const fines = run(`(() => {
+        const s = Signals.list.find(s => s.entries.includes(d));
+        const a = DIRS[d], e = city.entryPoint(s.i, s.j, d);
+        let count = 0;
+        Signals.ranRed = () => count++;
+        Signals.light = (_, dir) => (dir === d) === red ? 'r' : 'g';
+        Signals.redFor = () => 1;
+        const car = { x: e.x - a.dx * 2, y: e.y - a.dy * 2, speed: 35, vx: -a.dy * 35, vy: a.dx * 35 };
+        Signals.update(0.02, car);
+        car.x += a.dx * 4;
+        car.y += a.dy * 4;
+        Signals.update(0.02, car);
+        Signals.update(0.02, car);
+        return count;
+      })()`);
+      assert.equal(fines, red ? 1 : 0);
+    }
+  }
+});
+
+test('resgate exige duas paradas completas e paga apenas na chegada ao hospital', () => {
+  const { run, context } = game(['util', 'ambulancia']);
+  context.S.rescues = 0;
+  run(`Ambulancia.hospital = { x: 160, y: 0 };
+    Ambulancia.offer = { pick: { x: 0, y: 0 }, name: 'Ana', fare: 22 };
+    Ambulancia.accept(); Ambulancia.update(1, player);
+    player.speed = 30; Ambulancia.update(2, player);
+    player.speed = 0; Ambulancia.update(1, player)`);
+  assert.equal(context.S.rescue.phase, 'pickup');
+  run('Ambulancia.update(1, player)');
+  assert.equal(context.S.rescue.phase, 'hospital');
+  assert.equal(context.S.money, 0);
+  run('player.x = 160; Ambulancia.update(2, player); Ambulancia.update(1, player)');
+  assert.equal(context.S.rescue, null);
+  assert.equal(context.S.money, 22);
+  assert.equal(context.S.earned, 22);
+  assert.equal(context.S.rescues, 1);
+});
+
+test('ônibus atende os pontos em ordem, reinicia a espera ao sair e paga por desembarque', () => {
+  const { run, context } = game(['util', 'onibus']);
+  context.S.busPassengers = 0;
+  run(`Onibus.offer = { stops: [
+    {x: 0, y: 0, boarding: [1, 2]}, {x: 150, y: 0, boarding: [2]}, {x: 300, y: 0, boarding: []}
+  ] }; Onibus.accept(); Onibus.update(1, player);
+  player.speed = 12; Onibus.update(2, player); player.speed = 0; Onibus.update(1, player)`);
+  assert.equal(context.S.busRoute.index, 0);
+  run('Onibus.update(1, player); player.x = 300; Onibus.update(2, player)');
+  assert.equal(context.S.busRoute.index, 1);
+  assert.equal(context.S.money, 0);
+  run('player.x = 150; Onibus.update(2, player); Onibus.update(2, player)');
+  assert.equal(context.S.money, 5);
+  assert.equal(context.S.busRoute.aboard.length, 2);
+  run('player.x = 300; Onibus.update(2, player); Onibus.update(0.5, player)');
+  assert.equal(context.S.busRoute, null);
+  assert.equal(context.S.busPassengers, 3);
+  assert.equal(context.S.money, 15);
+  assert.equal(context.S.earned, 15);
+});
+
+test('VLT mantém o trilho, exige parada contínua, remunera uma vez e inverte a cabine na volta', () => {
+  const { run, context } = game(['util', 'vlt']);
+  context.S.vltTrips = 0;
+  const car = context.player;
+  car.p = { accel: 80, maxSpeed: 155, brake: 210, reverseMax: 36 };
+  run('VLT.init({ xs: [5,15,25,35,45], wx: [2,2,2,2,2], ys: [6] }); VLT.enter(player); VLT.accept()');
+  const start = car.x, railY = car.y;
+  run('VLT.update(1,player); VLT.drive(player,{up:true,left:true},0.1); VLT.update(1,player)');
+  assert.equal(context.S.vltRun.index, 0);
+  assert.ok(car.x > start);
+  assert.equal(car.y, railY);
+  run('VLT.drive(player,{hb:true},0.2); VLT.update(1,player)');
+  assert.equal(context.S.vltRun.index, 0);
+  run('VLT.update(1,player)');
+  assert.equal(context.S.vltRun.index, 1);
+  for (let i = 1; i < 5; i++) {
+    car.x = run('VLT.target().x');
+    run('VLT.update(2,player)');
+  }
+  run('VLT.update(2,player); VLT.accept(); VLT.update(2,player); VLT.drive(player,{up:true},1)');
+  assert.equal(context.S.vltTrips, 1);
+  assert.equal(context.S.money, 40);
+  assert.equal(context.S.vltRun.direction, -1);
+  assert.ok(car.vx < 0);
+  const savedX = car.x;
+  car.x = 0;
+  run('VLT.enter(player)');
+  assert.equal(car.x, savedX);
+  assert.equal(car.speed, 0);
+  run('VLT.cancel()');
+  assert.equal(context.S.vltRun, null);
+  assert.equal(context.S.money, 40);
+});
+
+test('farmácia de bike aguarda a retirada no balcão e avalia o estado do pacote', () => {
+  const { run, context } = game(['util', 'vehicles', 'delivery']);
+  run("Veh.set('farmacia', false)");
+  assert.equal(run('Veh.cur.pedal && Veh.cur.fuelUse === 0 && Veh.cur.soloOnly'), true);
+  run(`const service = { state: 'boarding', ride: { pharmacy: true, pick: { x: 0, y: 0 },
+    boardT: 0, prep: 0, name: 'Lia', type: 'frasco', t: 90, allowed: 25, hits: 2 } };`);
+  context.player.x = 60;
+  run('Delivery.stepPickup.call(service, 1, player)');
+  assert.equal(run('service.state'), 'toPickup');
+  context.player.x = 0;
+  run("service.state = 'boarding'; Delivery.stepPickup.call(service, 1, player)");
+  assert.equal(run('service.state'), 'onTrip');
+  run('service.ride.t = 90');
+  assert.equal(run('Delivery.report(service.ride).cold'), false);
+  assert.equal(run('Delivery.report({...service.ride, pharmacy:false}).cold'), true);
+  assert.ok(run("deliveryStars('frasco', Delivery.report(service.ride)) < deliveryStars('farmacia', Delivery.report(service.ride))"));
+});

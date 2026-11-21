@@ -78,6 +78,9 @@ kbd { font-family: inherit; background: #000; border: 1px solid #444; padding: 0
 #phone.food { box-shadow: 0 0 0 3px #7d0f14, 6px 6px 0 3px rgba(0,0,0,.45); }
 #phone.food .appbar { color: #ff5a5f; }
 #phone.food66 { box-shadow: 0 0 0 3px #8a6f00, 6px 6px 0 3px rgba(0,0,0,.45); }
+#phone.pharmacy { box-shadow: 0 0 0 3px #258664, 6px 6px 0 3px rgba(0,0,0,.45); }
+#phone.pharmacy .appbar { color: #72e6b5; }
+.lg-farmacia { background: #37c396; }
 #phone.food66 .appbar { color: #ffd21f; }
 .ok { color: var(--accent); }
 .t-pressa { background: #4a2a10; color: #ffb36b; } .t-enjoo { background: #183a28; color: #8ef0b0; } .t-exec { background: #2a2346; color: #c6b8ff; } .t-praia { background: #4a4214; color: #ffe58a; }
@@ -451,3 +454,6 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
   .touch-ui #dash .bar:not(:has(#fuelbar)) { display: flex; }
   .touch-ui #phonebody { font-size: 21px; }
 }
+
+.rail-cab #touchdrive .steering { visibility: hidden; }
+.rail-cab #easytag { display: none; }

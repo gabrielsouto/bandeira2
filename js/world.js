@@ -318,7 +318,9 @@ const World = {
   },
 
   carStolen() {
-    if (Veh.job === 'envios') Envios.cancel(true);
+    if (Veh.job === 'onibus') Onibus.cancel(true);
+    else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
+    else if (Veh.job === 'envios') Envios.cancel(true);
     else if (Veh.cur.shuttle) Escolar.cancel(true);
     else if (Veh.cur.parcels) Parcels.cancel(true);
     else if (Rides.ride) { toast(Rides.ride.order ? `Levaram o pedido de ${Rides.ride.name} junto!` : `${Rides.ride.name} saiu correndo do carro.`, 'bad'); Rides.cancel(true); }
