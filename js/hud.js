@@ -78,6 +78,7 @@ const HUD = {
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
     e.rating.textContent = Veh.cur.school ? `Aulas: ${Autoescola.passed()}/${LESSONS.length} · ${Autoescola.totalStars()} ★`
+      : Veh.job === 'barcas' ? S.ferryTrips + (S.ferryTrips === 1 ? ' travessia' : ' travessias')
       : Veh.job === 'vlt' ? 'Linha Circular · ' + S.vltTrips + (S.vltTrips === 1 ? ' viagem' : ' viagens')
       : Veh.job === 'onibus' ? S.busPassengers + (S.busPassengers === 1 ? ' passageiro transportado' : ' passageiros transportados')
       : Veh.job === 'ambulancia' ? S.rescues + (S.rescues === 1 ? ' resgate' : ' resgates')
@@ -139,7 +140,7 @@ const HUD = {
   },
 
   phoneHTML() {
-    if (Veh.job === 'vlt') return VLT.phoneHTML();
+    if (Veh.cur.guided) return activeJob().phoneHTML();
     const c = S.car, st = Rides.state, r = Veh.cur.parcels ? Parcels.route : Rides.ride;
     if ((Garagem.enabled || !r) && (c.health <= 0 || Care.empty())) {
       const alert = c.health <= 0 ? 'VEÍCULO QUEBRADO' : Veh.cur.electric ? 'BATERIA ESGOTADA' : 'SEM COMBUSTÍVEL';
@@ -206,7 +207,7 @@ const HUD = {
   drawMinimap() {
     const g = this.mmCtx, s = 2 / 16;
     g.drawImage(minimapBase, 0, 0);
-    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.job === 'vlt' ? [] : Rides.surges) {
+    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
       const a = Math.min(1, z.age / 2, (z.life - z.age) / 2);
       if (a <= 0) continue;
       g.globalAlpha = a;
@@ -229,7 +230,7 @@ const HUD = {
       const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);
       g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x - 5.5, y - 5.5, 11, 11);
     }
-    if (Veh.job === 'vlt') VLT.drawMinimap(g, s);
+    if (Veh.cur.guided) activeJob().drawMinimap(g, s);
     const tg = activeJob().target();
     if (tg && Math.floor(time * 4) % 2 === 0) {
       const x = Math.round(tg.x * s), y = Math.round(tg.y * s);

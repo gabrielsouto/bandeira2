@@ -455,5 +455,5 @@ button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
   .touch-ui #phonebody { font-size: 21px; }
 }
 
-.rail-cab #touchdrive .steering { visibility: hidden; }
-.rail-cab #easytag { display: none; }
+.guided-cab #touchdrive .steering { visibility: hidden; }
+.guided-cab #easytag { display: none; }

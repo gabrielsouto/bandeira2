@@ -3,7 +3,7 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
     car: { spare: true, fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
@@ -14,7 +14,7 @@ function loadSave() {
       const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
       const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
       const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
-      return { parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
+      return { parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;
@@ -56,6 +56,7 @@ resize();
 
 const player = makePlayer(0, 0, 0);
 function activeJob() {
+  if (Veh.job === 'barcas') return Barcas;
   if (Veh.job === 'vlt') return VLT;
   if (Veh.job === 'onibus') return Onibus;
   if (Veh.job === 'ambulancia') return Ambulancia;
@@ -70,9 +71,9 @@ function applyVehicle() {
   const v = Veh.cur;
   SPR.player = makeCarSprites(v.color, true, v.art, v.bag);
   player.p = Veh.phys();
-  const rail = v.art === 'vlt';
-  document.body.classList.toggle('rail-cab', rail);
-  $('help').textContent = rail ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
+  const guided = !!v.guided;
+  document.body.classList.toggle('guided-cab', guided);
+  $('help').textContent = guided ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
   $('appname').textContent = v.app;
   $('phone').classList.toggle('food', !!v.delivery);
   $('phone').classList.toggle('food66', Veh.job === 'comida66');
@@ -83,7 +84,7 @@ function applyVehicle() {
   document.documentElement.style.setProperty('--parcel-color', VEHICLES[Veh.job].color);
   $('lghub').classList.toggle('hidden', !v.parcels);
   $('lgstops').classList.toggle('hidden', !v.parcels);
-  $('lgsurge').classList.toggle('hidden', !!v.parcels || !!v.school || !!v.shuttle || v.art === 'vlt');
+  $('lgsurge').classList.toggle('hidden', !!v.parcels || !!v.school || !!v.shuttle || guided);
   $('lgcasa').classList.toggle('hidden', !Garagem.enabled);
   $('lgrecarga').classList.toggle('hidden', !Garagem.enabled);
   $('jobbtn').classList.toggle('hidden', !Garagem.enabled);
@@ -116,6 +117,7 @@ Ambulancia.init(city, mapCtx);
 Delivery.initPharmacies(city, mapCtx);
 Onibus.init(city);
 VLT.init(city);
+Barcas.init(city);
 Autoescola.init(city);
 traffic.capFn = (x, y) => World.trafficCap(x, y);
 Signals.init(city);
@@ -234,6 +236,7 @@ function onKey(code) {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
     if (code === 'KeyD') { pickVehicle('farmacia'); return; }
+    if (code === 'KeyB') { pickVehicle('barcas'); return; }
     if (code === 'KeyT') { pickVehicle('vlt'); return; }
     if (code === 'KeyO') { pickVehicle('onibus'); return; }
     if (code === 'KeyA') { pickVehicle('ambulancia'); return; }
@@ -250,7 +253,7 @@ function onKey(code) {
     else { const m = code.match(/^(Digit|Numpad)(\d)$/); if (m) clickModalIndex(+m[2] || 10); }
     return;
   }
-  if (Veh.job === 'vlt' && ['KeyO', 'KeyB', 'KeyT', 'KeyU', 'KeyP', 'KeyL', 'KeyG'].includes(code)) return;
+  if (Veh.cur.guided && ['KeyO', 'KeyB', 'KeyT', 'KeyU', 'KeyP', 'KeyL', 'KeyG'].includes(code)) return;
   if (Multi.roomKey(code)) return;
   switch (code) {
     case 'KeyE': activeJob().accept(); break;
@@ -286,6 +289,8 @@ function startGame() {
     if (Escolar.busy) {
       Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
       toast('Rota escolar retomada. Termine o trecho ou use Encerrar contrato no celular.');
+    } else if (S.ferryRun) {
+      Garagem.takeVehicle('barcas');
     } else if (S.vltRun) {
       Garagem.takeVehicle('vlt');
     } else if (S.busRoute) {
@@ -301,6 +306,8 @@ function startGame() {
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.job === 'barcas') {
+    toast(S.ferryRun ? 'Travessia retomada. Siga até o cais indicado.' : 'Barca atracada. Aperte E para embarcar os passageiros.', 'good');
   } else if (Veh.job === 'vlt') {
     toast(S.vltRun ? 'Serviço retomado na Linha Circular.' : 'VLT pronto. Inicie o serviço no painel.', 'good');
   } else if (Veh.job === 'onibus') {
@@ -360,7 +367,7 @@ Easy.refresh();
     const thumbScale = Math.min(2, cv.width / spr.img.width);
     const w = Math.round(spr.img.width * thumbScale), h = Math.round(spr.img.height * thumbScale);
     g.drawImage(spr.img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
-    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', ambulancia: 'A', onibus: 'O', vlt: 'T', farmacia: 'D' }[k];
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', ambulancia: 'A', onibus: 'O', vlt: 'T', barcas: 'B', farmacia: 'D' }[k];
     cv.setAttribute('aria-hidden', 'true');
     const key = document.createElement('kbd');
     key.textContent = shortcut;
@@ -509,7 +516,7 @@ function openPlaceMenu(pl) {
 function openTouchStatus() {
   const c = S.car;
   const level = Veh.cur.pedal ? Care.legs : Care.level();
-  const vehicle = Veh.job === 'vlt' ? '<p>VLT elétrico · Alimentação pela rede da Linha Circular</p>' : `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
+  const vehicle = Veh.job === 'barcas' ? '<p>Barcas da Orla · ' + S.ferryTrips + ' travessias concluídas</p>' : Veh.job === 'vlt' ? '<p>VLT elétrico · Alimentação pela rede da Linha Circular</p>' : `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
     ($('tempwrap').style.display === 'none' ? '' : `<p>Temperatura: ${Math.round(c.temp)} °C</p>`) +
     $('problems').innerHTML + ($('radio').textContent ? `<p>${esc($('radio').textContent)}</p>` : '');
   const room = GAME.mode === 'multi' ? `<div>${$('netinfo').innerHTML}</div>` : '';
@@ -547,8 +554,9 @@ function openPause(confirmReset) {
     ], 'Voltar');
     return;
   }
-  if (Veh.job === 'vlt') {
-    showModal('PAUSA · LINHA CIRCULAR', 'Viagens concluídas: ' + S.vltTrips, [
+  if (Veh.cur.guided) {
+    const ferry = Veh.job === 'barcas';
+    showModal(ferry ? 'PAUSA · BARCAS DA ORLA' : 'PAUSA · LINHA CIRCULAR', 'Viagens concluídas: ' + (ferry ? S.ferryTrips : S.vltTrips), [
       { label: 'Continuar', run: closeModal },
       { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
       { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },
@@ -680,16 +688,16 @@ function update(dt) {
   time += dt; gameMin += dt;
   const surface = city.tileAtPx(player.x, player.y);
   const px = player.x, py = player.y, inp = Multi.frozen() ? NO_INPUT : input; // na contagem 3-2-1 o carro espera
-  const rail = Veh.job === 'vlt';
-  if (rail) VLT.drive(player, inp, dt);
+  const guided = Veh.cur.guided;
+  if (guided) activeJob().drive(player, inp, dt);
   else driveRoad(inp, dt, Easy.mods(Care.mods(surface)));
   const moved = Math.hypot(player.x - px, player.y - py);
-  if (!rail && !Garagem.pushing) Care.update(dt, player, moved);
+  if (!guided && !Garagem.pushing) Care.update(dt, player, moved);
   else Care.stallT = Math.max(0, Care.stallT - dt);
   traffic.update(dt, player);
   const hits = peds.update(dt, player);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
-  if (!rail) {
+  if (!guided) {
     World.update(dt, player);
     Signals.update(dt, player);
     Police.update(dt, player);
@@ -700,7 +708,7 @@ function update(dt) {
   // marcas de pneu (ficam pintadas no mapa)
   const fx = Math.cos(player.a), fy = Math.sin(player.a), rx = -fy, ry = fx;
   const wheels = [[player.x - fx * 5 + rx * 3, player.y - fy * 5 + ry * 3], [player.x - fx * 5 - rx * 3, player.y - fy * 5 - ry * 3]];
-  const sliding = !rail && (Math.abs(player.vR) > 50 || (input.hb && player.speed > 40) || (player.braking && player.speed > 140));
+  const sliding = !guided && (Math.abs(player.vR) > 50 || (input.hb && player.speed > 40) || (player.braking && player.speed > 140));
   if (sliding && prevWheels && Math.hypot(wheels[0][0] - prevWheels[0][0], wheels[0][1] - prevWheels[0][1]) < 12) {
     mapCtx.strokeStyle = surface === T.GRASS ? 'rgba(70,45,20,0.45)' : 'rgba(16,16,18,0.4)';
     mapCtx.lineWidth = 1.5;
@@ -758,7 +766,7 @@ function render() {
   }
   if (shake > 0) { cx += R.f(-shake, shake); cy += R.f(-shake, shake); }
   camX = Math.round(clamp(cx, 0, Math.max(0, mapCanvas.width - vw)));
-  camY = Math.round(clamp(cy, 0, Math.max(0, mapCanvas.height - vh)));
+  camY = Math.round(clamp(cy, 0, Math.max(0, mapCanvas.height - (Veh.job === 'barcas' ? vh / 2 : vh))));
 
   ctx.fillStyle = PAL.water; ctx.fillRect(0, 0, vw, vh);
   ctx.drawImage(mapCanvas, camX, camY, Math.min(vw, mapCanvas.width), Math.min(vh, mapCanvas.height),
@@ -768,7 +776,7 @@ function render() {
 
   // áreas de tarifa dinâmica
   ctx.font = '12px VT323, monospace'; ctx.textAlign = 'center';
-  for (const s of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.job === 'vlt' ? [] : Rides.surges) {
+  for (const s of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
     const sx = s.x - camX, sy = s.y - camY;
     if (sx + s.r < 0 || sy + s.r < 0 || sx - s.r > vw || sy - s.r > vh) continue;
     const a = clamp(Math.min(s.age / 2, (s.life - s.age) / 2), 0, 1);

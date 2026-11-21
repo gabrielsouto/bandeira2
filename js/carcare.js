@@ -59,7 +59,7 @@ const Care = {
 
   // sem gasolina de verdade (a bike nunca fica)
   usingGas() { return S.car.kitGas && S.car.gas > 0 && !Veh.cur.electric; },
-  level() { if (Veh.job === 'vlt') return 100; return this.usingGas() ? S.car.gas : S.car.fuel; },
+  level() { if (Veh.cur.guided) return 100; return this.usingGas() ? S.car.gas : S.car.fuel; },
   badFuel() { return this.usingGas() || Veh.cur.electric ? 0 : S.car.bad || 0; },
   station() { return Veh.cur.electric ? 'recarga' : 'posto'; },
   empty() { return !Veh.cur.pedal && this.level() <= 0; },

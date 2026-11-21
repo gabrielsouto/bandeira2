@@ -27,6 +27,18 @@ const CAR_ART = [
   '.oooooooooooooooo.',
 ];
 // Furgão voltado para a direita. A faixa na caixa de carga leva a cor do app.
+const FERRY_ART = [
+  '...oooooooooooooooooo......',
+  '.obbbbbbbbbbbbbbbbbbbboo...',
+  'obllzzzzzzzzzzzzzzzzzbbbo..',
+  'obzzwzwwzwwzwwzwwzwwzzbbbo.',
+  'obzzzzzzzzsszzzzzzwwzzbbbbo',
+  'obzzzzzzzzsszzzzzzwwzzbbbbo',
+  'obzzwzwwzwwzwwzwwzwwzzbbbo.',
+  'obllzzzzzzzzzzzzzzzzzbbbo..',
+  '.obbbbbbbbbbbbbbbbbbbboo...',
+  '...oooooooooooooooooo......',
+];
 const VLT_ART = [
   '..ooooooooooookkoooooooooooo..',
   '.obwwbwwbwwbbdkkdbbwwbwwbwwbo.',
@@ -182,6 +194,7 @@ function artToCanvas(rows, pal) {
 function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
   let rows = art === 'bike' ? BIKE_ART : art === 'moto' ? (bag ? MOTO_BAG_ART : MOTO_ART) : CAR_ART;
   if (art === 'van') rows = VAN_ART;
+  if (art === 'barca') rows = FERRY_ART;
   if (art === 'vlt') rows = VLT_ART;
   if (art === 'onibus') rows = BUS_ART;
   if (art === 'ambulancia') rows = AMBULANCE_ART;

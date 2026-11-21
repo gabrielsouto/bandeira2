@@ -65,14 +65,7 @@ const VLT = {
   drive(car, inp, dt) {
     const r = S.vltRun;
     if (!r) return;
-    const p = car.p;
-    let v = car.vF;
-    if (inp.hb || (!inp.up && !inp.down)) {
-      const rate = inp.hb ? p.brake : 14;
-      v = Math.sign(v) * Math.max(0, Math.abs(v) - rate * dt);
-    } else if (inp.down) v -= (v > 0 ? p.brake : p.accel * 0.5) * dt;
-    else v += p.accel * dt;
-    v = clamp(v, -p.reverseMax, p.maxSpeed);
+    const v = guidedSpeed(car, inp, dt);
     r.position += v * dt;
     Object.assign(car, this.point(r.position));
     car.vF = v; car.vx = Math.cos(car.a) * v; car.vy = Math.sin(car.a) * v;

@@ -110,3 +110,14 @@ function pxDownArrow(g, cx, cy, col) {
 
 // No navegador esta linha não faz nada; no Node (servidor do multiplayer) exporta o que é compartilhado.
 if (typeof module !== 'undefined' && module.exports) module.exports = { TILE, mulberry32, R, clamp, lerp, angDiff };
+
+function guidedSpeed(car, inp, dt) {
+  const p = car.p;
+  let v = car.vF;
+  if (inp.hb || (!inp.up && !inp.down)) {
+    const rate = inp.hb ? p.brake : 14;
+    v = Math.sign(v) * Math.max(0, Math.abs(v) - rate * dt);
+  } else if (inp.down) v -= (v > 0 ? p.brake : p.accel * 0.5) * dt;
+  else v += p.accel * dt;
+  return clamp(v, -p.reverseMax, p.maxSpeed);
+}

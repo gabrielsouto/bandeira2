@@ -18,14 +18,14 @@ const Garagem = {
   atHome() { return this.enabled && Math.hypot(this.home.cx - player.x, this.home.cy - player.y) < 22; },
   takeVehicle(key, job) {
     if (S.carSlot) S.garage[S.carSlot] = S.car;
-    if (Veh.key === 'vlt' && key !== 'vlt') VLT.leave(player, city);
+    if (Veh.cur.guided && key !== Veh.key) activeJob().leave(player, city);
     Veh.set(key); Veh.setJob(job);
     S.car = S.garage[key] || (S.carSlot ? defaultSave().car : S.car);
     S.carSlot = key;
     delete S.garage[key];
     S.vehicle = key; S.job = Veh.job;
     Care.resetState(); this.pushing = false; applyVehicle();
-    if (key === 'vlt') VLT.enter(player);
+    if (Veh.cur.guided) activeJob().enter(player);
   },
   canSwitch() {
     if (player.speed >= 8 || this.pushing) return false;

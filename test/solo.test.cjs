@@ -329,3 +329,37 @@ test('farmácia de bike aguarda a retirada no balcão e avalia o estado do pacot
   assert.equal(run('Delivery.report({...service.ride, pharmacy:false}).cold'), true);
   assert.ok(run("deliveryStars('frasco', Delivery.report(service.ride)) < deliveryStars('farmacia', Delivery.report(service.ride))"));
 });
+test('Barcas embarca, retoma no canal, paga no desembarque e retorna pelo sentido oposto', () => {
+  const { context, run } = game(['util', 'city', 'vehicles', 'barcas']);
+  context.S.ferryTrips = 0;
+  run("const city = generateCity(20261118); Veh.set('barcas', false); player.p = Veh.cur.phys; Barcas.init(city); Barcas.enter(player); Barcas.accept()");
+  const fare = context.S.ferryRun.passengers * 4;
+  const step = input => run('Barcas.drive(player,' + JSON.stringify(input) + ',0.1); Barcas.update(0.1, player)');
+  run('Barcas.update(1.9, player)');
+  step({ up: true });
+  step({ hb: true });
+  assert.equal(context.S.ferryRun.boarded, false);
+  run('Barcas.update(2, player)');
+  assert.equal(context.S.ferryRun.boarded, true);
+  const dest = run('Barcas.target().x');
+  for (let i = 0; i < 500 && context.player.x < dest; i++) {
+    step({ up: true });
+    assert.equal(run('city.tileAtPx(player.x, player.y) === T.WATER'), true);
+  }
+  const savedX = context.S.ferryRun.x;
+  run('S = JSON.parse(JSON.stringify(S)); Barcas.enter(player)');
+  assert.equal(context.player.x, savedX);
+  assert.equal(context.S.money, 0);
+  run('Barcas.update(2, player); Barcas.update(2, player)');
+  assert.equal(context.S.money, fare);
+  assert.equal(context.S.earned, fare);
+  assert.equal(context.S.ferryTrips, 1);
+  assert.equal(context.S.ferryRun, null);
+  run('Barcas.accept(); Barcas.update(2, player)');
+  step({ up: true });
+  assert.ok(context.player.x < dest);
+  run('Barcas.cancel(); Barcas.leave(player)');
+  assert.equal(context.player.x, dest);
+  assert.equal(context.S.money, fare);
+  assert.equal(run('city.tileAtPx(player.x, player.y) === T.ROAD'), true);
+});
