@@ -1,6 +1,6 @@
 # Bandeira 2
 
-[![BBandeira 2 ao meio-dia, com o carro no cruzamento e uma chamada no celular. Clique para jogar.](docs/imagens/capa-dia.png)](https://gabrielsouto.github.io/bandeira2/)
+[![Bandeira 2 ao meio-dia, com o carro no cruzamento e uma chamada no celular. Clique para jogar.](docs/imagens/capa-dia.png)](https://gabrielsouto.github.io/bandeira2/)
 
 **[▶ Jogar no navegador](https://gabrielsouto.github.io/bandeira2/)** · [Controles e regras](https://gabrielsouto.github.io/bandeira2/ajuda.html) · [Jogar com amigos](#jogar-com-amigos) · [Rodar localmente](#rodar-localmente)
 
