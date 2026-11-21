@@ -208,7 +208,7 @@ function onKey(code) {
     case 'KeyF': Easy.toggle(); break;
     case 'KeyH': if (Veh.job === 'aereo' || Veh.job === 'passeador') break; Sfx.horn(0.09); peds.scare(player.x, player.y); break;
     case 'KeyG': callTow(); break;
-    case 'KeyM': Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
+    case 'KeyM': Sfx.setMuted(!Sfx.muted); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
     case 'KeyR': Radio.next(); break;
     case 'KeyX': Pega.key(); break;
     case 'KeyO': Nav.toggle('oficina'); break;
@@ -468,7 +468,7 @@ function openPause(confirmReset) {
       { label: 'Continuar', run: closeModal },
       ...Multi.pauseItems(),
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
-      { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
+      { label: Sfx.muted ? 'Ligar o som' : 'Desligar o som', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
       { label: 'Copiar o link da sala', run: () => {
         navigator.clipboard.writeText(location.href).then(() => toast('Link copiado!', 'good'),
@@ -495,7 +495,7 @@ function openPause(confirmReset) {
       { label: 'Continuar', run: closeModal },
       { label: 'Escolher a aula', run: () => Autoescola.lessonMenu() },
       { label: `Direção fácil: ${Easy.on ? 'LIGADA' : 'desligada'}`, run: () => { Easy.toggle(true); openPause(); } },
-      { label: Sfx.muted ? 'Ligar o som (e a voz do instrutor)' : 'Desligar o som (e a voz do instrutor)', run: () => { Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); openPause(); } },
+      { label: Sfx.muted ? 'Ligar o som (e a voz do instrutor)' : 'Desligar o som (e a voz do instrutor)', run: () => { Sfx.setMuted(!Sfx.muted); openPause(); } },
       { label: 'Ajuda: todas as regras', run: openHelp },
     ], 'Voltar', true);
     return;

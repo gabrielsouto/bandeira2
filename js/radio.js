@@ -1,6 +1,5 @@
 'use strict';
-// Rádio do carro: estações de música sintetizadas na hora (Web Audio) e uma estação falada (voz do navegador).
-// Cada estação é um sequenciador de 16 passos por compasso, com frases que se repetem e mudam de tempos em tempos.
+// Rádio do carro: música sintetizada, notícias faladas e emissoras ao vivo.
 
 const midiHz = (n) => 440 * Math.pow(2, (n - 69) / 12);
 
@@ -22,6 +21,11 @@ const RADIO_STATIONS = [
     chords: [[60, 64, 67, 71], [57, 60, 64, 67], [62, 65, 69, 72], [55, 59, 62, 65]], bass: 'walk', lead: 'cavaco', scale: [60, 62, 64, 67, 69, 72],
   },
   { id: 'news', name: 'Rádio Trânsito · notícias', talk: true },
+  { id: 'fm-o-dia', name: 'FM O Dia', stream: 'https://streaming.livespanel.com:8016/fmodia' },
+  { id: 'tupi', name: 'Super Rádio Tupi', stream: 'https://8923.brasilstream.com.br/stream' },
+  { id: 'cidade', name: 'Rádio Cidade', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOCIDADEAAC.aac' },
+  { id: 'jb', name: 'JB FM', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac' },
+  { id: 'antena1', name: 'Antena 1', stream: 'https://www.antena1.com.br/stream/stream/1;' },
 ];
 
 const RADIO_LINES = [
@@ -38,22 +42,57 @@ const RADIO_LINES = [
 ];
 
 const Radio = {
-  st: 0, out: null, timer: 0, nextBar: 0, bar: 0, phrase: null, talkT: 0, voice: null,
+  st: 0, out: null, timer: 0, nextBar: 0, bar: 0, phrase: null, talkT: 0, voice: null, live: null,
 
   get station() { return RADIO_STATIONS[this.st]; },
 
   // R: próxima estação
   next() {
+    clearInterval(this.timer);
+    this.timer = 0;
+    if (this.out) { this.out.disconnect(); this.out = null; }
+    this.stopLive();
     this.st = (this.st + 1) % RADIO_STATIONS.length;
     this.stopTalk();
     const s = this.station;
     toast('📻 ' + s.name);
-    if (s.id === 'off' || !Sfx.ac) { clearInterval(this.timer); this.timer = 0; return; }
+    if (s.stream) { this.playLive(s); return; }
+    if (s.id === 'off' || !Sfx.ac) return;
     this.ensureOut();
     this.bar = 0; this.phrase = null;
     this.nextBar = Sfx.ac.currentTime + 0.25;
     this.talkT = 0.5;
-    if (!this.timer) this.timer = setInterval(() => this.pump(), 30);
+    this.timer = setInterval(() => this.pump(), 30);
+  },
+
+  playLive(station) {
+    const audio = new Audio();
+    this.live = audio;
+    audio.volume = Sfx.vol * 0.55;
+    audio.muted = Sfx.muted;
+    const unavailable = () => {
+      if (this.live !== audio) return;
+      this.stopLive();
+      toast(station.name + ' sem sinal · R troca de estação');
+    };
+    audio.onerror = audio.onended = unavailable;
+    audio.src = station.stream;
+    audio.play().catch(unavailable);
+  },
+
+  stopLive() {
+    const audio = this.live;
+    if (!audio) return;
+    this.live = null;
+    audio.onerror = audio.onended = null;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+  },
+
+  setMuted(muted) {
+    if (this.live) this.live.muted = muted;
+    if (muted) this.stopTalk();
   },
 
   ensureOut() {

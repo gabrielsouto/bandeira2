@@ -115,5 +115,6 @@ const Sfx = {
   setMuted(m) {
     this.muted = m;
     if (this.master) this.master.gain.value = m ? 0 : this.vol;
+    Radio.setMuted(m);
   },
 };
