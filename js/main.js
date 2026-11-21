@@ -225,24 +225,7 @@ function startGame() {
   mode = 'play';
   clearInput();
   if (Garagem.enabled) {
-    if (Escolar.busy) {
-      Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
-      toast('Rota escolar retomada. Termine o trecho ou use Encerrar contrato no celular.');
-    } else if (S.flight) {
-      Garagem.takeVehicle('aereo');
-    } else if (S.ferryRun) {
-      Garagem.takeVehicle('barcas');
-    } else if (S.vltRun) {
-      Garagem.takeVehicle('vlt');
-    } else if (S.busRoute) {
-      Garagem.takeVehicle('onibus');
-    } else if (S.ocorrencia) {
-      Garagem.takeVehicle('policia');
-    } else if (S.rescue) {
-      Garagem.takeVehicle('ambulancia');
-    } else if (S.shipment) {
-      Garagem.takeVehicle(S.vehicle || 'envios', 'envios');
-    } else Garagem.takeVehicle(Veh.key, resumeJob);
+    Garagem.takeVehicle(Veh.key, resumeJob);
   } else applyVehicle();
   if (Veh.cur.school) {
     // o carro da escola: tanque cheio e inteiro (o carro do save fica guardado, a autoescola não grava nada)
@@ -264,7 +247,8 @@ function startGame() {
   } else if (Veh.job === 'envios') {
     toast(S.shipment ? 'Envio retomado. Siga a seta para continuar.' : 'Rebu Envios online. Os pedidos chegam no celular.', 'good');
   } else if (Veh.cur.shuttle) {
-    toast('Van escolar online! Os contratos das famílias chegam no celular.', 'good');
+    toast(Escolar.busy ? 'Rota escolar retomada. Termine o trecho ou use Encerrar contrato no celular.' :
+      'Van escolar online! Os contratos das famílias chegam no celular.', 'good');
   } else if (Veh.cur.parcels) {
     toast(`Você está online no ${Veh.cur.app}! Aceite uma rota no celular e carregue no galpão.`, 'good');
   } else if (Veh.cur.delivery) {
