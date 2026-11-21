@@ -54,6 +54,7 @@ const Police = {
       Care.charge(POLICE_FINE, 'policia');
       Care.stallT = Math.max(Care.stallT, 2);
       if (Veh.job === 'onibus') Onibus.cancel(true);
+      else if (Veh.job === 'policia') Patrulha.cancel();
       else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
       else if (Veh.job === 'envios') Envios.cancel(true);
       else if (Veh.cur.shuttle) Escolar.cancel(true);

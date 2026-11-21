@@ -319,6 +319,7 @@ const World = {
 
   carStolen() {
     if (Veh.job === 'onibus') Onibus.cancel(true);
+    else if (Veh.job === 'policia') Patrulha.cancel();
     else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
     else if (Veh.job === 'envios') Envios.cancel(true);
     else if (Veh.cur.shuttle) Escolar.cancel(true);

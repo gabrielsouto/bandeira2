@@ -3,7 +3,7 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
     car: { spare: true, fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
@@ -14,7 +14,7 @@ function loadSave() {
       const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
       const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
       const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
-      return { parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
+      return { parcels: 0, envios: 0, rescues: 0, ocorrencias: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;
@@ -56,6 +56,7 @@ function activeJob() {
   if (Veh.job === 'barcas') return Barcas;
   if (Veh.job === 'vlt') return VLT;
   if (Veh.job === 'onibus') return Onibus;
+  if (Veh.job === 'policia') return Patrulha;
   if (Veh.job === 'ambulancia') return Ambulancia;
   if (Veh.job === 'envios') return Envios;
   if (Veh.cur.shuttle) return Escolar;
@@ -172,6 +173,7 @@ function onKey(code) {
     if (code === 'KeyB') { pickVehicle('barcas'); return; }
     if (code === 'KeyT') { pickVehicle('vlt'); return; }
     if (code === 'KeyO') { pickVehicle('onibus'); return; }
+    if (code === 'KeyP') { pickVehicle('policia'); return; }
     if (code === 'KeyA') { pickVehicle('ambulancia'); return; }
     if (code === 'KeyN') { pickVehicle('envios'); return; }
     if (code === 'KeyV') { pickVehicle('escolar'); return; }
@@ -230,6 +232,8 @@ function startGame() {
       Garagem.takeVehicle('vlt');
     } else if (S.busRoute) {
       Garagem.takeVehicle('onibus');
+    } else if (S.ocorrencia) {
+      Garagem.takeVehicle('policia');
     } else if (S.rescue) {
       Garagem.takeVehicle('ambulancia');
     } else if (S.shipment) {
@@ -249,6 +253,8 @@ function startGame() {
     toast(S.vltRun ? 'Serviço retomado na Linha Circular.' : 'VLT pronto. Inicie o serviço no painel.', 'good');
   } else if (Veh.job === 'onibus') {
     toast(S.busRoute ? 'Linha retomada. Siga a seta até o próximo ponto.' : 'Ônibus em serviço. Aguarde a viagem no celular.', 'good');
+  } else if (Veh.job === 'policia') {
+    toast(S.ocorrencia ? 'Ocorrência retomada. Siga a seta.' : 'Viatura em patrulha. Aguarde a central chamar.', 'good');
   } else if (Veh.job === 'ambulancia') {
     toast(S.rescue ? 'Resgate retomado. Siga a seta.' : 'Ambulância de plantão. Aguarde um chamado no celular.', 'good');
   } else if (Veh.job === 'envios') {
@@ -303,7 +309,7 @@ Easy.refresh();
     const thumbScale = Math.min(2, cv.width / spr.img.width);
     const w = Math.round(spr.img.width * thumbScale), h = Math.round(spr.img.height * thumbScale);
     g.drawImage(spr.img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
-    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D' }[k];
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', policia: 'P', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D' }[k];
     cv.setAttribute('aria-hidden', 'true');
     const key = document.createElement('kbd');
     key.textContent = shortcut;
@@ -486,7 +492,7 @@ function openPause(confirmReset) {
     ], 'Voltar', true);
     return;
   }
-  showModal('PAUSA', `${Veh.job === 'onibus' ? 'Passageiros transportados' : Veh.job === 'ambulancia' ? 'Resgates' : Veh.job === 'envios' ? 'Envios' : Veh.cur.shuttle ? 'Trechos escolares' : Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.job === 'onibus' ? S.busPassengers : Veh.job === 'ambulancia' ? S.rescues : Veh.job === 'envios' ? S.envios : Veh.cur.shuttle ? S.schoolLegs : Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
+  showModal('PAUSA', `${Veh.job === 'onibus' ? 'Passageiros transportados' : Veh.job === 'policia' ? 'Ocorrências atendidas' : Veh.job === 'ambulancia' ? 'Resgates' : Veh.job === 'envios' ? 'Envios' : Veh.cur.shuttle ? 'Trechos escolares' : Veh.cur.parcels ? 'Pacotes' : Veh.cur.delivery ? 'Entregas' : 'Corridas'}: ${Veh.job === 'onibus' ? S.busPassengers : Veh.job === 'policia' ? S.ocorrencias : Veh.job === 'ambulancia' ? S.rescues : Veh.job === 'envios' ? S.envios : Veh.cur.shuttle ? S.schoolLegs : Veh.cur.parcels ? S.parcels : S.rides} · Total ganho: ${fmtMoney(S.earned)} · Nota: ${Rides.ratingAvg().toFixed(2).replace('.', ',')}`, [
     { label: 'Continuar', run: closeModal },
     { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
     { label: 'Minha casa', run: () => { if (Garagem.atHome()) Garagem.menu(); else { closeModal(); Nav.go('casa'); } } },
@@ -517,6 +523,7 @@ function callTow() {
     return;
   }
   if (Veh.job === 'onibus') Onibus.cancel(true);
+  else if (Veh.job === 'policia') Patrulha.cancel();
   else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
   else if (Veh.job === 'envios') Envios.cancel(true);
   else if (Veh.cur.shuttle) Escolar.cancel(true);
@@ -684,7 +691,7 @@ function render() {
 
   // áreas de tarifa dinâmica
   ctx.font = '12px VT323, monospace'; ctx.textAlign = 'center';
-  for (const s of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
+  for (const s of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'policia' || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
     const sx = s.x - camX, sy = s.y - camY;
     if (sx + s.r < 0 || sy + s.r < 0 || sx - s.r > vw || sy - s.r > vh) continue;
     const a = clamp(Math.min(s.age / 2, (s.life - s.age) / 2), 0, 1);

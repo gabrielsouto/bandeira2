@@ -400,3 +400,23 @@ test('Barcas retoma uma travessia salva antes do circuito', () => {
   assert.equal(context.player.x, 650);
   assert.equal(run('Barcas.target().name'), 'Cais Poente');
 });
+
+test('patrulha paga uma única vez após três segundos contínuos no local', () => {
+  const { run, context } = game(['util', 'patrulha']);
+  context.city = { curbs: [{ x: 160, y: 0 }] };
+  context.S.ocorrencias = 0;
+  run('Patrulha.update(3, player); Patrulha.accept(); Patrulha.update(3, player)');
+  assert.equal(context.S.money, 0);
+  const fare = context.S.ocorrencia.fare;
+  run('player.x = 160; Patrulha.update(2, player); player.speed = 25; Patrulha.update(1, player)');
+  run('player.speed = 0; Patrulha.update(2, player)');
+  assert.equal(context.S.money, 0);
+  run('Patrulha.update(1, player); Patrulha.update(1, player)');
+  assert.equal(context.S.money, fare);
+  assert.equal(context.S.earned, fare);
+  assert.equal(context.S.ocorrencias, 1);
+  assert.equal(run('Patrulha.target()'), null);
+  run('Patrulha.update(4, player); Patrulha.accept(); Patrulha.cancel(); Patrulha.update(3, player)');
+  assert.equal(context.S.money, fare);
+  assert.equal(context.S.ocorrencia, null);
+});

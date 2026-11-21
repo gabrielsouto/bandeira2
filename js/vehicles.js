@@ -90,6 +90,11 @@ const VEHICLES = {
     phys: { accel: 95, maxSpeed: 165, reverseMax: 40, brake: 265, steerRate: 2.25, off: 8 },
     fare: 1, offerMul: 1, fuelUse: 1.3, tankMul: 1.4, dmgMul: 0.85,
   },
+  policia: {
+    name: 'Polícia', app: 'CENTRAL DE PATRULHA', color: '#e9edf2', art: 'viatura', soloOnly: true,
+    desc: 'Patrulhe a cidade. Aceite ocorrências da central e pare no local para prestar atendimento. Só no solo.',
+    phys: { maxSpeed: 215 }, fare: 1, offerMul: 1, fuelUse: 1, tankMul: 1, dmgMul: 1,
+  },
   ambulancia: {
     ...PARCEL_VAN, name: 'Ambulância', app: 'CENTRAL DE RESGATE', color: '#f4f6f5', art: 'ambulancia',
     desc: 'Atenda chamados, resgate pacientes e leve cada pessoa ao pronto-socorro. Só no solo.',
@@ -112,9 +117,9 @@ VEHICLES.farmacia = {
   ...VEHICLES.comida66, name: 'Farmácia de bike', app: 'FARMA BIKE', color: '#37c396', bag: '#37c396',
   desc: 'Retire pedidos na farmácia e pedale até o cliente. Proteja os frascos contra batidas. Só no solo.',
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios', 'ambulancia', 'onibus', 'vlt', 'farmacia', 'barcas', 'aereo'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios', 'ambulancia', 'onibus', 'vlt', 'farmacia', 'barcas', 'aereo', 'policia'];
 const JOBS_BY_ART = {
-  helicoptero: ['aereo'], barca: ['barcas'], vlt: ['vlt'], onibus: ['onibus'], ambulancia: ['ambulancia'], van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
+  viatura: ['policia'], helicoptero: ['aereo'], barca: ['barcas'], vlt: ['vlt'], onibus: ['onibus'], ambulancia: ['ambulancia'], van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
   car: ['uber', 'n99', 'eucomida', 'envios'], taxi: ['taxi', 'uber', 'n99', 'eucomida', 'envios'],
   moto: ['moto', 'eucomida', 'xopi', 'envios'], bike: ['comida66', 'farmacia'], escola: ['escola'],
 };
@@ -147,7 +152,7 @@ const Veh = {
   // moto e bike: duas rodas (tombo, farol estreito, nada de areia no banco)
   twoWheel(k = this.key) { const a = VEHICLES[k].art; return a === 'moto' || a === 'bike'; },
   // nome do veículo nos avisos: "carro", "moto" ou "bike" (fem: usa "a")
-  noun(k = this.key) { const a = VEHICLES[k].art; if (a === 'helicoptero') return 'helicóptero'; if (a === 'barca') return 'barca'; if (a === 'vlt') return 'VLT'; if (a === 'onibus') return 'ônibus'; if (a === 'ambulancia') return 'ambulância'; return ['moto', 'bike', 'van'].includes(a) ? a : 'carro'; },
+  noun(k = this.key) { const a = VEHICLES[k].art; if (a === 'viatura') return 'viatura'; if (a === 'helicoptero') return 'helicóptero'; if (a === 'barca') return 'barca'; if (a === 'vlt') return 'VLT'; if (a === 'onibus') return 'ônibus'; if (a === 'ambulancia') return 'ambulância'; return ['moto', 'bike', 'van'].includes(a) ? a : 'carro'; },
   fem(k = this.key) { return !['helicóptero', 'carro', 'ônibus', 'VLT'].includes(this.noun(k)); },
 
   // física completa do veículo (o que não muda fica igual ao carro padrão)

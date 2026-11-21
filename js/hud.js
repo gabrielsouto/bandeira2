@@ -77,6 +77,7 @@ const HUD = {
       : Veh.job === 'barcas' ? S.ferryTrips + (S.ferryTrips === 1 ? ' travessia' : ' travessias')
       : Veh.job === 'vlt' ? 'Linha Circular · ' + S.vltTrips + (S.vltTrips === 1 ? ' viagem' : ' viagens')
       : Veh.job === 'onibus' ? S.busPassengers + (S.busPassengers === 1 ? ' passageiro transportado' : ' passageiros transportados')
+      : Veh.job === 'policia' ? S.ocorrencias + (S.ocorrencias === 1 ? ' ocorrência' : ' ocorrências')
       : Veh.job === 'ambulancia' ? S.rescues + (S.rescues === 1 ? ' resgate' : ' resgates')
       : Veh.job === 'envios' ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.envios} envio${S.envios === 1 ? '' : 's'}`
       : Veh.cur.shuttle ? 'Escolar · ' + S.schoolLegs + ' trechos pagos' : Veh.cur.parcels ? `★ ${nota.toFixed(2).replace('.', ',')} · ${S.parcels} pacote${S.parcels === 1 ? '' : 's'}`
@@ -140,6 +141,7 @@ const HUD = {
     }
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (Veh.job === 'onibus') return Onibus.phoneHTML();
+    if (Veh.job === 'policia') return Patrulha.phoneHTML();
     if (Veh.job === 'ambulancia') return Ambulancia.phoneHTML();
     if (Veh.job === 'envios') return Envios.phoneHTML();
     if (Veh.cur.school) return Autoescola.phoneHTML();
@@ -197,7 +199,7 @@ const HUD = {
   drawMinimap() {
     const g = this.mmCtx, s = 2 / 16;
     g.drawImage(minimapBase, 0, 0);
-    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
+    for (const z of Veh.cur.school || Veh.cur.parcels || Veh.cur.shuttle || Veh.job === 'policia' || Veh.job === 'ambulancia' || Veh.job === 'onibus' || Veh.cur.guided ? [] : Rides.surges) {
       const a = Math.min(1, z.age / 2, (z.life - z.age) / 2);
       if (a <= 0) continue;
       g.globalAlpha = a;

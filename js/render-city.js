@@ -205,6 +205,8 @@ function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
   if (art === 'onibus') rows = BUS_ART;
   if (art === 'ambulancia') rows = AMBULANCE_ART;
   const bagCol = typeof bag === 'string' ? bag : '#e3262e';
+  if (art === 'viatura') rows = rows.map((row, y) => y >= 2 && y <= 7
+    ? row.slice(0, 7) + (y < 5 ? 'zz' : 'ss') + row.slice(9) : row);
   if (art === 'taxi') rows = rows.map((row, y) => (y >= 3 && y <= 6) ? row.slice(0, 7) + 'sss' + row.slice(10) : row);
   // autoescola: faixa vermelha dos lados e placa no teto
   if (art === 'escola') rows = rows.map((row, y) => (y === 1 || y === 8) ? row.slice(0, 3) + 'y'.repeat(12) + row.slice(15)
@@ -215,7 +217,7 @@ function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
     x: shade(bagCol, -0.55), y: bagCol, z: typeof bag === 'string' ? '#151515' : '#f4f4f4' };
   if (art === 'bike') { pal.b = '#2a2a2a'; pal.h = '#e8f4ff'; } // quadro preto, farolete branco
   if (art === 'van') { pal.l = '#d9dcdd'; pal.z = '#232f3e'; }
-  if (art === 'ambulancia') { pal.z = '#e63d42'; pal.s = '#357fe5'; }
+  if (art === 'ambulancia' || art === 'viatura') { pal.z = '#e63d42'; pal.s = '#357fe5'; }
   const shadowPal = {};
   for (const k in pal) shadowPal[k] = 'rgba(0,0,0,0.35)';
   return {
