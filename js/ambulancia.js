@@ -1,5 +1,6 @@
 'use strict';
 
+const RESCUE_WALK_TIME = 2;
 const Ambulancia = {
   hospital: null, offer: null, nextOfferT: 3, dwell: 0,
   get state() { return S.rescue?.phase || (this.offer ? 'offer' : 'idle'); },
@@ -59,7 +60,7 @@ const Ambulancia = {
     const p = this.target();
     if (car.speed >= 8 || Math.hypot(p.x - car.x, p.y - car.y) >= 26) { this.dwell = 0; return; }
     this.dwell += dt;
-    if (this.dwell < 2) return;
+    if (this.dwell < RESCUE_WALK_TIME) return;
     this.dwell = 0;
     if (r.phase === 'pickup') {
       r.phase = 'hospital'; Sfx.door();
@@ -88,6 +89,17 @@ const Ambulancia = {
     const x = p.x - cx, y = p.y - cy, pickup = p.kind === 'pick';
     const color = pickup ? '#39ff88' : '#ffd23f';
     pxRing(g, x, y, 10, color); pxDownArrow(g, x, y - 15, color);
-    if (pickup) drawPedSprite(g, x, y, '#8eb5ff', '#51372c', time, true);
+    if (!pickup && !this.dwell) return;
+
+    const street = DIRS.find(d => city.tileAtPx(p.x + d.dx * TILE, p.y + d.dy * TILE) === T.ROAD);
+    const nx = street?.dx ?? 0, ny = street?.dy ?? 1;
+    const curbX = p.x - nx * 6 + ny * 12, curbY = p.y - ny * 6 - nx * 12;
+    const sideX = -Math.sin(player.a), sideY = Math.cos(player.a);
+    const side = (curbX - player.x) * sideX + (curbY - player.y) * sideY >= 0 ? 1 : -1;
+    const doorX = player.x + side * sideX * 6, doorY = player.y + side * sideY * 6;
+    const progress = this.dwell / RESCUE_WALK_TIME;
+    const towardDoor = pickup ? progress : 1 - progress;
+    drawPedSprite(g, lerp(curbX, doorX, towardDoor) - cx, lerp(curbY, doorY, towardDoor) - cy,
+      '#8eb5ff', '#51372c', this.dwell ? progress * 12 : time, !this.dwell);
   },
 };

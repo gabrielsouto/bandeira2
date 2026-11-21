@@ -233,6 +233,26 @@ test('resgate exige duas paradas completas e paga apenas na chegada ao hospital'
   assert.equal(context.S.rescues, 1);
 });
 
+test('paciente caminha até a ambulância e sai pela porta ao chegar ao hospital', () => {
+  const { run, context } = game(['util', 'ambulancia']);
+  let sprite;
+  Object.assign(context, { DIRS: [{ dx: 0, dy: 1 }], T: { ROAD: 1 }, city: { tileAtPx: () => 1 },
+    pxRing() {}, pxDownArrow() {}, drawPedSprite: (_g, x, y, shirt, hair, anim, wave) => { sprite = { x, y, wave }; } });
+  run("Ambulancia.hospital = { x: 160, y: 0 }; S.rescue = { phase: 'pickup', pick: { x: 0, y: 0 }, fare: 22 }");
+  const frame = dt => {
+    sprite = null;
+    run(`Ambulancia.update(${dt}, player); Ambulancia.drawWorld(null, 0, 0)`);
+    return sprite;
+  };
+  assert.deepEqual(frame(0), { x: 12, y: -6, wave: true });
+  assert.deepEqual(frame(1), { x: 6, y: -6, wave: false });
+  assert.equal(frame(1), null);
+  context.player.x = 160;
+  assert.deepEqual(frame(0.5), { x: 163, y: -6, wave: false });
+  assert.deepEqual(frame(1), { x: 169, y: -6, wave: false });
+  assert.equal(frame(0.5), null);
+});
+
 test('ônibus atende os pontos em ordem, reinicia a espera ao sair e paga por desembarque', () => {
   const { run, context } = game(['util', 'onibus']);
   context.S.busPassengers = 0;
@@ -254,12 +274,12 @@ test('ônibus atende os pontos em ordem, reinicia a espera ao sair e paga por de
   assert.equal(context.S.earned, 15);
 });
 
-test('VLT mantém o trilho, exige parada contínua, remunera uma vez e inverte a cabine na volta', () => {
+test('VLT mantém o trilho, exige parada contínua, remunera uma vez e retorna ao terminal pelo circuito', () => {
   const { run, context } = game(['util', 'vlt']);
   context.S.vltTrips = 0;
   const car = context.player;
   car.p = { accel: 80, maxSpeed: 155, brake: 210, reverseMax: 36 };
-  run('VLT.init({ xs: [5,15,25,35,45], wx: [2,2,2,2,2], ys: [6] }); VLT.enter(player); VLT.accept()');
+  run('VLT.init({ xs: [5,15,25,35,45], wx: [2,2,2,2,2], ys: [6,16,26], wy: [2,2,2] }); VLT.enter(player); VLT.accept()');
   const start = car.x, railY = car.y;
   run('VLT.update(1,player); VLT.drive(player,{up:true,left:true},0.1); VLT.update(1,player)');
   assert.equal(context.S.vltRun.index, 0);
@@ -269,20 +289,24 @@ test('VLT mantém o trilho, exige parada contínua, remunera uma vez e inverte a
   assert.equal(context.S.vltRun.index, 0);
   run('VLT.update(1,player)');
   assert.equal(context.S.vltRun.index, 1);
-  for (let i = 1; i < 5; i++) {
-    car.x = run('VLT.target().x');
+  for (let i = 1; i <= 5; i++) {
+    const target = run('VLT.target()');
+    car.vF = car.p.maxSpeed;
+    run('VLT.drive(player,{up:true},(VLT.target().position - S.vltRun.position) / player.p.maxSpeed)');
+    assert.ok(Math.abs(car.x - target.x) < 0.001 && Math.abs(car.y - target.y) < 0.001);
+    assert.equal(car.a, target.a);
+    run('VLT.enter(player)');
+    assert.equal(car.speed, 0);
+    assert.ok(Math.abs(car.y - target.y) < 0.001);
+    assert.equal(context.S.vltTrips, 0);
     run('VLT.update(2,player)');
   }
-  run('VLT.update(2,player); VLT.accept(); VLT.update(2,player); VLT.drive(player,{up:true},1)');
+  assert.equal(car.x, start);
+  assert.equal(car.y, railY);
+  assert.equal(context.S.vltRun, null);
+  run('VLT.update(2,player); VLT.accept()');
   assert.equal(context.S.vltTrips, 1);
   assert.equal(context.S.money, 40);
-  assert.equal(context.S.vltRun.direction, -1);
-  assert.ok(car.vx < 0);
-  const savedX = car.x;
-  car.x = 0;
-  run('VLT.enter(player)');
-  assert.equal(car.x, savedX);
-  assert.equal(car.speed, 0);
   run('VLT.cancel()');
   assert.equal(context.S.vltRun, null);
   assert.equal(context.S.money, 40);

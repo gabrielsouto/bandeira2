@@ -67,8 +67,8 @@ const VEHICLES = {
     fare: 1, offerMul: 0.7, fuelUse: 0.7, tankMul: 0.35, dmgMul: 1.7, noExec: true, noDirty: true,
   },
   vlt: {
-    name: 'VLT', app: 'VLT · LINHA NORTE', color: '#27b3a7', art: 'vlt', soloOnly: true,
-    desc: 'Conduza o trem elétrico pelos trilhos e pare nas plataformas da Linha Norte. Só no solo.',
+    name: 'VLT', app: 'VLT · LINHA CIRCULAR', color: '#27b3a7', art: 'vlt', soloOnly: true,
+    desc: 'Conduza o trem elétrico pelos trilhos e pare nas plataformas da Linha Circular. Só no solo.',
     phys: { accel: 80, maxSpeed: 155, brake: 210, reverseMax: 36 }, electric: true,
     fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
   },

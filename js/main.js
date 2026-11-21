@@ -302,7 +302,7 @@ function startGame() {
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
   } else if (Veh.job === 'vlt') {
-    toast(S.vltRun ? 'Serviço retomado na Linha Norte.' : 'VLT pronto. Inicie o serviço no painel.', 'good');
+    toast(S.vltRun ? 'Serviço retomado na Linha Circular.' : 'VLT pronto. Inicie o serviço no painel.', 'good');
   } else if (Veh.job === 'onibus') {
     toast(S.busRoute ? 'Linha retomada. Siga a seta até o próximo ponto.' : 'Ônibus em serviço. Aguarde a viagem no celular.', 'good');
   } else if (Veh.job === 'ambulancia') {
@@ -509,7 +509,7 @@ function openPlaceMenu(pl) {
 function openTouchStatus() {
   const c = S.car;
   const level = Veh.cur.pedal ? Care.legs : Care.level();
-  const vehicle = Veh.job === 'vlt' ? '<p>VLT elétrico · Alimentação pela rede da Linha Norte</p>' : `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
+  const vehicle = Veh.job === 'vlt' ? '<p>VLT elétrico · Alimentação pela rede da Linha Circular</p>' : `<p>${Veh.cur.pedal ? 'Fôlego' : Veh.cur.electric ? 'Bateria' : 'Combustível'}: ${Math.round(level)}% · Lataria: ${Math.round(c.health)}% · Desgaste: ${Math.round(c.wear)}%</p>` +
     ($('tempwrap').style.display === 'none' ? '' : `<p>Temperatura: ${Math.round(c.temp)} °C</p>`) +
     $('problems').innerHTML + ($('radio').textContent ? `<p>${esc($('radio').textContent)}</p>` : '');
   const room = GAME.mode === 'multi' ? `<div>${$('netinfo').innerHTML}</div>` : '';
@@ -548,7 +548,7 @@ function openPause(confirmReset) {
     return;
   }
   if (Veh.job === 'vlt') {
-    showModal('PAUSA · LINHA NORTE', 'Viagens concluídas: ' + S.vltTrips, [
+    showModal('PAUSA · LINHA CIRCULAR', 'Viagens concluídas: ' + S.vltTrips, [
       { label: 'Continuar', run: closeModal },
       { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
       { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },

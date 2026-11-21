@@ -6,37 +6,55 @@ const VLT = {
   get state() { return S.vltRun ? 'route' : 'idle'; },
 
   init(city) {
-    const names = ['Terminal Poente', 'Mercado', 'Praça Central', 'Jardim', 'Terminal Nascente'];
-    // Faixa exclusiva entre a margem norte e a primeira avenida.
-    this.stations = names.map((name, i) => {
-      const col = Math.round(i * (city.xs.length - 1) / (names.length - 1));
-      return { name, x: (city.xs[col] + city.wx[col] / 2) * TILE, y: (city.ys[0] - 2) * TILE };
-    });
+    const left = (city.xs[0] - 2) * TILE, top = (city.ys[0] - 2) * TILE;
+    const right = (city.xs.at(-1) + city.wx.at(-1) + 2) * TILE;
+    const bottom = (city.ys.at(-1) + city.wy.at(-1) + 2) * TILE;
+    const w = right - left, h = bottom - top;
+    this.length = 2 * (w + h);
+    this.edges = [
+      { x: left, y: top, start: 0, size: w, dx: 1, dy: 0 },
+      { x: right, y: top, start: w, size: h, dx: 0, dy: 1 },
+      { x: right, y: bottom, start: w + h, size: w, dx: -1, dy: 0 },
+      { x: left, y: bottom, start: 2 * w + h, size: h, dx: 0, dy: -1 },
+    ];
+    this.stations = [
+      ['Terminal Poente', (city.xs[0] + city.wx[0] / 2) * TILE - left],
+      ['Mercado', w / 2], ['Nascente', w + h / 2],
+      ['Jardim Sul', w + h + w / 2], ['Oeste', 2 * w + h + h / 2],
+    ].map(([name, position]) => ({ name, position, ...this.point(position) }));
   },
-  nearestTerminal(x) {
-    const last = this.stations.length - 1;
-    return x <= (this.stations[0].x + this.stations[last].x) / 2 ? 0 : last;
+  point(position) {
+    const d = ((position % this.length) + this.length) % this.length;
+    const e = this.edges.find(edge => d < edge.start + edge.size);
+    return { x: e.x + e.dx * (d - e.start), y: e.y + e.dy * (d - e.start),
+      a: Math.atan2(e.dy, e.dx) };
   },
-  park(car, x, direction) {
-    Object.assign(car, { x, y: this.stations[0].y, a: direction === 1 ? 0 : Math.PI,
-      speed: 0, vx: 0, vy: 0, vF: 0, vR: 0, steer: 0, throttle: 0, braking: true });
+  park(car, position) {
+    Object.assign(car, this.point(position), { speed: 0, vx: 0, vy: 0, vF: 0, vR: 0,
+      steer: 0, throttle: 0, braking: true });
     this.dwell = 0;
   },
   enter(car) {
-    const r = S.vltRun, terminal = this.nearestTerminal(car.x);
-    this.park(car, r ? r.x : this.stations[terminal].x, r ? r.direction : terminal ? -1 : 1);
+    const r = S.vltRun;
+    if (r && !Number.isFinite(r.position)) {
+      // A antiga Linha Norte salvava apenas a coordenada horizontal.
+      r.position = r.x - this.edges[0].x;
+      r.index = 0;
+    }
+    this.park(car, r ? r.position : this.stations[0].position);
   },
   leave(car, city) {
-    // Devolva o motorista à avenida paralela, no cruzamento mais próximo.
-    const station = this.stations.reduce((best, p) => Math.abs(p.x - car.x) < Math.abs(best.x - car.x) ? p : best);
-    this.park(car, station.x, 1);
-    car.y = (city.ys[0] + 0.5) * TILE;
+    const closest = (axis, widths, value) => axis.map((n, i) => (n + widths[i] / 2) * TILE)
+      .reduce((best, n) => Math.abs(n - value) < Math.abs(best - value) ? n : best);
+    const x = closest(city.xs, city.wx, car.x), y = closest(city.ys, city.wy, car.y);
+    this.park(car, this.stations[0].position);
+    Object.assign(car, { x, y });
   },
   accept() {
     if (S.vltRun) return;
-    const index = this.nearestTerminal(player.x), direction = index ? -1 : 1;
-    this.park(player, this.stations[index].x, direction);
-    S.vltRun = { index, direction, x: player.x, aboard: 0 };
+    const position = this.stations[0].position;
+    this.park(player, position);
+    S.vltRun = { index: 0, position, aboard: 0 };
     writeSave(); toast('Serviço iniciado. Aguarde o embarque na plataforma.');
   },
   cancel() {
@@ -55,64 +73,71 @@ const VLT = {
     } else if (inp.down) v -= (v > 0 ? p.brake : p.accel * 0.5) * dt;
     else v += p.accel * dt;
     v = clamp(v, -p.reverseMax, p.maxSpeed);
-    const next = car.x + r.direction * v * dt;
-    car.x = clamp(next, this.stations[0].x, this.stations[this.stations.length - 1].x);
-    if (car.x !== next) v = 0;
-    car.y = this.stations[0].y; car.vF = v; car.vx = r.direction * v;
+    r.position += v * dt;
+    Object.assign(car, this.point(r.position));
+    car.vF = v; car.vx = Math.cos(car.a) * v; car.vy = Math.sin(car.a) * v;
     car.speed = Math.abs(v); car.throttle = inp.up && !inp.hb ? 1 : 0; car.braking = !!(inp.hb || inp.down);
-    r.x = car.x;
   },
   target() {
     const r = S.vltRun;
     if (!r) return null;
-    return { ...this.stations[r.index], kind: this.isFinal(r) ? 'drop' : 'pick' };
+    const final = r.index === this.stations.length;
+    const station = this.stations[final ? 0 : r.index];
+    return { ...station, kind: final ? 'drop' : 'pick',
+      position: station.position + (final ? this.length : 0) };
   },
-  isFinal(r) { return r.index + r.direction < 0 || r.index + r.direction >= this.stations.length; },
   update(dt, car) {
     const r = S.vltRun;
     if (!r) return;
-    const station = this.stations[r.index];
-    if (car.speed > 0.5 || Math.abs(car.x - station.x) > 14) { this.dwell = 0; return; }
+    const station = this.target();
+    if (car.speed > 0.5 || Math.abs(r.position - station.position) > 14) { this.dwell = 0; return; }
     this.dwell += dt;
     if (this.dwell < 2) return;
     this.dwell = 0; Sfx.door();
-    if (this.isFinal(r)) {
+    if (station.kind === 'drop') {
       S.vltRun = null; S.vltTrips++; S.money += VLT_FARE; S.earned += VLT_FARE;
-      this.park(car, station.x, -r.direction); Sfx.cash();
-      toast('Fim da linha. +' + fmtMoney(VLT_FARE) + ' · E para iniciar a volta.', 'good');
+      this.park(car, station.position); Sfx.cash();
+      toast('Volta completa. +' + fmtMoney(VLT_FARE) + ' · E para iniciar outra volta.', 'good');
     } else {
       const leaving = R.i(0, r.aboard), boarding = R.i(3, 9);
-      r.aboard += boarding - leaving; r.index += r.direction;
+      r.aboard += boarding - leaving; r.index++;
       toast(station.name + ' · Embarques: ' + boarding + ' · Desembarques: ' + leaving);
     }
     writeSave();
   },
   phoneHTML() {
     const r = S.vltRun;
-    if (!r) return '<div class="ph-title">VLT · LINHA NORTE</div><div class="ph-row">5 estações · ' + fmtMoney(VLT_FARE) + ' por viagem</div><div class="ph-btns"><button data-act="accept"><kbd>E</kbd> INICIAR VIAGEM</button></div>';
-    const station = this.stations[r.index], distance = Math.abs(station.x - player.x);
+    if (!r) return '<div class="ph-title">VLT · LINHA CIRCULAR</div><div class="ph-row">5 estações · ' + fmtMoney(VLT_FARE) + ' por viagem</div><div class="ph-btns"><button data-act="accept"><kbd>E</kbd> INICIAR VIAGEM</button></div>';
+    const station = this.target(), distance = Math.abs(station.position - r.position);
     const status = this.dwell ? 'Portas abertas · aguarde' : distance <= 14 ? 'Freie para abrir as portas' :
-      (station.x - player.x) * r.direction < 0 ? 'Plataforma atrás · recue' : 'Siga até a plataforma';
+      station.position < r.position ? 'Plataforma atrás · recue' : 'Siga até a plataforma';
     return `<div class="ph-title">${esc(station.name)}</div><div class="ph-row">${status}</div><div class="ph-muted">${r.aboard} a bordo · ${kmStr(distance)} até a parada</div>
       <div class="ph-btns"><button class="ghost" data-act="cancel"><kbd>C</kbd> ENCERRAR</button></div>`;
   },
   drawTrack(g, cx, cy) {
-    const first = this.stations[0], last = this.stations[this.stations.length - 1];
-    const x = first.x - cx - 16, y = first.y - cy, width = last.x - first.x + 32;
-    g.fillStyle = '#53585c'; g.fillRect(x, y - 6, width, 13);
-    g.fillStyle = '#353d43';
-    for (let i = 0; i < width; i += 8) g.fillRect(x + i, y - 5, 3, 11);
-    g.fillStyle = '#bdc7cd'; g.fillRect(x, y - 3, width, 1); g.fillRect(x, y + 3, width, 1);
+    for (const edge of this.edges) {
+      g.save();
+      g.translate(edge.x - cx, edge.y - cy);
+      g.rotate(Math.atan2(edge.dy, edge.dx));
+      g.fillStyle = '#53585c'; g.fillRect(-6, -6, edge.size + 12, 13);
+      g.fillStyle = '#353d43';
+      for (let i = 0; i < edge.size; i += 8) g.fillRect(i, -5, 3, 11);
+      g.fillStyle = '#bdc7cd'; g.fillRect(0, -3, edge.size, 1); g.fillRect(0, 3, edge.size, 1);
+      g.restore();
+    }
     for (const station of this.stations) {
-      const sx = station.x - cx;
-      g.fillStyle = '#687583'; g.fillRect(sx - 22, y - 17, 44, 11);
-      g.fillStyle = '#ffcf54'; g.fillRect(sx - 22, y - 8, 44, 2);
-      g.fillStyle = '#f4f1df'; g.fillRect(sx - 1, y - 6, 2, 12);
+      g.save(); g.translate(station.x - cx, station.y - cy); g.rotate(station.a);
+      g.fillStyle = '#687583'; g.fillRect(-22, -17, 44, 11);
+      g.fillStyle = '#ffcf54'; g.fillRect(-22, -8, 44, 2);
+      g.fillStyle = '#f4f1df'; g.fillRect(-1, -6, 2, 12);
+      g.restore();
     }
   },
   drawMinimap(g, scale) {
-    const first = this.stations[0], last = this.stations[this.stations.length - 1];
-    g.fillStyle = '#49dfcc'; g.fillRect(first.x * scale, first.y * scale, (last.x - first.x) * scale, 1);
+    const [north, east] = this.edges;
+    g.strokeStyle = '#49dfcc'; g.lineWidth = 1;
+    g.strokeRect(north.x * scale, north.y * scale, north.size * scale, east.size * scale);
+    g.fillStyle = '#49dfcc';
     for (const p of this.stations) g.fillRect(p.x * scale - 1, p.y * scale - 1, 3, 3);
   },
   drawWorld(g, cx, cy) {
@@ -121,8 +146,13 @@ const VLT = {
     pxDownArrow(g, p.x - cx, p.y - cy - 22, p.kind === 'pick' ? '#39ff88' : '#ffd23f');
     if (p.kind === 'pick') {
       const t = this.dwell / 2;
-      for (let i = 0; i < 3; i++) drawPedSprite(g, lerp(p.x - 8 + 6 * i, player.x, t) - cx,
-        p.y - 13 + 10 * t - cy, ['#ffc573', '#90d5c9', '#db9dc5'][i], '#52453c', time * 3, !t);
+      for (let i = 0; i < 3; i++) {
+        const along = -8 + 6 * i;
+        const x = p.x + along * Math.cos(p.a) + 13 * Math.sin(p.a);
+        const y = p.y + along * Math.sin(p.a) - 13 * Math.cos(p.a);
+        drawPedSprite(g, lerp(x, player.x, t) - cx, lerp(y, player.y, t) - cy,
+          ['#ffc573', '#90d5c9', '#db9dc5'][i], '#52453c', time * 3, !t);
+      }
     }
   },
 };
