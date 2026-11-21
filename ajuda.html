@@ -77,6 +77,8 @@
     <a href="#ambulancia">Ambulância</a>
     <a href="#envios">Rebu Envios</a>
     <a href="#encomendas">Encomendas</a>
+    <a href="#passeador">Passeador de cachorros</a>
+    <a href="#gincana">Gincana da Rádio</a>
     <a href="#corridas">Corridas</a>
     <a href="#nota">Nota e gorjeta</a>
     <a href="#dinamica">Tarifa dinâmica</a>
@@ -92,7 +94,6 @@
     <a href="#colegios">Colégios</a>
     <a href="#semaforos">Semáforos</a>
     <a href="#policia">Polícia</a>
-    <a href="#passeador">Passeador de cachorros</a>
     <a href="#multas">Multas e cobranças</a>
     <a href="#multi">Multiplayer</a>
     <a href="#pega">Pega</a>
@@ -102,7 +103,7 @@
 <main>
 <section id="objetivo">
   <h2>OBJETIVO</h2>
-  <p>Você é motorista de aplicativo numa cidade inventada. Aceite corridas no celular, busque o passageiro, leve até o destino e ganhe dinheiro. Cuide do carro, fuja dos bandidos, da polícia e do trânsito, e mantenha a nota alta para receber mais chamadas.</p>
+  <p>No solo, você escolhe entre 22 modalidades. Para ganhar dinheiro com corridas, aceite uma chamada no celular, busque o passageiro e leve-o até o destino. Você também pode trabalhar nas linhas de transporte, fazer entregas, passear com cachorros ou seguir as pistas da Gincana da Rádio.</p>
   <p>No modo sozinho o progresso fica salvo no navegador. Na pausa das modalidades de rua, você pode consultar o total ganho e o contador do serviço atual. Para apagar o progresso do solo, escolha <b>Recomeçar do zero</b> e confirme no mesmo botão. No multiplayer, até 4 amigos disputam um turno e ganha quem tiver mais lucro.</p>
 </section>
 
@@ -110,21 +111,22 @@
   <h2>CONTROLES</h2>
   <p>Na tela inicial, abra <b>Seu veículo → Trocar</b> para ver a lista. Clique no veículo ou use um dos atalhos abaixo e aperte <kbd>Enter</kbd> ou <kbd>Espaço</kbd> para começar.</p>
   <div class="tbl"><table>
-    <tr><th>Atalhos no início</th><th>Veículos, na mesma ordem</th></tr>
+    <tr><th>Atalhos no início</th><th>Modalidades, na mesma ordem</th></tr>
     <tr><td>1 / 2 / 3 / 4</td><td>Rebu, 66, Táxi, Moto Rebu</td></tr>
     <tr><td>5 / 6 / 7</td><td>euComida, 66Comida, Autoescola</td></tr>
     <tr><td>8 / 9 / 0</td><td>Mercado Leve, Amazoom, Xopi</td></tr>
     <tr><td>V / E / N / D</td><td>Van escolar, Carro elétrico, Rebu Envios, Farmácia de bike</td></tr>
     <tr><td>A / P / O</td><td>Ambulância, Polícia, Ônibus urbano</td></tr>
     <tr><td>T / B / H</td><td>VLT, Barcas, Táxi aéreo</td></tr>
+    <tr><td>C / G</td><td><a href="#passeador">Passeador de cachorros</a>, <a href="#gincana">Gincana da Rádio</a></td></tr>
   </table></div>
   <h3>Durante o jogo</h3>
   <div class="tbl"><table>
     <tr><th>Tecla</th><th>O que faz</th></tr>
-    <tr><td><kbd>W A S D</kbd> ou setas</td><td>dirigir</td></tr>
+    <tr><td><kbd>W A S D</kbd> ou setas</td><td>dirigir ou caminhar no Passeador de cachorros</td></tr>
     <tr><td><kbd>Espaço</kbd></td><td>freio de mão (derrapagem)</td></tr>
     <tr><td><kbd>E</kbd></td><td>aceitar a corrida (no multiplayer: ir buscar a chamada destacada)</td></tr>
-    <tr><td><kbd>Q</kbd></td><td>recusar a corrida (no multiplayer: destacar a próxima chamada)</td></tr>
+    <tr><td><kbd>Q</kbd></td><td>recusar a corrida no solo, pedir uma dica na Gincana da Rádio ou destacar a próxima chamada no multiplayer</td></tr>
     <tr><td><kbd>C</kbd></td><td>cancelar a corrida ou largar o passageiro</td></tr>
     <tr><td><kbd>H</kbd></td><td>buzina (os pedestres saem da frente)</td></tr>
     <tr><td><kbd>O</kbd> / <kbd>P</kbd> / <kbd>L</kbd></td><td>seta até a <span class="c-ofi">oficina</span>, o <span class="c-posto">posto</span> ou o <span class="c-lava">lava jato</span> mais perto (a mesma tecla cancela)</td></tr>
@@ -152,7 +154,7 @@
 
 <section id="veiculos">
   <h2>VEÍCULOS</h2>
-  <p>No solo, estacione e abra <b>Trocar modalidade</b> no celular (<kbd>J</kbd>). Escolha o serviço para pegar o veículo dele no mesmo local. Conclua ou cancele o trabalho em andamento antes da troca.</p>
+  <p>Ao continuar o solo, vale a escolha feita na tela inicial. Se deixou um passeio ou um resgate em andamento, selecione o Passeador ou a Ambulância para retomá-lo. Durante o jogo, conclua ou cancele o serviço atual, pare e abra <b>Trocar modalidade</b> no celular (<kbd>J</kbd>).</p>
   <p>A Van escolar leva a turma, a van da Amazoom carrega encomendas, o carro Rebu busca passageiros e a moto do euComida leva refeições. Cada veículo guarda seu combustível, a lataria e o estepe até você voltar a usá-lo.</p>
   <h3 id="escolar">VAN ESCOLAR</h3>
   <p>Escolha <b>V · Van escolar</b> e aceite o contrato com <kbd>E</kbd> em até 18 segundos. Cada contrato reúne até três alunos e lista seus nomes e o valor por trecho de cada família. Pare perto de cada casa e espere a criança caminhar até a van. No portão da escola, aguarde a turma desembarcar para receber a ida. Durante os 90 segundos de aula você pode fazer outro trabalho. Na saída, volte à modalidade escolar, espere o último aluno embarcar e leve cada criança de volta à sua casa. Cada família paga a volta no desembarque.</p>
@@ -391,11 +393,18 @@
   <p>No multiplayer o turno vai das 07:00 às 19:00, então lá só chega a escurecer no fim da tarde.</p>
 </section>
 
-<section id="radio">
+<section id="gincana">
   <h2>Gincana da Rádio</h2>
-  <p>No solo, escolha Gincana da Rádio na tela inicial (G) ou no menu de modalidades (J). Escolha a missão no celular ou aperte E para começar a primeira. Estacione no lugar descrito em cada pista. Q revela o local e liga a seta. C cancela a missão.</p>
-  <p>Depois de duas pistas, leve o ouvinte à barca dentro do prazo, transporte um disco sem bater ou estacione para uma transmissão. Cada missão paga R$ 80, mais R$ 40 se resolver as duas pistas sem ajuda.</p>
+  <p>Escolha <b>G · Gincana da Rádio</b> na tela inicial ou use <kbd>J</kbd> ao estacionar. Escolha uma missão no celular ou aperte <kbd>E</kbd> para começar <b>Ouvinte premiado</b>. Leia ou ouça a primeira pista e estacione no local descrito. A próxima parada só aparece quando você acerta a atual.</p>
+  <p>Se precisar de ajuda, <kbd>Q</kbd> revela o nome do local da pista atual e liga a seta até ele. Depois da segunda pista, a seta indica o destino do desafio final. Concluir a missão rende <span class="money">R$ 80</span>, ou <span class="money">R$ 120</span> se você resolver as duas pistas sem pedir dica. Para cancelar, aperte <kbd>C</kbd>.</p>
+  <ul>
+    <li><b>Ouvinte premiado.</b> Depois do embarque, você tem 90 segundos para levar o ouvinte até a barca.</li>
+    <li><b>Disco de ouro.</b> Entregue o disco na estação Mercado. Uma batida forte com o disco a bordo encerra a missão.</li>
+    <li><b>Ao vivo na orla.</b> Estacione no Cais Nascente e fique parado por cinco segundos seguidos para completar a transmissão.</li>
+  </ul>
+</section>
 
+<section id="radio">
   <h2>RÁDIO</h2>
   <p><kbd>R</kbd> troca a estação: funk, sertanejo, pagode (todas tocadas na hora pelo próprio jogo) e a Rádio Trânsito, com notícias faladas pela voz do navegador. O nome da estação aparece no painel do carro. <kbd>M</kbd> desliga tudo.</p>
 </section>
@@ -444,7 +453,7 @@
 <section id="semaforos">
   <h2>SEMÁFOROS</h2>
   <ul>
-    <li>Metade dos cruzamentos tem semáforo, centralizado sobre as faixas de cada sentido. No vermelho, pare antes da linha branca que antecede a faixa de pedestres.</li>
+    <li>Cerca de metade dos cruzamentos de três ou quatro saídas tem semáforo. Observe o sinal sobre as faixas por onde você chega, inclusive quando for virar. No vermelho, pare antes da linha branca que antecede a faixa de pedestres.</li>
     <li>O ciclo: verde por 7 s, amarelo por 2 s, um instante de vermelho para todos e aí abre para a outra rua.</li>
     <li>Os carros do trânsito param no vermelho e no amarelo (se ainda dá tempo) e deixam espaço entre os para-choques enquanto esperam.</li>
     <li>Entrar no cruzamento com o sinal vermelho é <b>avançar o sinal</b>: multa de <span class="neg">R$ 60,00</span> (na sala, conta como radar). Na direção fácil do modo sozinho é só um aviso. Na autoescola, perde 15 pontos.</li>

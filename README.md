@@ -16,11 +16,11 @@
 2. Quando o celular tocar, aperte **E** para aceitar. Dirija com **WASD** ou as **setas**, siga a **seta verde** e pare ao lado do passageiro. Espere ele entrar.
 3. Siga a **seta amarela** até o destino e pare para receber. Chegar no prazo e evitar batidas ajuda a ganhar uma nota melhor e uma gorjeta.
 
-O solo salva seu progresso automaticamente no navegador. Para experimentar outro serviço, termine ou cancele o trabalho atual, estacione e aperte **J**. Você também pode escolher seu veículo antes de começar, em **Seu veículo → Trocar**.
+O solo salva seu progresso automaticamente no navegador. Para experimentar outro serviço durante o jogo, termine ou cancele o trabalho atual, estacione e aperte **J**. Ao voltar ao jogo, você começa com a opção escolhida em **Seu veículo → Trocar**. Para retomar um passeio com cachorros, por exemplo, escolha o Passeador.
 
-## O que dá para dirigir
+## Modalidades do solo
 
-O solo tem **20 opções**. Cada trabalho muda o que você precisa observar no trajeto.
+O solo tem **22 opções**, incluindo um trabalho a pé e uma gincana de carro pelas ruas da cidade.
 
 | Trabalho | Veículos e serviços | O que acontece no turno |
 | --- | --- | --- |
@@ -30,8 +30,10 @@ O solo tem **20 opções**. Cada trabalho muda o que você precisa observar no t
 | Transporte de passageiros | Van escolar, Ônibus urbano, VLT, Barcas e Táxi aéreo | Busque os alunos em casa, pare nos pontos da Linha 01, percorra cinco estações sobre trilhos, contorne a ilha de barca ou pouse nos helipontos da cidade. |
 | Emergências | Ambulância e Polícia | Leve o paciente ao hospital ou assuma a viatura para atender ocorrências e fazer rondas. |
 | Autoescola | Carro de aula | Siga as instruções de voz, respeite as placas de PARE e estacione na vaga. A sexta aula é a prova do DETRAN. |
+| Passeios a pé | [Passeador de cachorros](https://gabrielsouto.github.io/bandeira2/ajuda.html#passeador) | Busque até três cachorros, passe por cinco paradas em três quarteirões e receba de cada tutor ao devolver o cachorro. |
+| Desafios de rádio | [Gincana da Rádio](https://gabrielsouto.github.io/bandeira2/ajuda.html#gincana) | Resolva duas pistas e cumpra o desafio final. Uma missão vale R$ 80, com mais R$ 40 se você resolver as duas pistas sem pedir dica. |
 
-Entre um serviço e outro, o trânsito para no sinal, crianças atravessam na porta da escola e os postes acendem ao anoitecer. Cuide da lataria, do combustível e dos pneus. Em casa, dá para lavar o veículo e instalar um kit GNV no carro ou na van.
+Entre um serviço e outro, o trânsito para no sinal, crianças atravessam na porta da escola e os postes acendem ao anoitecer. Se furar um pneu, pare e aperte **T** para montar o estepe. Você também pode fazer a troca na vaga de casa, onde dá para lavar o veículo e instalar um kit GNV no carro ou na van.
 
 [![Bandeira 2 em pixel art, com uma viatura no encalço do motorista durante uma corrida noturna. Clique para jogar.](divulgacao/twitter.png)](https://gabrielsouto.github.io/bandeira2/)
 
@@ -47,7 +49,7 @@ Quem já embarcou um passageiro às 19h tem mais 30 segundos para entregá-lo. V
 
 | Teclas | Ação |
 | --- | --- |
-| **WASD** ou **setas** · **Espaço** | Dirigir · freio de mão |
+| **WASD** ou **setas** · **Espaço** | Dirigir ou caminhar com os cachorros · freio de mão ao dirigir |
 | **E** · **Q** · **C** | Aceitar, recusar ou cancelar um serviço no solo |
 | **J** · **B** | Trocar de modalidade ao estacionar · traçar rota para casa no solo |
 | **O** · **P** · **L** | Mostrar o caminho até oficina, posto ou lava jato |
