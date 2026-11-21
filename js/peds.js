@@ -67,12 +67,12 @@ class Peds {
   }
 
   // retorna quantos pedestres foram atropelados neste passo
-  update(dt, car) {
+  update(dt, car, airborne = false) {
     let hits = 0;
     const cs = car.speed;
     for (const p of this.list) {
       if (p.state === 'down') { p.t -= dt; if (p.t <= 0) p.state = 'walk'; continue; }
-      const dx = p.x - car.x, dy = p.y - car.y, d = Math.hypot(dx, dy);
+      const dx = p.x - car.x, dy = p.y - car.y, d = airborne ? Infinity : Math.hypot(dx, dy);
       if (d < 8 && cs > 28) { p.state = 'down'; p.t = 3; p.flip = R.chance(0.5); hits++; continue; }
       if (d < 8 && d > 0.01) { const k = (8 - d) / d; this.tryMove(p, dx * k, dy * k); }
       if (p.state === 'dodge') {

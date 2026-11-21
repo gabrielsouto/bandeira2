@@ -66,7 +66,7 @@ class Traffic {
     car.ti = ni; car.tj = nj; car.dir = d; car.lane = lane;
   }
 
-  update(dt, pl) {
+  update(dt, pl, airborne = false) {
     // carros extras (fila do colégio) somem quando ninguém está vendo
     this.cars = this.cars.filter((o) => !o.leave || Math.hypot(o.x - pl.x, o.y - pl.y) < 320);
     const cars = this.cars;
@@ -80,7 +80,7 @@ class Traffic {
         return Math.abs(-dx * fy + dy * fx) < 10;
       };
       let blocked = false, byPlayer = false, queued = false;
-      if (ahead(pl.x, pl.y)) { blocked = true; byPlayer = true; }
+      if (!airborne && ahead(pl.x, pl.y)) { blocked = true; byPlayer = true; }
       else if (car.ghost <= 0) {
         for (const o of cars) if (o !== car && ahead(o.x, o.y)) { blocked = true; queued = o.atLight || o.queued; break; }
       }

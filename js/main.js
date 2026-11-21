@@ -3,7 +3,7 @@
 
 const SAVE_KEY = 'bandeira2-save-v1';
 function defaultSave() {
-  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
+  return { v: 1, seed: 20261118, money: 150, ratings: [5, 5, 5, 5, 5], rides: 0, parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, garage: {}, earned: 0, aura: 0,
     car: { spare: true, fuel: 70, health: 100, wear: 8, temp: 50, problems: { flat: false, overheat: false, brakes: false, battery: false, dirty: false } } };
 }
 function loadSave() {
@@ -14,7 +14,7 @@ function loadSave() {
       const oldSlots = { car: 'uber', van: 'escolar', bike: 'comida66' };
       const garage = Object.fromEntries(Object.entries(s.garage || {}).map(([key, car]) => [oldSlots[key] || key, car]));
       const carSlot = s.vehicle || oldSlots[s.carSlot] || s.carSlot || (Veh.cur.school ? 'uber' : Veh.key);
-      return { parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
+      return { parcels: 0, envios: 0, rescues: 0, busPassengers: 0, vltTrips: 0, ferryTrips: 0, airTrips: 0, schoolLegs: 0, ...s, garage, carSlot, car: { spare: true, ...s.car } };
     }
   } catch (e) { /* sem save */ }
   return null;
@@ -52,6 +52,7 @@ resize();
 
 const player = makePlayer(0, 0, 0);
 function activeJob() {
+  if (Veh.job === 'aereo') return TaxiAereo;
   if (Veh.job === 'barcas') return Barcas;
   if (Veh.job === 'vlt') return VLT;
   if (Veh.job === 'onibus') return Onibus;
@@ -69,7 +70,7 @@ function applyVehicle() {
   player.p = Veh.phys();
   const guided = !!v.guided;
   document.body.classList.toggle('guided-cab', guided);
-  $('help').textContent = guided ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
+  $('help').textContent = Veh.job === 'aereo' ? 'W/↑ acelerar · A/D ou ←/→ girar · S/↓ recuar · Espaço frear · E embarcar · C cancelar · J modalidade' : guided ? 'W/↑ acelerar · S/↓ frear e recuar · Espaço frear · E iniciar · C encerrar · J modalidade · Esc pausa' : roadHelp;
   $('appname').textContent = v.app;
   $('phone').classList.toggle('food', !!v.delivery);
   $('phone').classList.toggle('food66', Veh.job === 'comida66');
@@ -114,6 +115,7 @@ Delivery.initPharmacies(city, mapCtx);
 Onibus.init(city);
 VLT.init(city);
 Barcas.init(city);
+TaxiAereo.init(city);
 Autoescola.init(city);
 traffic.capFn = (x, y) => World.trafficCap(x, y);
 Signals.init(city);
@@ -166,6 +168,7 @@ function onKey(code) {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
     if (code === 'KeyD') { pickVehicle('farmacia'); return; }
+    if (code === 'KeyH') { pickVehicle('aereo'); return; }
     if (code === 'KeyB') { pickVehicle('barcas'); return; }
     if (code === 'KeyT') { pickVehicle('vlt'); return; }
     if (code === 'KeyO') { pickVehicle('onibus'); return; }
@@ -192,7 +195,7 @@ function onKey(code) {
     case 'KeyC': activeJob().cancel(); break;
     case 'KeyV': if (Veh.cur.parcels && Parcels.state === 'route') Parcels.startReturn(); break;
     case 'KeyF': Easy.toggle(); break;
-    case 'KeyH': Sfx.horn(0.09); peds.scare(player.x, player.y); break;
+    case 'KeyH': if (Veh.job === 'aereo') break; Sfx.horn(0.09); peds.scare(player.x, player.y); break;
     case 'KeyG': callTow(); break;
     case 'KeyM': Sfx.setMuted(!Sfx.muted); if (Sfx.muted) Radio.stopTalk(); toast(Sfx.muted ? 'Som desligado' : 'Som ligado'); break;
     case 'KeyR': Radio.next(); break;
@@ -219,6 +222,8 @@ function startGame() {
     if (Escolar.busy) {
       Garagem.takeVehicle(VEHICLES[S.vehicle]?.art === 'van' ? S.vehicle : 'escolar', 'escolar');
       toast('Rota escolar retomada. Termine o trecho ou use Encerrar contrato no celular.');
+    } else if (S.flight) {
+      Garagem.takeVehicle('aereo');
     } else if (S.ferryRun) {
       Garagem.takeVehicle('barcas');
     } else if (S.vltRun) {
@@ -236,6 +241,8 @@ function startGame() {
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.job === 'aereo') {
+    toast(S.flight ? 'Voo retomado. Confira o destino no painel.' : 'Helicóptero pronto. Aperte E para aceitar um voo.', 'good');
   } else if (Veh.job === 'barcas') {
     toast(S.ferryRun ? 'Travessia retomada. Siga até o cais indicado.' : 'Barca atracada. Aperte E para embarcar os passageiros.', 'good');
   } else if (Veh.job === 'vlt') {
@@ -296,7 +303,7 @@ Easy.refresh();
     const thumbScale = Math.min(2, cv.width / spr.img.width);
     const w = Math.round(spr.img.width * thumbScale), h = Math.round(spr.img.height * thumbScale);
     g.drawImage(spr.img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
-    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', ambulancia: 'A', onibus: 'O', vlt: 'T', barcas: 'B', farmacia: 'D' }[k];
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D' }[k];
     cv.setAttribute('aria-hidden', 'true');
     const key = document.createElement('kbd');
     key.textContent = shortcut;
@@ -459,8 +466,8 @@ function openPause(confirmReset) {
     return;
   }
   if (Veh.cur.guided) {
-    const ferry = Veh.job === 'barcas';
-    showModal(ferry ? 'PAUSA · BARCAS DA ORLA' : 'PAUSA · LINHA CIRCULAR', 'Viagens concluídas: ' + (ferry ? S.ferryTrips : S.vltTrips), [
+    const trips = { aereo: S.airTrips, barcas: S.ferryTrips, vlt: S.vltTrips };
+    showModal('PAUSA · ' + Veh.cur.app, 'Viagens concluídas: ' + trips[Veh.job], [
       { label: 'Continuar', run: closeModal },
       { label: 'Trocar modalidade', run: () => Garagem.jobsMenu() },
       { label: 'Trocar estação do rádio', run: () => { closeModal(); Radio.next(); } },
@@ -596,8 +603,9 @@ function update(dt) {
   const moved = Math.hypot(player.x - px, player.y - py);
   if (!guided && !Garagem.pushing) Care.update(dt, player, moved);
   else Care.stallT = Math.max(0, Care.stallT - dt);
-  traffic.update(dt, player);
-  const hits = peds.update(dt, player);
+  const airborne = Veh.job === 'aereo';
+  traffic.update(dt, player, airborne);
+  const hits = peds.update(dt, player, airborne);
   for (let k = 0; k < hits; k++) onPedHit('pedestre');
   if (!guided) {
     World.update(dt, player);
@@ -636,7 +644,7 @@ function update(dt) {
     if (f.t > 1.6) floaters.splice(k, 1);
   }
 
-  const pl = Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
+  const pl = airborne ? null : Garagem.atHome() ? Garagem.home : city.placeAt(player.x, player.y);
   if (pl && pl === Nav.place) Nav.clear(`Você chegou: ${pl.name}.`);
   if (pl && pl !== lastPlace && (player.speed < 18 || Garagem.pushing) && !Veh.cur.school) { lastPlace = pl; openPlaceMenu(pl); }
   if (!pl) lastPlace = null;
@@ -718,6 +726,16 @@ function render() {
   if (Multi.ghostT > 0) ctx.globalAlpha = Math.floor(time * 8) % 2 ? 0.35 : 0.7; // pisca enquanto é fantasma
   if (Garagem.pushing) drawPedSprite(ctx, player.x - Math.cos(player.a)*12 - camX, player.y - Math.sin(player.a)*12 - camY, '#78bffa', '#604028', player.speed ? time*5 : 0, false);
   drawCar(SPR.player, player.x, player.y, player.a, player.braking);
+  if (Veh.job === 'aereo' && S.flight?.boarded) {
+    ctx.save();
+    ctx.translate(Math.round(player.x - camX), Math.round(player.y - camY));
+    ctx.rotate(time * 28);
+    ctx.fillStyle = '#34404a';
+    ctx.fillRect(-17, -1, 34, 2);
+    ctx.fillStyle = '#fff3ba';
+    ctx.fillRect(-17, -1, 3, 2); ctx.fillRect(14, -1, 3, 2);
+    ctx.restore();
+  }
   ctx.globalAlpha = 1;
 
   for (const p of particles) {

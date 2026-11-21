@@ -73,6 +73,7 @@ const HUD = {
     // no multiplayer a nota é a média do turno, calculada pela sala
     const nota = GAME.mode === 'multi' ? Multi.myNota : Rides.ratingAvg();
     e.rating.textContent = Veh.cur.school ? `Aulas: ${Autoescola.passed()}/${LESSONS.length} · ${Autoescola.totalStars()} ★`
+      : Veh.job === 'aereo' ? S.airTrips + (S.airTrips === 1 ? ' voo' : ' voos')
       : Veh.job === 'barcas' ? S.ferryTrips + (S.ferryTrips === 1 ? ' travessia' : ' travessias')
       : Veh.job === 'vlt' ? 'Linha Circular · ' + S.vltTrips + (S.vltTrips === 1 ? ' viagem' : ' viagens')
       : Veh.job === 'onibus' ? S.busPassengers + (S.busPassengers === 1 ? ' passageiro transportado' : ' passageiros transportados')

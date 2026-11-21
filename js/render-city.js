@@ -194,6 +194,12 @@ function artToCanvas(rows, pal) {
 function makeCarSprites(body, isPlayer, art = 'car', bag = false) {
   let rows = art === 'bike' ? BIKE_ART : art === 'moto' ? (bag ? MOTO_BAG_ART : MOTO_ART) : CAR_ART;
   if (art === 'van') rows = VAN_ART;
+  if (art === 'helicoptero') rows = [
+    '.............k..........', '...t.........k..........', '...b......zzzkzzzzz.....',
+    '...b.......ookoo........', '..obo....obbbkwwwbo.....', 'obbbdddddbbblkwwwbbo....',
+    'obbbdddddbbblkwwwbbo....', '..obo....obbbkwwwbo.....', '...b.......ookoo........',
+    '...b......zzzkzzzzz.....', '.............k..........', '.............k..........',
+  ];
   if (art === 'barca') rows = FERRY_ART;
   if (art === 'vlt') rows = VLT_ART;
   if (art === 'onibus') rows = BUS_ART;
