@@ -52,6 +52,7 @@ resize();
 
 const player = makePlayer(0, 0, 0);
 function activeJob() {
+  if (Veh.job === 'gincana') return Gincana;
   if (Veh.job === 'passeador') return Passeador;
   if (Veh.job === 'aereo') return TaxiAereo;
   if (Veh.job === 'barcas') return Barcas;
@@ -172,6 +173,7 @@ function onKey(code) {
   if (mode === 'title') {
     if (Multi.titleKey(code)) return;
     if (code === 'KeyF') { Easy.toggle(true); return; }
+    if (code === 'KeyG') { pickVehicle('gincana'); return; }
     if (code === 'KeyC') { pickVehicle('passeador'); return; }
     if (code === 'KeyD') { pickVehicle('farmacia'); return; }
     if (code === 'KeyH') { pickVehicle('aereo'); return; }
@@ -236,6 +238,8 @@ function startGame() {
     S.car = defaultSave().car; S.car.fuel = 100; S.car.wear = 0;
     $('money').classList.add('hidden'); $('aura').classList.add('hidden'); // o dinheiro do solo não entra na aula
     Autoescola.start();
+  } else if (Veh.job === 'gincana') {
+    toast('Gincana da Rádio · Confira a missão no celular.', 'good');
   } else if (Veh.job === 'passeador') {
     toast(S.dogWalk ? 'Passeio retomado. Confira a parada no celular.' : 'Aperte E para aceitar um passeio.', 'good');
   } else if (Veh.job === 'aereo') {
@@ -311,7 +315,7 @@ Easy.refresh();
       const w = Math.round(img.width * thumbScale), h = Math.round(img.height * thumbScale);
       g.drawImage(img, Math.round((cv.width - w) / 2), Math.round((cv.height - h) / 2), w, h);
     }
-    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', policia: 'P', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D', passeador: 'C' }[k];
+    const shortcut = i < 10 ? (i + 1) % 10 : { escolar: 'V', eletrico: 'E', envios: 'N', policia: 'P', ambulancia: 'A', onibus: 'O', vlt: 'T', aereo: 'H', barcas: 'B', farmacia: 'D', gincana: 'G', passeador: 'C' }[k];
     cv.setAttribute('aria-hidden', 'true');
     const key = document.createElement('kbd');
     key.textContent = shortcut;
@@ -527,6 +531,7 @@ function callTow() {
     return;
   }
   if (Veh.job === 'onibus') Onibus.cancel(true);
+  else if (Veh.job === 'gincana') Gincana.cancel();
   else if (Veh.job === 'policia') Patrulha.cancel();
   else if (Veh.job === 'ambulancia') Ambulancia.cancel(true);
   else if (Veh.job === 'envios') Envios.cancel(true);

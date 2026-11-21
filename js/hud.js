@@ -38,7 +38,8 @@ const HUD = {
       if (!b || !canDrive()) return;
       const a = b.dataset.act;
       const tgt = activeJob();
-      if (a === 'walk' && tgt === Passeador) tgt.accept(Number(b.dataset.count));
+      if (a === 'mission' && Veh.job === 'gincana') tgt.accept(Number(b.dataset.mission));
+      else if (a === 'walk' && tgt === Passeador) tgt.accept(Number(b.dataset.count));
       else if (a === 'accept') tgt.accept(); else if (a === 'decline') tgt.decline?.(); else if (a === 'cancel') tgt.cancel();
       else if (a === 'siren' && tgt === Patrulha) onKey('KeyK');
       else if (a === 'round' && tgt === Patrulha) onKey('KeyZ');
@@ -147,6 +148,7 @@ const HUD = {
     }
     if (GAME.mode === 'multi') { const h = RidesNet.phoneHTML(); if (h !== null) return h; }
     if (Veh.job === 'onibus') return Onibus.phoneHTML();
+    if (Veh.job === 'gincana') return Gincana.phoneHTML();
     if (Veh.job === 'policia') return Patrulha.phoneHTML();
     if (Veh.job === 'ambulancia') return Ambulancia.phoneHTML();
     if (Veh.job === 'envios') return Envios.phoneHTML();

@@ -695,3 +695,40 @@ test('ronda recolhe um bandido da área e só paga ao concluir a entrega na pris
   assert.equal(context.S.ocorrencias, 1);
   assert.equal(context.S.ocorrencia, null);
 });
+
+test('gincana leva a paradas acessíveis e paga cada desafio uma única vez', () => {
+  const { run, context } = game(['util', 'city', 'vlt', 'barcas', 'gincana']);
+  context.Radio = { stopTalk() {}, say() {} };
+  run('const city = generateCity(20261118); VLT.init(city); Barcas.init(city)');
+  const arrive = dt => run(`Object.assign(player, Gincana.point()); Gincana.update(${dt}, player)`);
+  for (const id of [0, 1, 2]) {
+    run(`Gincana.accept(${id})`);
+    assert.equal(run('Gincana.target()'), null);
+    if (id === 1) run('Gincana.decline()');
+    for (let step = 0; step < 2; step++) {
+      assert.equal(run('city.tileAtPx(Gincana.point().x, Gincana.point().y) === T.ROAD'), true);
+      arrive(1);
+    }
+    assert.ok(run('Gincana.target()'));
+    if (id === 2) {
+      arrive(4);
+      assert.equal(run('Gincana.state'), 'route');
+      run('player.speed = 10; Gincana.update(1, player); player.speed = 0');
+      arrive(2);
+      assert.equal(run('Gincana.state'), 'route');
+    }
+    arrive(5);
+    run('Gincana.update(1, player)');
+    assert.equal(run('Gincana.state'), 'idle');
+  }
+  assert.equal(context.S.money, 320);
+  assert.equal(context.S.earned, 320);
+  run('Gincana.accept(0)');
+  arrive(1); arrive(1); arrive(91);
+  assert.equal(run('Gincana.state'), 'idle');
+  run('Gincana.accept(1)');
+  arrive(1); arrive(1);
+  run('Gincana.onImpact(80)');
+  assert.equal(run('Gincana.state'), 'idle');
+  assert.equal(context.S.money, 320);
+});

@@ -95,6 +95,11 @@ const VEHICLES = {
     desc: 'Trabalhe a pé. Busque até três cachorros, contorne três quarteirões com o grupo e receba de cada tutor na volta. Só no solo.',
     phys: { maxSpeed: 42 }, fare: 1, offerMul: 1, fuelUse: 0, tankMul: 1, dmgMul: 0,
   },
+  gincana: {
+    name: 'Gincana da Rádio', app: 'GINCANA DA RÁDIO', color: '#fcab39', art: 'car', soloOnly: true,
+    desc: 'Decifre duas pistas do locutor e complete o desafio final para ganhar o prêmio.',
+    phys: {}, fare: 1, offerMul: 1, fuelUse: 1, tankMul: 1, dmgMul: 1,
+  },
   policia: {
     name: 'Polícia', app: 'CENTRAL DE PATRULHA', color: '#e9edf2', art: 'viatura', soloOnly: true,
     desc: 'Patrulhe a cidade. Aceite ocorrências da central e pare no local para prestar atendimento. Só no solo.',
@@ -122,10 +127,10 @@ VEHICLES.farmacia = {
   ...VEHICLES.comida66, name: 'Farmácia de bike', app: 'FARMA BIKE', color: '#37c396', bag: '#37c396',
   desc: 'Retire pedidos na farmácia e pedale até o cliente. Proteja os frascos contra batidas. Só no solo.',
 };
-const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios', 'ambulancia', 'onibus', 'vlt', 'farmacia', 'barcas', 'aereo', 'policia', 'passeador'];
+const VEH_ORDER = ['uber', 'n99', 'taxi', 'moto', 'eucomida', 'comida66', 'escola', 'leve', 'amazoom', 'xopi', 'escolar', 'eletrico', 'envios', 'ambulancia', 'onibus', 'vlt', 'farmacia', 'barcas', 'aereo', 'policia', 'passeador', 'gincana'];
 const JOBS_BY_ART = {
   passeador: ['passeador'], viatura: ['policia'], helicoptero: ['aereo'], barca: ['barcas'], vlt: ['vlt'], onibus: ['onibus'], ambulancia: ['ambulancia'], van: ['escolar', 'amazoom', 'leve', 'uber', 'eucomida', 'envios'],
-  car: ['uber', 'n99', 'eucomida', 'envios'], taxi: ['taxi', 'uber', 'n99', 'eucomida', 'envios'],
+  car: ['uber', 'gincana', 'n99', 'eucomida', 'envios'], taxi: ['taxi', 'uber', 'n99', 'eucomida', 'envios'],
   moto: ['moto', 'eucomida', 'xopi', 'envios'], bike: ['comida66', 'farmacia'], escola: ['escola'],
 };
 const VEH_KEY = 'bandeira2-veiculo';
