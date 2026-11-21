@@ -6,13 +6,27 @@ const NPC_COLORS = ['#c0392b', '#2e6fb0', '#27ae60', '#8e44ad', '#d35400', '#7f8
 const NPC_HALF_LENGTH = 9, NPC_QUEUE_GAP = 8;
 const NPC_HEADWAY = 2 * NPC_HALF_LENGTH + NPC_QUEUE_GAP;
 const WALKER_RADIUS = 3;
+const NPC_HALF_WIDTH = 5;
+const JUNCTION_CLEARANCE = NPC_HALF_LENGTH + NPC_HALF_WIDTH + 2;
 
 // Folga entre o pedestre e a carroceria de 18 × 10 px, nos eixos do veículo.
 function walkerCarGap(dx, dy, angle) {
   if (Math.abs(dx) > 16 || Math.abs(dy) > 16) return Infinity;
   const fx = Math.cos(angle), fy = Math.sin(angle);
   return Math.max(Math.abs(dx * fx + dy * fy) - NPC_HALF_LENGTH,
-    Math.abs(dy * fx - dx * fy) - 5) - WALKER_RADIUS;
+    Math.abs(dy * fx - dx * fy) - NPC_HALF_WIDTH) - WALKER_RADIUS;
+}
+
+// Testa os quatro eixos das duas carrocerias orientadas.
+function trafficOverlap(x, y, a, other) {
+  const dx = other.x - x, dy = other.y - y;
+  if (dx * dx + dy * dy >= 4 * (NPC_HALF_LENGTH ** 2 + NPC_HALF_WIDTH ** 2)) return 0;
+  const c = Math.abs(Math.cos(a - other.a)), s = Math.abs(Math.sin(a - other.a));
+  const length = NPC_HALF_LENGTH * (1 + c) + NPC_HALF_WIDTH * s;
+  const width = NPC_HALF_WIDTH * (1 + c) + NPC_HALF_LENGTH * s;
+  const fx = Math.cos(a), fy = Math.sin(a), ox = Math.cos(other.a), oy = Math.sin(other.a);
+  return Math.max(0, Math.min(length - Math.abs(dx * fx + dy * fy), width - Math.abs(dy * fx - dx * fy),
+    length - Math.abs(dx * ox + dy * oy), width - Math.abs(dy * ox - dx * oy)));
 }
 
 class Traffic {
@@ -64,6 +78,7 @@ class Traffic {
     const nl = c.laneCount(car.ti, car.tj, d);
     const lane = d === car.dir && !R.chance(0.2) ? Math.min(car.lane, nl - 1) : R.i(0, nl - 1);
     const E = c.entryPoint(car.ti, car.tj, car.dir, car.lane), X = c.exitPoint(car.ti, car.tj, d, lane);
+    if (car.crossing) car.crossing.exit = X;
     if (d !== car.dir) {
       const C = (car.dir % 2 === 1) ? { x: E.x, y: X.y } : { x: X.x, y: E.y };
       for (const t of [0.25, 0.5, 0.75]) {
@@ -82,6 +97,10 @@ class Traffic {
     // carros extras (fila do colégio) somem quando ninguém está vendo
     this.cars = this.cars.filter((o) => !o.leave || Math.hypot(o.x - pl.x, o.y - pl.y) < 320);
     const cars = this.cars;
+    const crossings = new Map();
+    for (const car of cars) {
+      if (car.crossing) crossings.set(car.crossing.key, car);
+    }
     for (const car of cars) {
       car.hitT -= dt; car.ghost -= dt; car.honkT -= dt;
       const fx = Math.cos(car.a), fy = Math.sin(car.a);
@@ -121,6 +140,16 @@ class Traffic {
           car.atLight = room < 1;
         }
       }
+      // Só entra um carro por vez. Quem espera fica com a carroceria fora da área de conversão.
+      if (!car.crossing && car.wps.length === 1 && !wp.turn && Number.isInteger(car.ti)) {
+        const distance = Math.hypot(wp.x - car.x, wp.y - car.y);
+        const key = car.tj * this.city.NX + car.ti;
+        if (crossings.has(key) || blocked) clearance = Math.min(clearance, Math.max(0, distance - JUNCTION_CLEARANCE));
+        else if (distance <= JUNCTION_CLEARANCE + (car.speed + 60 * dt) * dt && clearance > 0) {
+          car.crossing = { key };
+          crossings.set(key, car);
+        }
+      }
       target = Math.min(target, Math.sqrt(2 * 240 * clearance));
       if (car.speed < target) car.speed = Math.min(target, car.speed + 60 * dt);
       else car.speed = Math.max(target, car.speed - 240 * dt);
@@ -138,6 +167,16 @@ class Traffic {
       let step = Math.min(car.speed * dt, clearance), guard = 0;
       if (step === clearance) car.speed = 0;
       const turnFactor = Math.min(1, 10 * dt);
+      const clear = (x, y, angle) => {
+        if (walking && walkerCarGap(pl.x - x, pl.y - y, angle) < 0) return false;
+        return cars.every(o => {
+          if (o === car) return true;
+          const overlap = trafficOverlap(x, y, angle, o);
+          // Bloqueia contato mesmo durante a manobra de saída de um engarrafamento.
+          return overlap <= 1e-6 || overlap < trafficOverlap(car.x, car.y, car.a, o) - 1e-6;
+        });
+      };
+      const originalAngle = car.a;
       while (step > 1e-4 && guard++ < 8) {
         if (!car.wps.length) this.plan(car);
         const w = car.wps[0];
@@ -145,16 +184,22 @@ class Traffic {
         const heading = d > 0.001 ? Math.atan2(dy, dx) : car.ma;
         const x = d <= step ? w.x : car.x + dx / d * step;
         const y = d <= step ? w.y : car.y + dy / d * step;
-        if (walking && walkerCarGap(pl.x - x, pl.y - y, car.a + angDiff(car.a, heading) * turnFactor) < 0) {
+        const angle = originalAngle + angDiff(originalAngle, heading) * turnFactor;
+        if (!clear(x, y, angle)) {
           car.speed = 0;
           break;
         }
-        car.x = x; car.y = y; car.ma = heading;
+        car.x = x; car.y = y; car.a = angle; car.ma = heading;
         if (d <= step) car.wps.shift();
         step -= d;
       }
-      const angle = car.a + angDiff(car.a, car.ma) * turnFactor;
-      if (!walking || walkerCarGap(pl.x - car.x, pl.y - car.y, angle) >= 0) car.a = angle;
+      const angle = originalAngle + angDiff(originalAngle, car.ma) * turnFactor;
+      if (clear(car.x, car.y, angle)) car.a = angle;
+      const exit = car.crossing?.exit;
+      if (exit && car.wps.length === 1 && Math.hypot(car.x - exit.x, car.y - exit.y) >= JUNCTION_CLEARANCE) {
+        crossings.delete(car.crossing.key);
+        car.crossing = null;
+      }
     }
   }
 }

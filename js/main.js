@@ -98,7 +98,7 @@ function placeCarAt(p) {
   Garagem.pushing = false;
   player.x = p.cx; player.y = p.cy;
   player.a = { top: -Math.PI / 2, bottom: Math.PI / 2, left: Math.PI, right: 0 }[p.side];
-  player.vx = player.vy = 0; player.steer = 0; player.speed = 0;
+  Object.assign(player, { vx: 0, vy: 0, vF: 0, vR: 0, steer: 0, speed: 0, throttle: 0, braking: false });
   lastPlace = p;
 }
 placeCarAt(city.places.find((p) => p.kind === 'posto') || city.places[0]);
@@ -716,14 +716,15 @@ function render() {
     const sx = Math.round(p.cx - camX), sy = Math.round(p.cy - camY + Math.sin(time * 3 + p.cx) * 2);
     if (sx < -20 || sy < -20 || sx > vw + 20 || sy > vh + 20) continue;
     const ic = p.kind === 'posto' ? ICONS.fuel : p.kind === 'lavajato' ? ICONS.drop : ICONS.wrench;
-    ctx.drawImage(ic, sx - ic.width, sy - ic.height - 4, ic.width * 2, ic.height * 2);
+    const hasCharger = Garagem.enabled && p === Garagem.charger;
+    const left = sx - ic.width - (hasCharger ? 10 : 0);
+    ctx.drawImage(ic, left, sy - ic.height - 4, ic.width * 2, ic.height * 2);
+    if (hasCharger) ctx.drawImage(ICONS.charge, left + ic.width * 2 + 4, sy - 12, 16, 16);
   }
 
   if (Garagem.enabled) {
-    for (const [p, icon] of [[Garagem.home, ICONS.home], [Garagem.charger, ICONS.charge]]) {
-      const x = p.cx - camX + (p === Garagem.charger ? 12 : 0), y = p.cy - camY;
-      ctx.drawImage(icon, x - 8, y - 18, 16, 16);
-    }
+    const { cx, cy } = Garagem.home;
+    ctx.drawImage(ICONS.home, cx - camX - 8, cy - camY - 18, 16, 16);
   }
 
   Signals.draw(ctx, camX, camY, vw, vh);

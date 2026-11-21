@@ -223,14 +223,24 @@ test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro d
     job.accept(count);
     const { dogs, stops } = s.dogWalk;
     const blocks = run('city.blocks');
-    const visitedBlocks = new Set([dogs[0], ...stops].map(p => blocks.find(b =>
-      p.x >= b.x0 * 16 && p.x < (b.x1 + 1) * 16 && p.y >= b.y0 * 16 && p.y < (b.y1 + 1) * 16)));
+    const blockAt = p => blocks.find(b =>
+      p.x >= b.x0 * 16 && p.x < (b.x1 + 1) * 16 && p.y >= b.y0 * 16 && p.y < (b.y1 + 1) * 16);
+    const visitedBlocks = new Set(stops.map(blockAt));
     assert.equal(stops.length, 5);
     assert.equal(visitedBlocks.has(undefined), false);
     assert.equal(visitedBlocks.size, 3);
     assert.equal(dogs.length, count);
     assert.equal(new Set(dogs.map(d => d.name)).size, count);
-    assert.equal(new Set(dogs.map(d => d.x + ',' + d.y)).size, count);
+    assert.equal(new Set(dogs.map(blockAt)).size, count);
+    const city = run('city'), sidewalk = run('T.SIDEWALK');
+    for (const dog of dogs) {
+      assert.ok(visitedBlocks.has(blockAt(dog)));
+      assert.equal(city.tileAtPx(dog.x, dog.y), sidewalk);
+    }
+    if (count >= 2) {
+      assert.ok(dogs[0].x !== dogs[1].x && dogs[0].y !== dogs[1].y);
+      assert.ok(Math.hypot(dogs[0].x - dogs[1].x, dogs[0].y - dogs[1].y) >= 7 * 16);
+    }
     Object.assign(person, job.target());
     let paid = 0;
     const visit = (point, phase, index, leashed) => {
@@ -240,6 +250,10 @@ test('passeador reúne o grupo, mantém as guias e recebe uma vez por cachorro d
       assert.equal(dogs.filter((d, i) => job.onLeash(w, i)).length, leashed);
       assert.equal(job.target().x, point.x);
       assert.equal(job.target().y, point.y);
+      // Os trechos entre tutores podem exigir contornar prédios.
+      if (phase !== 'walk' || index === 0) {
+        person.x = point.x; person.y = point.y;
+      }
       for (let frame = 0; frame < 600 && Math.hypot(point.x - person.x, point.y - person.y) > 1; frame++) {
         job.drive(person, { right: point.x - person.x > 0.7, left: person.x - point.x > 0.7,
           up: person.y - point.y > 0.7, down: point.y - person.y > 0.7 }, 1 / 60);
@@ -309,6 +323,24 @@ test('carro em curva cede ao passeador ao lado e retoma o trajeto depois', () =>
   context.player.x += 50;
   for (let i = 0; i < 60; i++) traffic.update(1 / 60, context.player, false, true);
   assert.ok(car.y > 120);
+});
+
+test('carros em conversão respeitam a carroceria vizinha mesmo após a espera', () => {
+  const { run, context } = game(['util', 'traffic']);
+  const traffic = run('new Traffic({}, 0)');
+  const turning = { x: 100, y: 100, a: 0, ma: 0, speed: 36, cruise: 36,
+    hitT: 0, ghost: 10, honkT: 0, stuck: 0, wps: [{ x: 100, y: 180, turn: true }] };
+  const stopped = { ...turning, x: 100, y: 116, speed: 0, hitT: 12 };
+  traffic.cars.push(turning, stopped);
+  const overlap = run('trafficOverlap');
+  for (let i = 0; i < 300; i++) {
+    traffic.update(1 / 60, context.player);
+    assert.ok(overlap(turning.x, turning.y, turning.a, stopped) <= 1e-6);
+  }
+  assert.equal(turning.speed, 0);
+  traffic.cars.pop();
+  for (let i = 0; i < 60; i++) traffic.update(1 / 60, context.player);
+  assert.ok(turning.y > 125);
 });
 
 test('passeio individual antigo conserva a parada, a posição e o valor contratado', () => {

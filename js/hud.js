@@ -97,12 +97,14 @@ const HUD = {
     if (c.health <= 0) probs.push('QUEBRADO');
     if (Care.empty()) probs.push(Veh.cur.electric ? 'SEM CARGA' : 'SEM COMBUSTÍVEL');
     if (Garagem.pushing) probs.push('EMPURRANDO');
-    if (c.problems.flat && Garagem.enabled && !Veh.twoWheel()) probs.push(c.spare ? 'PNEU FURADO' : 'SEM ESTEPE');
     if (pedal && Care.legs < LEGS_TIRED) probs.push('PERNA BAMBA');
     if (!pedal && Care.overheated) probs.push('SUPERAQUECIDO');
     if (!pedal && Care.badFuel() > 0.25) probs.push('GASOLINA BATIZADA');
     if (Police.wanted) probs.push('POLÍCIA NA COLA');
-    for (const k in PROBLEMS) if (c.problems[k]) probs.push(PROBLEMS[k].label);
+    for (const k in PROBLEMS) if (c.problems[k]) {
+      const noSpare = k === 'flat' && Garagem.enabled && !Veh.twoWheel() && !c.spare;
+      probs.push(noSpare ? 'PNEU FURADO · SEM ESTEPE' : PROBLEMS[k].label);
+    }
     const ph = probs.map((p) => `<span class="prob">${p}</span>`).join('');
     if (ph !== this.lastProbs) { e.probs.innerHTML = ph; this.lastProbs = ph; }
 
@@ -220,7 +222,9 @@ const HUD = {
     if (Garagem.enabled) {
       const home = Garagem.home, charger = Garagem.charger;
       g.fillStyle = '#ce8cff'; g.fillRect(Math.round(home.cx*s)-3, Math.round(home.cy*s)-3, 6, 6);
-      g.fillStyle = '#5af2ce'; g.fillRect(Math.round(charger.cx*s), Math.round(charger.cy*s)-3, 3, 6);
+      const x = Math.round(charger.cx * s), y = Math.round(charger.cy * s);
+      g.fillStyle = '#000'; g.fillRect(x + 4, y - 4, 5, 8);
+      g.fillStyle = '#5af2ce'; g.fillRect(x + 5, y - 3, 3, 6);
     }
     if (Nav.place && Math.floor(time * 4) % 2 === 0) { // destino da navegação piscando
       const x = Math.round(Nav.place.cx * s), y = Math.round(Nav.place.cy * s);

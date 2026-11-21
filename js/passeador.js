@@ -31,7 +31,6 @@ const Passeador = {
   neighborhoodLoop() {
     const routes = [];
     // Contorna três quadras alinhadas, com uma parada em cada calçada da quadra central.
-    // Nas duas pontas, o primeiro trecho fica todo na mesma calçada para buscar os cachorros.
     const addLoop = (near, middle, far, sideA, sideB, vertical) => {
       const points = [[near, sideA], [near, sideB], [middle, sideB],
         [far, sideB], [far, sideA], [middle, sideA]].map(([along, across]) => ({
@@ -54,22 +53,41 @@ const Passeador = {
     routes.sort((a, b) => distance(a) - distance(b));
     return R.pick(routes.slice(0, 3));
   },
+  tutorHomes(route, count) {
+    const [start, firstStop, , opposite] = route;
+    const horizontal = start.x === firstStop.x;
+    const blocks = city.blocks.filter(b => {
+      const x = (b.x0 + b.x1 + 1) * TILE / 2, y = (b.y0 + b.y1 + 1) * TILE / 2;
+      return x > Math.min(start.x, opposite.x) && x < Math.max(start.x, opposite.x) &&
+        y > Math.min(start.y, opposite.y) && y < Math.max(start.y, opposite.y);
+    });
+    const homes = [];
+    const firstSide = R.chance(0.5);
+    for (let i = 0; i < count; i++) {
+      const [block] = blocks.splice(R.i(0, blocks.length - 1), 1);
+      // O miolo de cada face mantém os tutores afastados até em quadras vizinhas.
+      const min = horizontal ? block.x0 : block.y0, max = horizontal ? block.x1 : block.y1;
+      const margin = Math.ceil((max - min) / 4);
+      const along = R.i(min + margin, max - margin);
+      const farSide = i === 0 ? firstSide : i === 1 ? !firstSide : R.chance(0.5);
+      const x = horizontal ? along : (farSide ? block.x1 : block.x0);
+      const y = horizontal ? (farSide ? block.y1 : block.y0) : along;
+      homes.push({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE });
+    }
+    return homes;
+  },
   accept(count = 3) {
     if (S.dogWalk || ![1, 2, 3].includes(count)) return;
     const route = this.neighborhoodLoop();
-    const [home, ...stops] = route;
+    const stops = route.slice(1);
     const perimeter = route.reduce((sum, p, i) => {
       const next = route[(i + 1) % route.length];
       return sum + Math.hypot(next.x - p.x, next.y - p.y);
     }, 0);
     const fare = 12 + Math.round(perimeter / 40);
     const names = ['Paçoca', 'Mel', 'Fubá', 'Pipoca', 'Nina'], colors = [...DOG_COLORS];
-    const dogs = [];
-    for (let i = 0; i < count; i++) {
-      const t = i / (count + 1);
-      dogs.push({ x: lerp(home.x, stops[0].x, t), y: lerp(home.y, stops[0].y, t), fare,
-        name: names.splice(R.i(0, names.length - 1), 1)[0], color: colors.splice(R.i(0, colors.length - 1), 1)[0] });
-    }
+    const dogs = this.tutorHomes(route, count).map(home => ({ ...home, fare,
+      name: names.splice(R.i(0, names.length - 1), 1)[0], color: colors.splice(R.i(0, colors.length - 1), 1)[0] }));
     S.dogWalk = { dogs, stops, phase: 'pickup', index: 0, trail: [], x: player.x, y: player.y };
     this.dwell = 0;
     writeSave(); toast('Passeio aceito. Busque ' + dogs[0].name + ' na calçada.');
