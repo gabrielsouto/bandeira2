@@ -11,7 +11,7 @@ function game(files) {
     toast() {}, writeSave() {}, addFloater() {},
     Sfx: { cash() {}, door() {}, ding() {} },
     Rides: { canWork: () => true },
-    player: { x: 0, y: 0, speed: 0 },
+    time: 0, player: { x: 0, y: 0, a: 0, speed: 0 },
     S: { money: 0, earned: 0, schoolLegs: 0, ratings: [5], car: {} },
     Easy: { solo: true },
   });
@@ -62,6 +62,9 @@ test('Rebu Envios exige coleta, parada no destinatário e o PIN combinado para p
   stop(50);
   run('Envios.finish(player, 1324)');
   assert.equal(s.shipment.phase, 'delivery');
+  Object.assign(context.player, { x: 230 });
+  run('Envios.update(0.5, player); Envios.accept(); Envios.finish(player, 1324)');
+  assert.equal(s.money, 0);
   stop(230);
   run('Envios.finish(player, 1111)');
   assert.equal(s.envios, 0);
@@ -71,6 +74,44 @@ test('Rebu Envios exige coleta, parada no destinatário e o PIN combinado para p
   assert.equal(s.money, 17);
   assert.equal(s.earned, 17);
   assert.equal(s.ratings.at(-1), 4);
+});
+
+test('na Rebu Envios a caixa muda de mãos na lateral do veículo e acompanha quem volta à calçada', () => {
+  const { run, context } = game(['util', 'envios']);
+  const people = [], boxes = [];
+  Object.assign(context, { DIRS: [{ dx: 0, dy: 1 }], T: { ROAD: 1 }, city: { tileAtPx: () => 1 },
+    pxRing() {}, pxDownArrow() {}, drawPedSprite: (_g, x, y) => people.push([x, y]),
+    Parcels: { drawBox: (_g, x, y) => boxes.push([x - 3, y + 2]) } });
+  context.Rides.stepSurges = () => {};
+  context.S.envios = 0;
+  context.S.shipment = { phase: 'pickup', fare: 12, hits: 0, pin: null,
+    pick: { x: 50, y: 0 }, drop: { x: 230, y: 0 } };
+  const frame = dt => {
+    people.length = boxes.length = 0;
+    context.time += dt;
+    run(`Envios.update(${dt}, player); Envios.drawWorld(null, 0, 0)`);
+    return people[0];
+  };
+  for (const pickup of [true, false]) {
+    context.player.x = pickup ? 50 : 230;
+    const curb = frame(0);
+    const halfway = frame(0.5);
+    assert.notDeepEqual(halfway, curb);
+    assert.deepEqual(boxes, pickup ? [halfway] : []);
+    context.player.speed = 20;
+    assert.deepEqual(frame(0.1), curb);
+    context.player.speed = 0;
+    const door = frame(1);
+    assert.notDeepEqual(door, halfway);
+    assert.deepEqual(boxes, pickup ? [] : [door]);
+    context.player.x += 90;
+    assert.deepEqual(frame(0.5), halfway);
+    assert.deepEqual(boxes, pickup ? [] : [halfway]);
+    frame(0.6);
+  }
+  assert.deepEqual(people, []);
+  assert.equal(context.S.money, 12);
+  assert.equal(context.S.envios, 1);
 });
 
 test('o cilindro mantém o motor funcionando com o tanque vazio e depois volta à gasolina', () => {

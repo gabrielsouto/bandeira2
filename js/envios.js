@@ -1,8 +1,9 @@
 'use strict';
 
 // Um envio liga duas pessoas. Só o pacote aceito e sua etapa precisam ir para o save.
+const ENVIO_WALK_TIME = 1;
 const Envios = {
-  offer: null, nextOfferT: 3, dwell: 0, receipt: null,
+  offer: null, nextOfferT: 3, dwell: 0, receipt: null, walkBack: null,
   get state() { return S.shipment?.phase || (this.offer ? 'offer' : 'idle'); },
 
   makeOffer(car) {
@@ -47,6 +48,14 @@ const Envios = {
     return this.state === 'pickup' ? { ...r.pick, kind: 'pick' } : { ...r.drop, kind: 'drop' };
   },
   parkedAt(car, p) { return car.speed < 8 && Math.hypot(car.x - p.x, car.y - p.y) < 26; },
+  atRecipient(car) {
+    return this.state === 'delivery' && this.dwell >= ENVIO_WALK_TIME && this.parkedAt(car, S.shipment.drop);
+  },
+  startWalkBack(stop, car, pickup) {
+    // A pessoa volta a partir de onde recebeu ou deixou o pacote, mesmo se o veículo já saiu.
+    this.walkBack = { stop, car: { x: car.x, y: car.y, a: car.a }, pickup, start: time };
+    this.dwell = 0;
+  },
   onImpact(imp) {
     if (this.state === 'delivery' && imp > 60) {
       if (!S.shipment.hits) toast('A embalagem amassou na batida.', 'warn');
@@ -68,18 +77,17 @@ const Envios = {
     }
     const pickup = r.phase === 'pickup';
     if (!this.parkedAt(car, pickup ? r.pick : r.drop)) { this.dwell = 0; return; }
-    if (!pickup && r.pin) return; // o jogador confirma o código com o destinatário
-    this.dwell += dt;
-    if (this.dwell < 1) return;
-    this.dwell = 0;
+    this.dwell = Math.min(ENVIO_WALK_TIME, this.dwell + dt);
+    if (this.dwell < ENVIO_WALK_TIME) return;
     if (pickup) {
+      this.startWalkBack(r.pick, car, true);
       r.phase = 'delivery'; Sfx.door(); writeSave();
       toast('Pacote retirado. Leve para ' + r.recipient + ' na seta amarela.', 'good');
-    } else this.finish(car);
+    } else if (!r.pin) this.finish(car);
   },
   askPin() {
     const r = S.shipment;
-    if (r?.phase !== 'delivery' || !r.pin || !this.parkedAt(player, r.drop)) return;
+    if (!r?.pin || !this.atRecipient(player)) return;
     // O destinatário dita o código. O motorista seleciona o que ouviu no app.
     const choices = [r.pin];
     for (const offset of [17, 101]) choices.push(1000 + (r.pin - 1000 + offset) % 9000);
@@ -94,12 +102,13 @@ const Envios = {
   },
   finish(car, code = null) {
     const r = S.shipment;
-    if (r?.phase !== 'delivery' || !this.parkedAt(car, r.drop) || code !== r.pin) return;
+    if (!this.atRecipient(car) || code !== r.pin) return;
+    this.startWalkBack(r.drop, car, false);
     const stars = Math.max(1, 5 - r.hits);
     S.money += r.fare; S.earned += r.fare; S.envios++;
     S.ratings.push(stars); if (S.ratings.length > 30) S.ratings.shift();
     this.receipt = { name: r.recipient, fare: r.fare, stars };
-    S.shipment = null; this.nextOfferT = 5; this.dwell = 0;
+    S.shipment = null; this.nextOfferT = 5;
     writeSave(); Sfx.cash(); addFloater(car.x, car.y - 12, '+' + fmtMoney(r.fare), '#39ff88');
     toast(r.recipient + ' recebeu o pacote. +' + fmtMoney(r.fare), 'good');
   },
@@ -111,12 +120,14 @@ const Envios = {
         '<div class="ph-status"><span class="dot"></span>ONLINE</div><div class="ph-muted">Aguardando envios…</div>';
     }
     const offer = this.state === 'offer', pickup = this.state === 'pickup';
-    const atRecipient = !offer && !pickup && this.parkedAt(player, r.drop);
+    const readyForPin = r.pin && this.atRecipient(player);
     const title = offer ? 'NOVO ENVIO' : pickup ? 'RETIRAR PACOTE' : 'ENTREGAR PACOTE';
     const details = offer ? `Coleta a ${kmStr(r.pickD)} · trajeto de ${kmStr(r.tripD)}` :
+      readyForPin ? 'Confira o PIN com o destinatário.' :
+      this.dwell > 0 ? (pickup ? 'O remetente está trazendo o pacote.' : 'O destinatário está vindo buscar o pacote.') :
       pickup ? 'Pare na seta verde para receber o pacote.' : 'Pare na seta amarela para entregar em mãos.';
     const buttons = offer ? '<button data-act="accept"><kbd>E</kbd> ACEITAR</button><button class="ghost" data-act="decline"><kbd>Q</kbd> RECUSAR</button>' :
-      (atRecipient && r.pin ? '<button data-act="accept"><kbd>E</kbd> CONFERIR PIN</button>' : '') + '<button class="ghost" data-act="cancel"><kbd>C</kbd> CANCELAR</button>';
+      (readyForPin ? '<button data-act="accept"><kbd>E</kbd> CONFERIR PIN</button>' : '') + '<button class="ghost" data-act="cancel"><kbd>C</kbd> CANCELAR</button>';
     return `<div class="ph-title">${title}</div><div class="ph-fare">${fmtMoney(r.fare)}</div>
       <div class="ph-row">${esc(r.item)}</div><div class="ph-muted">De ${esc(r.sender)} para ${esc(r.recipient)}</div>
       <div class="ph-row">${details}</div>${r.pin ? '<div class="ph-badge">ENTREGA COM PIN</div>' : ''}
@@ -124,12 +135,29 @@ const Envios = {
       ${offer ? '<div class="ph-timer"><div></div></div>' : ''}<div class="ph-btns">${buttons}</div>`;
   },
   drawWorld(g, cx, cy) {
+    const back = this.walkBack;
+    if (back) {
+      const progress = 1 - (time - back.start) / ENVIO_WALK_TIME;
+      if (progress > 0) this.drawWalk(g, cx, cy, back.stop, back.car, progress, back.pickup, true);
+      else this.walkBack = null;
+    }
     const p = this.target();
     if (!p) return;
     const x = p.x - cx, y = p.y - cy, pickup = p.kind === 'pick';
     const color = pickup ? '#39ff88' : '#ffd23f';
     pxRing(g, x, y, 10, color); pxDownArrow(g, x, y - 15, color);
-    drawPedSprite(g, x, y, pickup ? '#52c7aa' : '#fa9a72', '#443023', time, true);
-    if (pickup) Parcels.drawBox(g, x + 3, y - 2);
+    this.drawWalk(g, cx, cy, p, player, this.dwell / ENVIO_WALK_TIME, pickup, false);
+  },
+  drawWalk(g, cx, cy, stop, car, progress, pickup, returning) {
+    const road = DIRS.find(d => city.tileAtPx(stop.x + d.dx * TILE, stop.y + d.dy * TILE) === T.ROAD);
+    const nx = road?.dx ?? 0, ny = road?.dy ?? 1;
+    const curbX = stop.x - 5 * nx + 14 * ny, curbY = stop.y - 5 * ny - 14 * nx;
+    const sideX = -Math.sin(car.a), sideY = Math.cos(car.a);
+    const side = (curbX - car.x) * sideX + (curbY - car.y) * sideY >= 0 ? 1 : -1;
+    const x = lerp(curbX, car.x + side * sideX * 7, progress) - cx;
+    const y = lerp(curbY, car.y + side * sideY * 7, progress) - cy;
+    const waiting = progress === 0;
+    drawPedSprite(g, x, y, pickup ? '#52c7aa' : '#fa9a72', '#443023', waiting ? time : progress * 8, waiting);
+    if (pickup !== returning) Parcels.drawBox(g, x + 3, y - 2);
   },
 };
