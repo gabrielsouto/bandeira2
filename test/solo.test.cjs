@@ -420,3 +420,27 @@ test('patrulha paga uma única vez após três segundos contínuos no local', ()
   assert.equal(context.S.money, fare);
   assert.equal(context.S.ocorrencia, null);
 });
+
+test('ronda recolhe um bandido da área e só paga ao concluir a entrega na prisão', () => {
+  const { run, context } = game(['util', 'patrulha']);
+  const zone = { x: 0, y: 0 };
+  const bandit = { x: 0, y: 0, z: zone, state: 'lurk' };
+  context.World = { risks: [zone], bandits: [bandit], inRisk: () => true };
+  context.Garagem = { pushing: false };
+  context.Nav = { clear() {} };
+  context.S.ocorrencias = 0;
+  run('Patrulha.prison = { x: 200, y: 0 }; Patrulha.startRound(); player.speed = 20; Patrulha.update(1, player)');
+  assert.equal(context.World.bandits.length, 1);
+  run('player.speed = 0; Patrulha.update(1, player)');
+  assert.equal(context.World.bandits.length, 0);
+  assert.equal(context.S.money, 0);
+  assert.equal(run('Patrulha.target().kind'), 'drop');
+  const fare = context.S.ocorrencia.fare;
+  run('player.x = 200; Patrulha.update(2, player); player.x = 0; Patrulha.update(1, player)');
+  run('player.x = 200; Patrulha.update(2, player)');
+  assert.equal(context.S.money, 0);
+  run('Patrulha.update(1, player); Patrulha.update(1, player)');
+  assert.equal(context.S.money, fare);
+  assert.equal(context.S.ocorrencias, 1);
+  assert.equal(context.S.ocorrencia, null);
+});

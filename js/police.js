@@ -13,7 +13,7 @@ const FLOW_EVERY = 0.35;     // s entre recálculos do mapa de distâncias
 
 const Police = {
   cops: [], wanted: false, chaseT: 0, caughtT: 0, lostT: 0, flowT: 0, dist: null, queue: null, spr: null,
-  siren: null, why: '',
+  ...SirenSound, why: '',
 
   // começa (ou piora) uma perseguição
   alert(why) {
@@ -155,30 +155,6 @@ const Police = {
   },
 
   // ---------- som ----------
-  startSiren() {
-    const ac = Sfx.ac;
-    if (!ac || this.siren) return;
-    const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), g = ac.createGain();
-    o.type = 'square'; o.frequency.value = 760;
-    lfo.type = 'triangle'; lfo.frequency.value = 1.4; lg.gain.value = 260;
-    lfo.connect(lg); lg.connect(o.frequency);
-    const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
-    g.gain.value = 0;
-    o.connect(f); f.connect(g); g.connect(Sfx.master);
-    o.start(); lfo.start();
-    this.siren = { o, lfo, g };
-  },
-  sirenVol(d) {
-    if (this.siren) this.siren.g.gain.setTargetAtTime(mode === 'play' ? 0.05 * clamp(1 - d / 650, 0.08, 1) : 0, Sfx.ac.currentTime, 0.1);
-  },
-  stopSiren() {
-    if (!this.siren) return;
-    const { o, lfo, g } = this.siren;
-    g.gain.setTargetAtTime(0, Sfx.ac.currentTime, 0.05);
-    o.stop(Sfx.ac.currentTime + 0.3); lfo.stop(Sfx.ac.currentTime + 0.3);
-    this.siren = null;
-  },
-
   // ---------- desenho ----------
   draw() {
     if (!this.cops.length) return;

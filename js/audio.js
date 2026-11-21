@@ -1,6 +1,32 @@
 'use strict';
 // Sons sintetizados com Web Audio (sem arquivos): motor, cantada de pneu, buzina, batida, caixa registradora.
 
+const SirenSound = {
+  startSiren() {
+    const ac = Sfx.ac;
+    if (!ac || this.siren) return;
+    const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), g = ac.createGain();
+    o.type = 'square'; o.frequency.value = 760;
+    lfo.type = 'triangle'; lfo.frequency.value = 1.4; lg.gain.value = 260;
+    lfo.connect(lg); lg.connect(o.frequency);
+    const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
+    g.gain.value = 0;
+    o.connect(f); f.connect(g); g.connect(Sfx.master);
+    o.start(); lfo.start();
+    this.siren = { o, lfo, g };
+  },
+  sirenVol(d) {
+    if (this.siren) this.siren.g.gain.setTargetAtTime(mode === 'play' ? 0.05 * clamp(1 - d / 650, 0.08, 1) : 0, Sfx.ac.currentTime, 0.1);
+  },
+  stopSiren() {
+    if (!this.siren) return;
+    const { o, lfo, g } = this.siren;
+    g.gain.setTargetAtTime(0, Sfx.ac.currentTime, 0.05);
+    o.stop(Sfx.ac.currentTime + 0.3); lfo.stop(Sfx.ac.currentTime + 0.3);
+    this.siren = null;
+  },
+};
+
 const Sfx = {
   ac: null, master: null, muted: false, vol: 0.45,
 

@@ -67,6 +67,7 @@ function activeJob() {
 const roadHelp = $('help').textContent;
 function applyVehicle() {
   const v = Veh.cur;
+  if (Veh.job !== 'policia') Patrulha.setSiren(false);
   SPR.player = makeCarSprites(v.color, true, v.art, v.bag);
   player.p = Veh.phys();
   const guided = !!v.guided;
@@ -113,6 +114,7 @@ Parcels.init(city, mapCtx);
 Garagem.init();
 Ambulancia.init(city, mapCtx);
 Delivery.initPharmacies(city, mapCtx);
+Patrulha.init(city, mapCtx);
 Onibus.init(city);
 VLT.init(city);
 Barcas.init(city);
@@ -138,7 +140,7 @@ const driving = createDrivingInput();
 const input = driving.state;
 function clearInput() { driving.clear(); }
 const canDrive = () => mode === 'play' && !document.hidden;
-function suspendInput() { clearInput(); writeSave(); }
+function suspendInput() { Patrulha.setSiren(false); clearInput(); writeSave(); }
 window.addEventListener('pagehide', suspendInput);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) suspendInput();
@@ -192,6 +194,8 @@ function onKey(code) {
   if (Multi.roomKey(code)) return;
   switch (code) {
     case 'KeyE': activeJob().accept(); break;
+    case 'KeyK': if (Veh.job === 'policia') Patrulha.setSiren(!Patrulha.sirenOn); break;
+    case 'KeyZ': if (Veh.job === 'policia') Patrulha.startRound(); break;
     case 'KeyI': if (Veh.job === 'barcas') Barcas.accept(true); break;
     case 'KeyQ': activeJob().decline?.(); break;
     case 'KeyC': activeJob().cancel(); break;
@@ -343,13 +347,14 @@ function showModal(title, sub, items, closeLabel, noMoney) {
   mode = 'menu';
   $('hud').inert = true;
   modalBox.focus();
-  Police.sirenVol(0);
+  Police.sirenVol(0); Patrulha.sound?.sirenVol(0);
   Sfx.engine(0, 0, false); Sfx.screech(0);
   clearInput();
 }
 function closeModal() {
   modal.classList.add('hidden');
   mode = 'play';
+  if (Patrulha.sirenOn) Patrulha.sound.sirenVol(0);
   $('hud').inert = false;
   clearInput();
   writeSave();
@@ -763,6 +768,14 @@ function render() {
     World.drawLights(L, camX, camY); Delivery.drawLights(L, camX, camY); Parcels.drawLights(L, camX, camY); Autoescola.drawLights(L, camX, camY); Signals.drawLights(L, camX, camY);
   });
   Police.drawGlow();
+  if (Patrulha.sirenOn) {
+    ctx.save(); ctx.translate(Math.round(player.x - camX), Math.round(player.y - camY)); ctx.rotate(player.a);
+    const flip = Math.floor(time * 5) % 2;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = ctx.shadowColor = flip ? '#ff3344' : '#fff'; ctx.fillRect(-2, -4, 3, 4);
+    ctx.fillStyle = ctx.shadowColor = flip ? '#fff' : '#437cff'; ctx.fillRect(-2, 0, 3, 4);
+    ctx.restore();
+  }
   Multi.drawTags();
 
   // seta orbitando o carro apontando o objetivo

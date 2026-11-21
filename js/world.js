@@ -250,6 +250,7 @@ const World = {
 
   updateBandits(dt, car) {
     const night = Light.isNight(gameMin);
+    const patrolZone = Veh.job === 'policia' && S.ocorrencia?.phase === 'ronda' ? this.risks[S.ocorrencia.zone] : null;
     for (const z of this.risks) {
       const n = this.bandits.filter((b) => b.z === z && b.state !== 'gone').length;
       z.spawnT -= dt;
@@ -257,7 +258,7 @@ const World = {
         z.spawnT = R.f(4, 9);
         const t = R.pick(z.tiles);
         const x = t.x * 16 + 8, y = t.y * 16 + 8;
-        if (Math.hypot(x - car.x, y - car.y) > 120) this.bandits.push({ z, x, y, state: 'lurk', t: 0, tx: x, ty: y, anim: 0, flee: 0 });
+        if (Math.hypot(x - car.x, y - car.y) > (z === patrolZone ? 24 : 120)) this.bandits.push({ z, x, y, state: 'lurk', t: 0, tx: x, ty: y, anim: 0, flee: 0 });
       }
     }
     const fast = car.speed > 110;
@@ -275,10 +276,16 @@ const World = {
         Sfx.tone(523, 0.1, 'square', 0.06); Sfx.tone(784, 0.2, 'square', 0.06, 0.1);
         continue;
       }
+      if (Veh.job === 'policia' && b.state === 'approach') b.state = 'lurk';
+      if (patrolZone === b.z && d < 90 && car.speed < 30 && this.inRisk(car.x, car.y)) {
+        const step = Math.min(d, 32 * dt);
+        if (d > 1) { b.x += dx / d * step; b.y += dy / d * step; b.anim += dt * 12; }
+        continue;
+      }
       let sp = 12, gx = b.tx, gy = b.ty;
       if (b.state === 'lurk') {
         if (Math.hypot(b.tx - b.x, b.ty - b.y) < 2) { const t = R.pick(b.z.tiles); b.tx = t.x * 16 + 8; b.ty = t.y * 16 + 8; }
-        if (d < 100 && car.speed < 70 && this.robCd <= 0 && mode === 'play' && !Veh.cur.school) {
+        if (d < 100 && car.speed < 70 && this.robCd <= 0 && mode === 'play' && !Veh.cur.school && Veh.job !== 'policia') {
           // quem tem muita aura assusta o bandido
           if (R.chance(Math.min(0.85, (S.aura || 0) / 120))) {
             b.state = 'flee'; b.t = 3;

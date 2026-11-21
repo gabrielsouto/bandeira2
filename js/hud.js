@@ -39,6 +39,8 @@ const HUD = {
       const a = b.dataset.act;
       const tgt = activeJob();
       if (a === 'accept') tgt.accept(); else if (a === 'decline') tgt.decline?.(); else if (a === 'cancel') tgt.cancel();
+      else if (a === 'siren' && tgt === Patrulha) onKey('KeyK');
+      else if (a === 'round' && tgt === Patrulha) onKey('KeyZ');
       else if (a === 'circle' && tgt === Barcas) Barcas.accept(true);
       else if (a === 'return' && tgt === Parcels && tgt.state === 'route') tgt.startReturn();
       else if (a === 'tow') onKey('KeyG');
