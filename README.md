@@ -1,151 +1,101 @@
-# Bandeira 2 (protótipo)
+# Bandeira 2
 
-Jogo arcade top-down em pixel art: você é motorista de aplicativo numa cidade inventada.
-Tudo é desenhado e sintetizado por código (sem arquivos de arte ou som).
+[![Bandeira 2 em pixel art, com uma viatura no encalço do motorista durante uma corrida noturna. Clique para jogar.](divulgacao/twitter.png)](https://gabrielsouto.github.io/bandeira2/)
 
-**Jogue online:** https://gabrielsouto.github.io/bandeira2/ · **Ajuda com todas as regras:** [ajuda.html](ajuda.html) (também abre pela tela inicial e pela pausa)
+**[▶ Jogar no navegador](https://gabrielsouto.github.io/bandeira2/)** · [Controles e regras](https://gabrielsouto.github.io/bandeira2/ajuda.html) · [Jogar com amigos](#jogar-com-amigos) · [Rodar localmente](#rodar-localmente)
 
-## Como rodar localmente
+Às oito da noite, o táxi começa a cobrar bandeira 2. Até lá, dá tempo de levar a turma à escola, entregar um açaí antes que derreta ou assumir a cabine do VLT. Neste arcade de direção com vista de cima, você escolhe como ganhar a vida na cidade. Ruas, veículos e pedestres são desenhados por código, e o rádio toca funk, sertanejo e pagode sintetizados no navegador.
 
-O jogo é HTML + JavaScript puro, sem build. Basta servir a pasta e abrir no navegador:
+| Táxi · uma chamada com pressa | VLT · próxima parada, Mercado | Barcas · rumo ao Cais Nascente |
+| :---: | :---: | :---: |
+| [![Táxi no trânsito, com a oferta de corrida e o valor no celular.](docs/imagens/taxi.png)](docs/imagens/taxi.png) | [![VLT na linha circular, com cinco passageiros a bordo.](docs/imagens/vlt.png)](docs/imagens/vlt.png) | [![Barca deixando o cais com onze passageiros a bordo.](docs/imagens/barca.png)](docs/imagens/barca.png) |
 
-```
+## Sua primeira corrida
+
+1. Na tela inicial, mantenha o **Rebu** e aperte **Enter** para começar. Se quiser ajuda para frear e alinhar o carro com a rua, ative **Direção fácil**.
+2. Quando o celular tocar, aperte **E** para aceitar. Dirija com **WASD** ou as **setas**, siga a **seta verde** e pare ao lado do passageiro. Espere ele entrar.
+3. Siga a **seta amarela** até o destino e pare para receber. Chegar no prazo e evitar batidas ajuda a ganhar uma nota melhor e uma gorjeta.
+
+O solo salva seu progresso automaticamente no navegador. Para experimentar outro serviço, termine ou cancele o trabalho atual, estacione e aperte **J**. Você também pode escolher seu veículo antes de começar, em **Seu veículo → Trocar**.
+
+## O que dá para dirigir
+
+O solo tem **20 opções**. Cada trabalho muda o que você precisa observar no trajeto.
+
+| Trabalho | Veículos e serviços | O que acontece no turno |
+| --- | --- | --- |
+| Corridas | Rebu, 66, Táxi, Moto Rebu e Carro elétrico | Busque passageiros e aproveite a tarifa dinâmica. O táxi cobra bandeira 2 das 20h às 6h. No elétrico, localize o posto com carregador. |
+| Comida e farmácia | euComida, 66Comida e Farmácia de bike | Retire o pedido na loja e leve até a porta do cliente. A comida esfria e, na bicicleta, quem precisa recuperar o fôlego é você. |
+| Fretes e encomendas | Rebu Envios, Mercado Leve, Amazoom e Xopi | No Rebu Envios, leve um pacote de pessoa para pessoa, às vezes com PIN. Nas rotas de galpão, escolha a ordem das paradas e cuide dos pacotes frágeis. |
+| Transporte de passageiros | Van escolar, Ônibus urbano, VLT, Barcas e Táxi aéreo | Busque os alunos em casa, pare nos pontos da Linha 01, percorra cinco estações sobre trilhos, contorne a ilha de barca ou pouse nos helipontos da cidade. |
+| Emergências | Ambulância e Polícia | Leve o paciente ao hospital ou assuma a viatura para atender ocorrências e fazer rondas. |
+| Autoescola | Carro de aula | Siga as instruções de voz, respeite as placas de PARE e estacione na vaga. A sexta aula é a prova do DETRAN. |
+
+Entre um serviço e outro, o trânsito para no sinal, crianças atravessam na porta da escola e os postes acendem ao anoitecer. Cuide da lataria, do combustível e dos pneus. Em casa, dá para lavar o veículo e instalar um kit GNV no carro ou na van.
+
+## Jogar com amigos
+
+Abra **Jogar com amigos**, escolha um apelido e clique em **Criar sala**. Compartilhe o link ou o código de quatro caracteres. Cabem **até quatro jogadores**, ao volante de Rebu, 66, Táxi ou Moto Rebu. Quem criou a sala aperta **Enter** para iniciar o turno.
+
+Todos largam com **R$ 150** às 7h e têm **12 minutos reais** até as 19h. As chamadas aparecem para todos. **Q** destaca a próxima e **E** indica o caminho, mas leva a corrida quem parar primeiro ao lado do passageiro. Quer disputar na pista? **X** chama um pega. Durante o turno, a inscrição custa R$ 20 por piloto e o vencedor leva o pote.
+
+Quem já embarcou um passageiro às 19h tem mais 30 segundos para entregá-lo. Vence quem fizer mais lucro, com desempate pela nota média. O dinheiro da sala fica separado do progresso solo.
+
+## Controles rápidos
+
+| Teclas | Ação |
+| --- | --- |
+| **WASD** ou **setas** · **Espaço** | Dirigir · freio de mão |
+| **E** · **Q** · **C** | Aceitar, recusar ou cancelar um serviço no solo |
+| **J** · **B** | Trocar de modalidade ao estacionar · traçar rota para casa no solo |
+| **O** · **P** · **L** | Mostrar o caminho até oficina, posto ou lava jato |
+| **H** · **R** · **M** | Buzinar, mudar a estação do rádio ou ligar e desligar o som |
+| **F** · **Esc** | Alternar a direção fácil · abrir a pausa |
+
+Os comandos específicos de cada veículo ficam no [manual do jogador](https://gabrielsouto.github.io/bandeira2/ajuda.html).
+
+## Rodar localmente
+
+O cliente usa HTML, CSS e JavaScript puro. Com Python instalado, execute na raiz do repositório e abra [localhost:8642](http://localhost:8642/).
+
+```sh
 python -m http.server 8642
 ```
 
-Depois acesse http://localhost:8642. (Abrir o `index.html` direto com duplo clique também funciona na maioria dos navegadores.)
+<details>
+<summary><strong>Multiplayer local, testes e publicação</strong></summary>
 
-## Multiplayer (em construção)
+As salas usam WebSocket e Cloudflare Durable Objects. Para jogar em rede localmente, mantenha o servidor de arquivos aberto e inicie o servidor das salas em outro terminal, com Node.js e npm instalados.
 
-Até 4 amigos na mesma cidade, numa sala aberta por link (`?sala=K7QF`), disputando um turno das 07:00 às 19:00 (12 minutos reais). Todos veem os outros dirigindo e podem bater neles.
-
-- **Espera:** quem criou a sala (o dono; se ele sair, o mais antigo) aperta **Enter** para começar. Até lá dá para dar voltas, mas não há chamadas e o posto e a oficina ficam fechados. Durante o turno só volta quem já estava nele.
-- **Turno:** todos largam iguais (R$ 150, carro do save novo), depois de um 3-2-1. As chamadas e as áreas de dinâmica vêm do servidor e são as mesmas para todos: no celular aparece a lista, **E** vai buscar a chamada destacada e **Q** passa para a próxima. Ir buscar não reserva nada: leva a corrida quem parar ao lado do passageiro primeiro.
-- **Caixa:** o dinheiro mora no servidor. Ele paga as corridas, cobra as taxas de cancelamento e confere cada compra no posto e na oficina pelo teto de cada item e pelo limite do fiado (−R$ 200). Guincho e multa são cobrados mesmo sem dinheiro. O placar ao vivo fica no canto superior esquerdo.
-- **19:00:** quem está com passageiro tem 30 s de prorrogação para entregar. Depois vem o ranking (lucro do turno, desempate pela nota média), e o dono pode pedir **revanche**.
-- **Veículo:** cada um escolhe o seu na tela inicial (Rebu, 66, Táxi ou Moto Rebu) e os outros veem o formato certo. A sala paga a corrida com o multiplicador do veículo; executivo não anda de moto.
-- **Pega:** **X** chama um pega com a largada onde você está; a sala sorteia a chegada. Quem parar na largada e apertar **X** em 20 s entra. Depois do 3-2-1 (carro travado), ganha quem chegar primeiro. Durante o turno cada piloto paga R$ 20 de inscrição e o vencedor leva o pote; se ninguém chegar, a inscrição volta. Fora do turno é só pela glória. Quem está no pega não pega passageiro.
-- Polícia, bandidos e colégios são de cada um (não aparecem para os outros), mas as multas, o assalto e a franquia do seguro passam pelo caixa da sala.
-
-O dinheiro da sala não mexe no save do single player.
-
-O jogo continua sem build. Só o servidor das salas (pasta `server/`, Cloudflare Durable Objects) precisa de Node:
-
-```
+```sh
 cd server
-npm install
-npm run dev        # servidor local em ws://localhost:8787
+npm ci
+npm run dev
 ```
 
-Com o servidor local rodando, abra `http://localhost:8642/?sala=TEST` em **duas janelas lado a lado** (não em duas abas da mesma janela: o navegador congela a aba que fica escondida). Parâmetros úteis:
+Abra [a sala TEST](http://localhost:8642/?sala=TEST) em duas janelas lado a lado para manter os dois jogos visíveis. O cliente em localhost procura o servidor em `ws://localhost:8787`.
 
-| Parâmetro | Para quê |
-|---|---|
-| `?lag=200` | soma 200 ms de ida e volta |
-| `?jitter=60` | soma até 60 ms aleatórios por mensagem |
-| `?servidor=ws://host:porta` | usa outro servidor |
-| `?turno=2` | turno de 2 minutos (só vale no servidor local) |
-| `?hora=21` | começa o solo às 21:00 (para ver a noite) |
+| Parâmetro de URL | Uso |
+| --- | --- |
+| `sala=TEST&turno=2` | Disputar um turno de dois minutos no servidor local |
+| `lag=200&jitter=60` | Simular latência e variação na entrega das mensagens |
+| `servidor=ws://host:porta` | Conectar o cliente a outro servidor |
+| `hora=21` | Começar o solo à noite |
 
-Testes do servidor:
+**Testes.** Na raiz, rode `node --test test/input.test.cjs test/solo.test.cjs`. Em `server/`, use `npm test` para as regras da sala ou `npm run fumaca` para um turno ponta a ponta com o servidor local em execução. Para simular outro jogador na sala TEST, rode `node test/robo.mjs TEST` ou `node test/pega-bot.mjs TEST`.
 
-```
-npm test                       # regras da sala (disputa, pagamento, atraso...), sem rede
-npm run fumaca                 # ponta a ponta no servidor local (precisa do npm run dev), com um turno de 30 s
-node test/robo.mjs TEST        # um jogador falso disputando corridas na sala TEST
-VOLTAS=1 node test/robo.mjs TEST   # o mesmo robô só dando voltas num quarteirão
-node test/pega-bot.mjs TEST        # um piloto falso (de moto) que entra em qualquer pega aberto na sala TEST
-CRIAR=1 node test/pega-bot.mjs TEST   # o mesmo, mas ele mesmo chama o pega
-COMECAR=1 TURNO=1 TURNOS=3 node test/robo.mjs TEST   # se for o dono, joga 3 turnos de 1 min seguidos
-                                                    # e confere o próprio saldo com o ranking em cada um
-```
+**Publicação.** Dentro de `server/`, autentique com `npx wrangler login` e publique com `npm run deploy` antes de atualizar o cliente no GitHub Pages. Ao alterar o protocolo, mantenha `PROTO` e `NET_PROTO` sincronizados. O endereço de produção é configurado por `NET_SERVER_PROD`. [Servidor da sala](server/src/sala.js) · [Cliente WebSocket](js/net.js)
 
-As regras da sala ficam em `server/src/regras.js` (lógica pura, sem rede) e usam as mesmas fórmulas de tarifa, nota e gorjeta do solo (`js/rides.js`) e os mesmos preços (`js/carcare.js`). Cada mudança de dinheiro vira uma linha no livro-caixa da sala; no fim do turno o servidor confere o saldo de cada um com a soma do livro e escreve o resultado no log (`npx wrangler tail`).
+</details>
 
-Servidor publicado: `wss://bandeira2-servidor.gabrielsouto.workers.dev` (plano grátis da Cloudflare). Para publicar uma versão nova: `npx wrangler login` (uma vez) e `npm run deploy` dentro de `server/`. Publique sempre o servidor antes do jogo. Quando a versão do protocolo muda (`PROTO` em `server/src/sala.js` e `NET_PROTO` em `js/net.js`), quem estiver com o jogo antigo aberto recebe um aviso para recarregar a página. O endereço fica em `NET_SERVER_PROD`, no topo de `js/net.js`; se ele estiver vazio, o site publicado esconde o multiplayer.
+<details>
+<summary><strong>Onde encontrar o código</strong></summary>
 
-## Controles
+| Parte do jogo | Arquivos |
+| --- | --- |
+| Tela, menus e progresso | [Página inicial](index.html) · [Loop e save](js/main.js) · [Painel, celular e minimapa](js/hud.js) |
+| Cidade e direção | [Geração do mapa](js/city.js) · [Arte em pixel](js/render-city.js) · [Física](js/car.js) · [Veículos](js/vehicles.js) |
+| Trabalhos | [Corridas](js/rides.js) · [Entregas](js/delivery.js) · [Encomendas](js/parcels.js) · [Demais módulos](js/) |
+| Salas e testes | [Regras do servidor](server/src/regras.js) · [Testes da sala](server/test/) · [Testes do cliente](test/) |
 
-| Tecla | Ação |
-|---|---|
-| WASD / setas | dirigir |
-| Espaço | freio de mão (derrapagem) |
-| E / Q | aceitar / recusar corrida |
-| C | cancelar corrida |
-| H | buzina |
-| R | rádio (troca a estação; no fim do turno da sala, abre o ranking) |
-| X | pega (multiplayer): chamar, entrar ou desistir |
-| 1–7 | escolher Rebu, 66, Táxi, Moto Rebu, euComida, 66Comida ou Autoescola |
-| 8 / 9 / 0 | escolher Mercado Leve, Amazoom ou Xopi |
-| V | voltar ao galpão com a carga restante durante uma rota de encomendas |
-| O / P / L | seta até a oficina, o posto ou o lava jato mais perto (a mesma tecla cancela) |
-| G | guincho (quando o carro quebra ou fica sem gasolina; não cobra se você já está lá) |
-| F | liga/desliga a direção fácil |
-| M | liga/desliga o som |
-| Esc | pausa |
-
-## O que já existe
-
-- Cidade procedural (grade de ruas com calçadões, prédios, praças, árvores, água na borda).
-- Física arcade com derrapagem, marcas de pneu e batidas.
-- Trânsito na mão direita que faz curvas, para atrás de obstáculos e buzina se você fechar a rua.
-- Pedestres que pulam pro lado (e multa se você atropelar).
-- Corridas: ofertas no celular, buscar, levar, prazo, avaliação, gorjeta.
-- Tipos de passageiro: normal, com pressa, enjoa fácil (pode sujar o carro), executivo, voltando da praia (sempre suja o carro).
-- Veículos: Rebu (equilibrado), 66 (tarifa menor, mais chamadas, econômico), Táxi (tarifa maior e bandeira 2 das 20:00 às 06:00) e Moto Rebu (ágil, tanque barato, tarifa 40% menor, sem executivo, tombo dói).
-- Entregador do **euComida** (5º veículo, só no solo): moto com bag que leva pedidos de 8 restaurantes (toldo listrado, rosa no minimapa) até o cliente. A cozinha pode estar preparando, a comida esfria, pizza e pedido de festa não aguentam batida, açaí derrete e o refri vaza com derrapada.
-- Entregador de bike do **66Comida** (6º veículo, só no solo): os mesmos pedidos, mas de bicicleta. Não gasta gasolina: a barra do tanque vira **fôlego**, que cai pedalando e volta parado (ou com um café no posto). Mais lenta, só pedidos perto, sem pedido de festa e com mais prazo.
-- **Direção fácil** (tecla F, botão na tela inicial ou pausa): carro mais lento que quase não derrapa, volante que se endireita sozinho, raspa no muro em vez de quicar e freio automático na frente de pedestres e carros. No solo, também estraga menos, não quebra sozinho e gasta menos gasolina.
-- No solo, as vans do **Mercado Leve** e da **Amazoom** fazem rotas de até 12 pacotes. A **Xopi** oferece rotas curtas de até 5 pacotes na moto. Carregue no galpão, escolha as paradas no minimapa e volte à doca para receber pelas coletas e pelo bônus de rota perfeita.
-- **Autoescola** (7º veículo, só no solo): busque o instrutor e siga as setas pintadas nos cruzamentos. O instrutor fala o que fazer (voz do navegador), tira pontos por batida, excesso de velocidade, calçada, contramão e PARE furado, e dá de 0 a 3 estrelas. 6 aulas (a última é a prova do DETRAN, que dá a carteira) e depois treino livre. Não mexe no dinheiro nem no save.
-- Dia e noite: o relógio anda 1 minuto por segundo; à noite escurece, com faróis, postes e giroflex.
-- Rádio do carro com estações sintetizadas (funk, sertanejo, pagode) e uma estação de notícias falada pela voz do navegador.
-- Posto Preço Baixo: gasolina 40% mais barata, mas batizada. Rende menos, o motor fica fraco e engasga, e o desgaste sobe. Abastecer em outro posto dilui.
-- Lava jato: carro sujo (vômito ou areia) só sai lá. A sujeira derruba a nota dos passageiros.
-- Áreas de risco (círculos vermelhos): bandidos se aproximam de quem para ou anda devagar e levam dinheiro, o carro ou os dois. Carro roubado volta pelo seguro na oficina, com franquia. Acelere para fugir. Atropelar bandido não dá multa: dá **AURA**, e quem tem muita aura assusta os bandidos.
-- Colégios: na entrada e na saída das aulas (06:45–07:30, 11:45–12:30, 17:15–18:00) a rua da frente engarrafa e crianças atravessam. Radar de 40 km/h na zona escolar.
-- Polícia: atropelar alguém, passar no radar ou bater numa viatura põe a polícia atrás de você. Parado com a viatura colada = multa e perde a corrida. Despistar (ficar bem longe por 6 s) dá AURA.
-- Semáforos em metade dos cruzamentos de 3 ou 4 saídas: verde, amarelo e vermelho, com faixa branca antes do cruzamento. O trânsito para no vermelho. Avançar o vermelho = multa de radar (R$ 60); na direção fácil do solo é só um aviso; na autoescola tira 15 pontos.
-- Tarifa dinâmica em áreas aleatórias que aparecem e somem.
-- Carro com combustível, lataria, desgaste e defeitos aleatórios (pneu furado, radiador, freio, bateria).
-- Postos, oficinas e lava jatos: entre devagar no pátio para abrir o menu. Dá pra pagar no fiado até -R$ 200. Quebrou ou ficou sem gasolina sem dinheiro nem no fiado: a oficina faz um remendo grátis e o frentista empresta um pouco de gasolina, para ninguém ficar preso.
-- Gatos e cachorros nas calçadas: atropelar um tira 15 de AURA.
-- Save automático no navegador (localStorage).
-
-## Estrutura
-
-```
-js/util.js         utilidades (aleatório, cores, pixels)
-js/city.js         geração da cidade
-js/render-city.js  arte gerada por código (mapa, carros, ícones)
-js/car.js          física e colisão do jogador
-js/vehicles.js     veículos, capacidades, física, tarifa e consumo
-js/facil.js        direção fácil (física mais mansa, volante que se endireita, freio automático)
-js/autoescola.js   modo autoescola: instrutor, caminho da aula, faltas, estrelas e carteira
-js/parcels.js      rotas de encomendas, galpões, paradas e devoluções
-js/delivery.js     entregador do euComida e do 66Comida: restaurantes, pedidos, nota da entrega
-js/light.js        dia e noite (escuridão, faróis, postes)
-js/radio.js        rádio do carro (música sintetizada e notícias faladas)
-js/world.js        áreas de risco com bandidos (e AURA), gatos e cachorros, colégios com trânsito
-js/police.js       perseguição da polícia
-js/semaforo.js     semáforos: ciclo das luzes, trânsito parando no vermelho, multa de quem avança
-ajuda.html         página de ajuda com todas as regras
-js/traffic.js      trânsito
-js/peds.js         pedestres
-js/rides.js        corridas e tarifa dinâmica
-js/carcare.js      combustível, danos e defeitos
-js/hud.js          interface (celular, painel, minimapa)
-js/net.js          conexão com a sala (WebSocket, reconexão, ping, atraso simulado)
-js/multi.js        multiplayer no jogo (entrada na sala, rivais, interpolação, colisão)
-js/rides-net.js    corridas disputadas da sala (chamadas do servidor, embarque, pagamento)
-js/pega.js         pega no multiplayer (largada, chegada, contagem, resultado)
-js/main.js         loop, câmera, desenho, menus, save
-server/            servidor das salas (Cloudflare Durable Objects)
-```
-
-## Ideias para depois
-
-- Semáforos.
-- Comprar carros novos e upgrades.
-- Bairros com cara própria, eventos (chuva, show, jogo de futebol gerando demanda).
-- Sprites desenhados à mão no lugar da arte gerada por código.
+</details>
