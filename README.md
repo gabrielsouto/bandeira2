@@ -47,7 +47,7 @@ Quem já embarcou um passageiro às 19h tem mais 30 segundos para entregá-lo. V
 
 ## Rádio do carro
 
-Aperte **R** para ligar o rádio e avançar uma estação por vez. Depois das quatro estações do jogo, você ouve seis emissoras ao vivo nesta ordem. São elas **FM O Dia**, **Super Rádio Tupi**, **Rádio Cidade**, **JB FM**, **Antena 1** e **Rádio Globo do Rio**. Mais um toque em **R** desliga só o rádio. **M** silencia ou reativa todo o som do jogo. [Guia do rádio](https://gabrielsouto.github.io/bandeira2/ajuda.html#radio)
+Aperte **R** para ligar o rádio e avançar uma estação por vez. Depois das quatro estações do jogo, você ouve oito emissoras ao vivo nesta ordem. São elas **FM O Dia**, **Super Rádio Tupi**, **Rádio Cidade**, **JB FM**, **Antena 1**, **Rádio Globo do Rio**, **BandNews FM Rio** e **CBN Rio**. Mais um toque em **R** desliga só o rádio. **M** silencia ou reativa todo o som do jogo. [Guia do rádio](https://gabrielsouto.github.io/bandeira2/ajuda.html#radio)
 
 ## Controles rápidos
 

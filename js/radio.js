@@ -27,6 +27,8 @@ const RADIO_STATIONS = [
   { id: 'jb', name: 'JB FM', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac' },
   { id: 'antena1', name: 'Antena 1', stream: 'https://www.antena1.com.br/stream/stream/1;' },
   { id: 'globo-rio', name: 'Rádio Globo do Rio', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO_GLOBO_RJAAC.aac' },
+  { id: 'bandnews-rio', name: 'BandNews FM Rio', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/BANDNEWSFM_RJAAC.aac' },
+  { id: 'cbn-rio', name: 'CBN Rio', stream: 'https://playerservices.streamtheworld.com/api/livestream-redirect/CBN_RJAAC.aac' },
 ];
 
 const RADIO_LINES = [
